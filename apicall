@@ -1,3 +1,5 @@
+gsutil ls -l gs://your-bucket-name/** | awk '{ if ($2 < "'$(date -d '2 days ago' +%Y-%m-%d)'" ) print $NF }' | gsutil -m rm -I
+
 #!/bin/bash
 
 # Get the current time in epoch format
