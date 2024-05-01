@@ -1,3 +1,12 @@
+PCollection<KV<String, Long>> totalRecordsView = input
+        .apply("CountTotalRecords", Count.globally())
+        .apply(ParDo.of(new DoFn<Long, KV<String, Long>>() {
+            @ProcessElement
+            public void processElement(ProcessContext c) {
+                c.output(KV.of("total", c.element()));
+            }
+        }));
+
 // Retrieve the count of successful inserts
 PCollection<KV<String, String>> successfulInsertsView = result
         .getSuccessfulInserts()
