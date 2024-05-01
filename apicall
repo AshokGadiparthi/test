@@ -1,3 +1,61 @@
+#!/bin/bash
+
+# Get the current time in epoch format
+current_time=$(date +%s)
+
+# Calculate the time two days ago in epoch format
+two_days_ago=$((current_time - 2 * 24 * 3600))
+
+# List files in the bucket and their metadata
+gsutil ls -l gs://your-bucket-name > files.txt
+
+# Parse the output and delete files older than two days
+while read -r line; do
+    # Extract the modification time of the file
+    modification_time=$(echo "$line" | awk '{print $2}')
+
+    # Convert modification time to epoch format
+    modification_time_epoch=$(date -d "$modification_time" +%s)
+
+    # Check if the file is older than two days
+    if ((modification_time_epoch < two_days_ago)); then
+        # Extract the filename from the line
+        filename=$(echo "$line" | awk '{print $NF}')
+
+        # Delete the file
+        gsutil rm "$filename"
+    fi
+done < files.txt
+
+# Remove the temporary file
+rm files.txt
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 To efficiently handle your requirement of consuming the API for address details in batches and then storing the responses in BigQuery, let's outline a solution that uses Google Cloud Platform (GCP) services to manage the workload effectively. This involves making HTTP requests to the external API, handling the response data, and storing it in BigQuery. We can improve on the previous example by incorporating batch processing and more robust error handling.
 
 Recommended Architecture:
