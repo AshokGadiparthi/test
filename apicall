@@ -1,3 +1,19 @@
+// Get the successful inserts with windowing
+PCollection<KV<TableRow, Long>> successfulInserts = result
+    .getSuccessfulInserts()
+    .apply("AddWindow", Window.into(FixedWindows.of(Duration.standardMinutes(1)))); // Adjust window duration as needed
+
+// Convert TableRow to String and Long to String
+PCollection<KV<String, String>> formattedSuccessfulInserts = successfulInserts
+    .apply("FormatResult", MapElements.into(TypeDescriptors.kvs(TypeDescriptors.strings(), TypeDescriptors.strings()))
+        .via((KV<TableRow, Long> element) -> {
+            TableRow row = element.getKey();
+            String key = "successfulInserts"; // Assuming you want this key for all elements
+            String value = String.valueOf(element.getValue());
+            return KV.of(key, value);
+        }));
+
+
 apply("CalculateMissingPercentage", ParDo.of(new DoFn<KV<String, CoGbkResult>, KV<String, Long>>() {
     @ProcessElement
     public void processElement(ProcessContext c) {
