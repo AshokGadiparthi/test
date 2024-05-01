@@ -1,3 +1,36 @@
+// Step 3: Recovery Mechanism
+// Get the total count of records processed
+PCollection<Long> totalRecordsProcessed = inputData.apply(Count.globally());
+
+// Get the count of records successfully inserted into BigQuery
+PCollection<Long> successfulInserts = result.getSuccessfulInserts().apply(Count.globally());
+
+// Convert successful inserts count into a singleton view
+final PCollectionView<Long> successfulInsertsView = successfulInserts.apply(View.asSingleton());
+
+// Identify missing records
+PCollection<Long> missingRecordsCount = totalRecordsProcessed
+    .apply("Calculate Missing Records", ParDo.of(new DoFn<Long, Long>() {
+        @ProcessElement
+        public void processElement(ProcessContext c) {
+            Long totalRecords = c.element();
+            Long successfulInsertsCount = c.sideInput(successfulInsertsView);
+            Long missingCount = totalRecords - successfulInsertsCount;
+            c.output(missingCount);
+        }
+    }).withSideInputs(successfulInsertsView));
+
+// Step 4: Logging and Reporting
+missingRecordsCount.apply(Sum.longs())
+    .apply(ParDo.of(new DoFn<Long, Void>() {
+        @ProcessElement
+        public void processElement(ProcessContext c) {
+            Long missingRecordCount = c.element();
+            // Log or report the count of missing records
+            LOG.info("Missing records count: {}", missingRecordCount);
+        }
+    }));
+
 // Step 1: Record Tracking
 PCollection<YourData> inputData = /* Your input data */;
 PCollectionView<Map<String, Boolean>> recordIdsView = inputData
