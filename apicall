@@ -62,6 +62,120 @@ public class DataflowJob {
                 .apply(View.asSingleton());
 
         // Calculate percentage of records successfully inserted
+        PCollection<KV<String, Long>> missingRecords = KeyedPCollectionTuple
+                .of("successfulInserts", successfulInsertsView)
+                .and("totalRecords", totalRecordsView)
+                .apply(CoGroupByKey.create())
+                .apply("CalculateMissingPercentage", ParDo.of(new DoFn<KV<Void, CoGbkResult>, KV<String, Long>>() {
+                    @ProcessElement
+                    public void processElement(ProcessContext c) {
+                        long successfulInserts = c.element().getValue().getOnly("successfulInserts", 0L);
+                        long totalRecords = c.element().getValue().getOnly("totalRecords", 0L);
+                        double percentage = (double) successfulInserts / totalRecords * 100.0;
+                        c.output(KV.of("Percentage of records successfully inserted", (long) percentage));
+                        long missing = totalRecords - successfulInserts;
+                        c.output(KV.of("Missing Records", missing));
+                    }
+                }));
+
+        // Print the percentage of missing records
+        missingRecords.apply("PrintMissingPercentage", ParDo.of(new DoFn<KV<String, Long>, Void>() {
+            @ProcessElement
+            public void processElement(ProcessContext c) {
+                System.out.println(c.element().getKey() + ": " + c.element().getValue() + "%");
+            }
+        }));
+
+        pipeline.run();
+    }
+
+    private static TableSchema getSchema() {
+        return new TableSchema()
+                .setFields(
+                        ImmutableList.of(
+                                new TableFieldSchema().setName("fullName").setType("STRING")
+                                // Add more fields as needed
+                        )
+                );
+    }
+}
+
+
+
+
+
+
+
+
+
+------------------------
+
+
+
+import com.google.api.services.bigquery.model.TableRow;
+import org.apache.beam.sdk.Pipeline;
+import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
+import org.apache.beam.sdk.io.gcp.pubsub.PubsubIO;
+import org.apache.beam.sdk.options.*;
+import org.apache.beam.sdk.transforms.*;
+import org.apache.beam.sdk.transforms.windowing.*;
+import org.apache.beam.sdk.values.*;
+import org.joda.time.Duration;
+
+public class DataflowJob {
+
+    public interface MyOptions extends PipelineOptions, StreamingOptions {
+        @Description("Pub/Sub subscription path")
+        @Validation.Required
+        ValueProvider<String> getSubscriptionPath();
+        void setSubscriptionPath(ValueProvider<String> value);
+
+        @Description("BigQuery output table")
+        @Validation.Required
+        ValueProvider<String> getOutputTable();
+        void setOutputTable(ValueProvider<String> value);
+    }
+
+    public static void main(String[] args) {
+        MyOptions options = PipelineOptionsFactory.fromArgs(args).withValidation().as(MyOptions.class);
+        options.setStreaming(true);
+
+        Pipeline pipeline = Pipeline.create(options);
+
+        PCollection<TableRow> input = pipeline
+                .apply("ReadFromPubSub", PubsubIO.readAvros(Employee.class)
+                        .fromSubscription(options.getSubscriptionPath()))
+                .apply("TransformEmployeeData", ParDo.of(new DoFn<Employee, TableRow>() {
+                    @ProcessElement
+                    public void processElement(ProcessContext c) {
+                        Employee emp = c.element();
+                        // Perform transformation
+                        TableRow row = new TableRow();
+                        row.set("fullName", emp.getFirstName() + " " + emp.getLastName());
+                        // Add more fields as needed
+                        c.output(row);
+                    }
+                }));
+
+        WriteResult result = input.apply("WriteToBigQuery", BigQueryIO.writeTableRows()
+                .to(options.getOutputTable())
+                .withSchema(getSchema())
+                .withFormatFunction(row -> row)
+                .withWriteDisposition(BigQueryIO.Write.WriteDisposition.WRITE_APPEND)
+                .withCreateDisposition(BigQueryIO.Write.CreateDisposition.CREATE_IF_NEEDED));
+
+        // Retrieve the count of successful inserts
+        PCollectionView<Long> successfulInsertsView = result
+                .getSuccessfulInserts()
+                .apply("CountSuccessfulInserts", Combine.globally(Count.<TableRow>combineFn()).withoutDefaults())
+                .apply(View.asSingleton());
+
+        // Get the total count of records processed
+        PCollectionView<Long> totalRecordsView = input
+                .apply("CountTotalRecords", Count.globally())
+                .apply(View.asSingleton());
+
+        // Calculate percentage of records successfully inserted
         PCollection<String> printPercentage = KeyedPCollectionTuple.of("successfulInserts", successfulInsertsView)
                 .and("totalRecords", totalRecordsView)
                 .apply(CoGroupByKey.create())
