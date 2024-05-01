@@ -12,6 +12,20 @@ apply("CalculateMissingPercentage", ParDo.of(new DoFn<KV<Void, CoGbkResult>, KV<
 }));
 
 
+apply("CalculateMissingPercentage", ParDo.of(new DoFn<KV<Void, CoGbkResult>, KV<String, Long>>() {
+    @ProcessElement
+    public void processElement(ProcessContext c) {
+        CoGbkResult result = c.element().getValue();
+        long successfulInserts = result.getOnly("successfulInserts", 0L);
+        long totalRecords = result.getOnly("totalRecords", 0L);
+        double percentage = (double) successfulInserts / totalRecords * 100.0;
+        c.output(KV.of("Percentage of records successfully inserted", (long) percentage));
+        long missing = totalRecords - successfulInserts;
+        c.output(KV.of("Missing Records", missing));
+    }
+}));
+
+
 // Calculate percentage of records successfully inserted
 PCollection<KV<String, Long>> missingRecords = KeyedPCollectionTuple
         .of("successfulInserts", successfulInsertsView)
