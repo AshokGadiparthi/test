@@ -1,3 +1,60 @@
+// Step 1: Record Tracking
+PCollection<YourData> inputData = /* Your input data */;
+PCollectionView<Map<String, Boolean>> recordIdsView = inputData
+    .apply("Extract Record IDs", ParDo.of(new DoFn<YourData, KV<String, Void>>() {
+        @ProcessElement
+        public void processElement(ProcessContext c) {
+            String recordId = /* Extract unique identifier for each record */;
+            c.output(KV.of(recordId, null));
+        }
+    }))
+    .apply(View.asMap());
+
+// Step 2: Error Handling (Assuming WriteResult is available)
+WriteResult result = processedData.apply(/* Write to BigQuery operation */);
+result.getFailedInsertsWithErr()
+    .apply(/* Handle failed inserts */);
+
+// Step 3: Recovery Mechanism
+// Get the total count of records processed
+long totalRecordsProcessed = inputData.apply(Count.globally());
+// Get the count of records successfully inserted into BigQuery
+PCollectionView<Long> successfulInsertsView = result
+    .apply(Count.globally())
+    .apply(View.asSingleton());
+
+// Compare counts and identify missing records
+PCollection<Long> missingRecordsCount = KeyedPCollectionTuple
+    .of(new TupleTag<Void>(), View.<String, Boolean>asMap())
+    .and(result.getSuccessfulInserts().apply(Count.globally()))
+    .apply(CoGroupByKey.create())
+    .apply(ParDo.of(new DoFn<KV<String, CoGbkResult>, Long>() {
+        @ProcessElement
+        public void processElement(ProcessContext c) {
+            KV<String, CoGbkResult> element = c.element();
+            if (!element.getValue().getOnly(new TupleTag<Void>())) {
+                // Record is missing
+                c.output(1L);
+            }
+        }
+    }))
+    .apply(Sum.longs());
+
+// Step 4: Logging and Reporting
+missingRecordsCount.apply(Sum.longs())
+    .apply(ParDo.of(new DoFn<Long, Void>() {
+        @ProcessElement
+        public void processElement(ProcessContext c) {
+            long missingRecordCount = c.element();
+            // Log or report the count of missing records
+            LOG.info("Missing records count: {}", missingRecordCount);
+        }
+    }));
+
+// Additional steps for logging and reporting as needed
+
+
+
 gsutil ls -l gs://your-bucket-name/** | awk '{ if ($2 < "'$(date -d '2 days ago' +%Y-%m-%d)'" ) print $NF }' | gsutil -m rm -I
 
 #!/bin/bash
