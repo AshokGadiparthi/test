@@ -1,3 +1,12 @@
+PCollection<KV<String, String>> successfulInsertsView = result
+    .getSuccessfulInserts()
+    .apply("CountSuccessfulInserts", Count.perElement())
+    .apply("FormatResult", MapElements.into(TypeDescriptors.kvs(TypeDescriptors.strings(), TypeDescriptors.strings()))
+        .via((KV<TableRow, Long> element) -> KV.of("successfulInserts", String.valueOf(element.getValue()))));
+
+successfulInsertsView
+    .apply(View.asSingleton());
+
 import com.google.api.services.bigquery.model.TableRow;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
