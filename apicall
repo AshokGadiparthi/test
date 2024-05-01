@@ -1,3 +1,13 @@
+// Transform TableRow to KV<String, Long>
+PCollection<KV<String, Long>> successfulInserts = result
+    .apply("ExtractKey", MapElements.into(TypeDescriptors.kvs(TypeDescriptors.strings(), TypeDescriptors.longs()))
+        .via((TableRow row) -> KV.of(row.get("key_field").toString(), 1L))); // Adjust key_field as needed
+
+// Apply windowing
+PCollection<KV<String, Long>> successfulInsertsWithWindow = successfulInserts
+    .apply("AddWindow", Window.into(FixedWindows.of(Duration.standardMinutes(1)))); // Adjust window duration as needed
+
+
 // Get the successful inserts with windowing
 PCollection<KV<TableRow, Long>> successfulInserts = result
     .getSuccessfulInserts()
