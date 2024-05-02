@@ -1,4 +1,77 @@
+import org.apache.beam.sdk.Pipeline;
+import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
+import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO.Write;
+import org.apache.beam.sdk.io.gcp.bigquery.BigQueryInsertError;
+import org.apache.beam.sdk.options.Default;
+import org.apache.beam.sdk.options.Description;
+import org.apache.beam.sdk.options.PipelineOptions;
+import org.apache.beam.sdk.options.PipelineOptionsFactory;
+import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.transforms.ParDo;
+import org.apache.beam.sdk.values.PCollection;
 
+public class DataflowBatch {
+    public interface MyOptions extends PipelineOptions {
+        @Description("Input BigQuery table")
+        @Default.String("YOUR_PROJECT_ID:YOUR_DATASET.YOUR_TABLE")
+        String getInputTable();
+        void setInputTable(String value);
+    }
+
+    public static void main(String[] args) {
+        MyOptions options = PipelineOptionsFactory.fromArgs(args).withValidation().as(MyOptions.class);
+
+        Pipeline pipeline = Pipeline.create(options);
+
+        PCollection<TableRow> records = pipeline
+            .apply("Read from BigQuery", BigQueryIO.readTableRows().from(options.getInputTable()));
+
+        PCollection<BigQueryInsertError> failedInserts = records.apply("Insert into BigQuery",
+            BigQueryIO.writeTableRows()
+                .to(options.getInputTable())
+                .withWriteDisposition(Write.WriteDisposition.WRITE_APPEND)
+                .withCreateDisposition(Write.CreateDisposition.CREATE_IF_NEEDED)
+                .withExtendedErrorInfo()
+                .withMethod(BigQueryIO.Write.Method.STORAGE_WRITE_API)
+        );
+
+        PCollection<Long> totalRecords = records.apply("Count Total Records", Count.globally());
+
+        PCollection<Long> successfulInsertsCount = failedInserts
+            .apply("Filter Successful Inserts",
+                ParDo.of(new DoFn<BigQueryInsertError, Long>() {
+                    @ProcessElement
+                    public void processElement(ProcessContext c) {
+                        c.output(1L);
+                    }
+                }))
+            .apply("Count Successful Inserts", Sum.longsGlobally());
+
+        PCollection<Long> missingRecordsCount = totalRecords
+            .apply("Calculate Missing Records",
+                ParDo.of(new DoFn<Long, Long>() {
+                    @ProcessElement
+                    public void processElement(ProcessContext c) {
+                        long totalRecords = c.element();
+                        long successfulInserts = c.sideInput(successfulInsertsCount);
+                        c.output(totalRecords - successfulInserts);
+                    }
+                }).withSideInputs(successfulInsertsCount));
+
+        missingRecordsCount.apply("Log Missing Records",
+            ParDo.of(new DoFn<Long, Void>() {
+                @ProcessElement
+                public void processElement(ProcessContext c) {
+                    long missingRecords = c.element();
+                    System.out.println("Missing records: " + missingRecords);
+                }
+            }));
+
+        pipeline.run().waitUntilFinish();
+    }
+}
+
+///////////////////
 
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
