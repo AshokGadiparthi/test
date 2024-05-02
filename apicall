@@ -1,3 +1,96 @@
+import org.apache.beam.sdk.Pipeline;
+import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
+import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO.Write.WriteDisposition;
+import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO.Write.CreateDisposition;
+import org.apache.beam.sdk.options.Default;
+import org.apache.beam.sdk.options.Description;
+import org.apache.beam.sdk.options.PipelineOptions;
+import org.apache.beam.sdk.options.PipelineOptionsFactory;
+import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.transforms.ParDo;
+import org.apache.beam.sdk.values.PCollection;
+import org.apache.beam.sdk.values.PCollectionView;
+import org.apache.beam.sdk.transforms.windowing.BoundedWindow;
+import org.apache.beam.sdk.transforms.windowing.FixedWindows;
+import org.apache.beam.sdk.transforms.windowing.Window;
+import org.joda.time.Duration;
+
+public class DataflowBatch {
+    public interface MyOptions extends PipelineOptions {
+        @Description("Input Pub/Sub topic")
+        @Default.String("projects/YOUR_PROJECT_ID/topics/YOUR_TOPIC")
+        String getInputTopic();
+        void setInputTopic(String value);
+
+        @Description("Output BigQuery table")
+        @Default.String("YOUR_PROJECT_ID:YOUR_DATASET.YOUR_TABLE")
+        String getOutputTable();
+        void setOutputTable(String value);
+    }
+
+    public static void main(String[] args) {
+        MyOptions options = PipelineOptionsFactory.fromArgs(args).withValidation().as(MyOptions.class);
+
+        Pipeline pipeline = Pipeline.create(options);
+
+        PCollection<Employee> employees = pipeline
+            .apply("Read Avro Messages", AvroIO.read(Employee.class).from(options.getInputTopic()));
+
+        // Apply windowing to the employees collection
+        PCollection<Employee> windowedEmployees = employees.apply(
+            "Apply Windowing", Window.into(FixedWindows.of(Duration.standardMinutes(1))));
+
+        PCollection<Long> totalRecords = windowedEmployees.apply("Count Total Records", Count.globally());
+
+        PCollection<TableRow> successfulInserts = windowedEmployees.apply("Insert into BigQuery",
+            BigQueryIO.<Employee>write()
+                .to(options.getOutputTable())
+                .withFormatFunction((Employee element) -> {
+                    return new TableRow().set("fullName", element.getFirstName() + " " + element.getLastName());
+                })
+                .withWriteDisposition(WriteDisposition.WRITE_APPEND)
+                .withCreateDisposition(CreateDisposition.CREATE_IF_NEEDED)
+                .withMethod(Method.STORAGE_WRITE_API));
+
+        PCollectionView<Long> successfulInsertCount = successfulInserts
+            .apply("Count Successful Inserts", Count.globally())
+            .apply(View.asSingleton());
+
+        PCollectionView<Long> totalRecordsView = totalRecords.apply(View.asSingleton());
+
+        PCollection<String> status = KeyedPCollectionTuple
+            .of("successfulInserts", successfulInsertCount)
+            .and("totalRecords", totalRecordsView)
+            .apply(CoGroupByKey.create())
+            .apply(ParDo.of(new DoFn<KV<String, CoGbkResult>, String>() {
+                @ProcessElement
+                public void processElement(ProcessContext c) {
+                    long successfulInsertCount = c.element().getValue().getOnly("successfulInserts", 0L);
+                    long totalRecords = c.element().getValue().getOnly("totalRecords", 0L);
+                    if (successfulInsertCount == totalRecords) {
+                        c.output("All records successfully inserted into BigQuery.");
+                    } else {
+                        long missingRecords = totalRecords - successfulInsertCount;
+                        c.output("Missing records: " + missingRecords);
+                    }
+                }
+            }));
+
+        // Print the status
+        status.apply(ParDo.of(new DoFn<String, Void>() {
+            @ProcessElement
+            public void processElement(ProcessContext c) {
+                System.out.println(c.element());
+            }
+        }));
+
+        pipeline.run().waitUntilFinish();
+    }
+}
+
+////////////////////
+
+
 // Transform TableRow to KV<String, Long>
 PCollection<KV<String, Long>> successfulInserts = result
     .apply("ExtractKey", MapElements.into(TypeDescriptors.kvs(TypeDescriptors.strings(), TypeDescriptors.longs()))
