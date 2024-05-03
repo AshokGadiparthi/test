@@ -1,3 +1,47 @@
+PCollection<Employee> missingEmployees = grouped.apply(ParDo.of(new DoFn<KV<Integer, CoGbkResult>, Employee>() {
+    @ProcessElement
+    public void processElement(ProcessContext c) {
+        KV<Integer, CoGbkResult> e = c.element();
+        Iterable<Employee> employeeGroup = e.getValue().getAll(employeeTag);
+        Iterable<TableRow> tableRowGroup = e.getValue().getAll(tableRowTag);
+
+        // If employee exists but no corresponding TableRow
+        if (employeeGroup.iterator().hasNext() && !tableRowGroup.iterator().hasNext()) {
+            for (Employee emp : employeeGroup) {
+                c.output(emp);
+            }
+        }
+    }
+}));
+
+PCollection<TableRow> employeeTableRows = missingEmployees.apply("ConvertToTableRow", ParDo.of(new DoFn<Employee, TableRow>() {
+    @ProcessElement
+    public void processElement(@Element Employee employee, OutputReceiver<TableRow> out) {
+        TableRow row = new TableRow()
+                .set("employee_id", employee.getId())
+                .set("name", employee.getName())
+                .set("department", employee.getDepartment()) // Assuming department is a field
+                .set("position", employee.getPosition()); // Assuming position is a field
+        out.output(row);
+    }
+}));
+
+employeeTableRows.apply("WriteToBigQuery", BigQueryIO.writeTableRows()
+    .to("your-project:your_dataset.your_table")
+    .withSchema(getSchema()) // Define and provide the schema
+    .withCreateDisposition(BigQueryIO.Write.CreateDisposition.CREATE_IF_NEEDED)
+    .withWriteDisposition(BigQueryIO.Write.WriteDisposition.WRITE_APPEND));
+
+public static TableSchema getSchema() {
+    List<TableFieldSchema> fields = new ArrayList<>();
+    fields.add(new TableFieldSchema().setName("employee_id").setType("INTEGER"));
+    fields.add(new TableFieldSchema().setName("name").setType("STRING"));
+    fields.add(new TableFieldSchema().setName("department").setType("STRING"));
+    fields.add(new TableFieldSchema().setName("position").setType("STRING"));
+    return new TableSchema().setFields(fields);
+}
+
+///////////////////
 
 missingEmployees.apply(ParDo.of(new LogEmployeeIdFn()));
 
