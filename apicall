@@ -1,3 +1,44 @@
+import org.apache.beam.sdk.coders.AtomicCoder;
+import org.apache.beam.sdk.coders.Coder;
+import org.apache.beam.sdk.coders.CoderException;
+
+import java.io.*;
+
+public class EmployeeCoder extends AtomicCoder<Employee> {
+
+    public static EmployeeCoder of() {
+        return new EmployeeCoder();
+    }
+
+    @Override
+    public void encode(Employee value, OutputStream outStream) throws CoderException, IOException {
+        if (value == null) {
+            throw new CoderException("Cannot encode null values");
+        }
+        ObjectOutputStream oos = new ObjectOutputStream(outStream);
+        oos.writeObject(value);
+        oos.flush();
+    }
+
+    @Override
+    public Employee decode(InputStream inStream) throws CoderException, IOException {
+        ObjectInputStream ois = new ObjectInputStream(inStream);
+        try {
+            return (Employee) ois.readObject();
+        } catch (ClassNotFoundException e) {
+            throw new CoderException("Failed to decode Employee", e);
+        }
+    }
+}
+
+PipelineOptions options = PipelineOptionsFactory.create();
+Pipeline p = Pipeline.create(options);
+
+// Register the custom coder for the Employee class
+p.getCoderRegistry().registerCoderForClass(Employee.class, EmployeeCoder.of());
+
+
+
 public class Employee {
     private int id;
     private String name;
