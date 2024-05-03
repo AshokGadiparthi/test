@@ -1,3 +1,54 @@
+PCollection<KV<Integer, Employee>> keyedEmployees = employees.apply(
+    MapElements.via(new SimpleFunction<Employee, KV<Integer, Employee>>() {
+        public KV<Integer, Employee> apply(Employee emp) {
+            return KV.of(emp.getId(), emp);
+        }
+    }));
+
+PCollection<KV<Integer, TableRow>> keyedTableRows = tableRows.apply(
+    MapElements.via(new SimpleFunction<TableRow, KV<Integer, TableRow>>() {
+        public KV<Integer, TableRow> apply(TableRow row) {
+            // Assuming the TableRow has a method getEmployeeId to fetch the ID
+            return KV.of(row.getEmployeeId(), row);
+        }
+    }));
+	
+final TupleTag<Employee> employeeTag = new TupleTag<>();
+final TupleTag<TableRow> tableRowTag = new TupleTag<>();
+
+PCollection<KV<Integer, CoGbkResult>> grouped =
+    KeyedPCollectionTuple.of(employeeTag, keyedEmployees)
+                         .and(tableRowTag, keyedTableRows)
+                         .apply(CoGroupByKey.create());
+
+PCollection<Employee> missingEmployees = grouped.apply(ParDo.of(new DoFn<KV<Integer, CoGbkResult>, Employee>() {
+    @ProcessElement
+    public void processElement(ProcessContext c) {
+        KV<Integer, CoGbkResult> e = c.element();
+        Iterable<Employee> employeeGroup = e.getValue().getAll(employeeTag);
+        Iterable<TableRow> tableRowGroup = e.getValue().getAll(tableRowTag);
+
+        // If employee exists but no corresponding TableRow
+        if (!employeeGroup.iterator().hasNext() && tableRowGroup.iterator().hasNext()) {
+            c.output(tableRowGroup.iterator().next());
+        }
+
+        // If TableRow exists but no corresponding Employee
+        if (!tableRowGroup.iterator().hasNext() && employeeGroup.iterator().hasNext()) {
+            c.output(employeeGroup.iterator().next());
+        }
+    }
+}));
+
+
+//////////////////
+
+
+
+
+
+
+
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO.Write;
