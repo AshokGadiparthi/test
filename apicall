@@ -1,3 +1,18 @@
+
+missingEmployees.apply(ParDo.of(new LogEmployeeIdFn()));
+
+
+public static class LogEmployeeIdFn extends DoFn<Employee, Void> {
+    private static final Logger LOG = Logger.getLogger(LogEmployeeIdFn.class.getName());
+
+    @ProcessElement
+    public void processElement(@Element Employee employee, OutputReceiver<Void> out) {
+        LOG.info("Missing Employee ID: " + employee.getId());
+    }
+}
+
+
+
 PCollection<KV<Integer, Employee>> keyedEmployees = employees.apply(
     MapElements.via(new SimpleFunction<Employee, KV<Integer, Employee>>() {
         public KV<Integer, Employee> apply(Employee emp) {
