@@ -1,3 +1,104 @@
+public class Employee {
+    private int id;
+    private String name;
+    private String department;
+
+    public Employee(int id, String name, String department) {
+        this.id = id;
+        this.name = name;
+        this.department = department;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getDepartment() {
+        return department;
+    }
+}
+
+public class TableRow {
+    private Map<String, String> fields;
+
+    public TableRow(int employeeId) {
+        fields = new HashMap<>();
+        fields.put("employee_id", Integer.toString(employeeId));
+    }
+
+    public int getEmployeeId() {
+        return Integer.parseInt(fields.get("employee_id"));
+    }
+}
+
+public static void main(String[] args) {
+    PipelineOptions options = PipelineOptionsFactory.create();
+    Pipeline p = Pipeline.create(options);
+
+    // Create dummy data for Employees
+    List<KV<Integer, Employee>> employeeData = Arrays.asList(
+        KV.of(1, new Employee(1, "Alice", "Engineering")),
+        KV.of(2, new Employee(2, "Bob", "Marketing")),
+        KV.of(3, new Employee(3, "Charlie", "Engineering")),
+        KV.of(4, new Employee(4, "David", "HR")),
+        KV.of(5, new Employee(5, "Eve", "Finance"))
+    );
+
+    // Create dummy data for TableRows
+    List<KV<Integer, TableRow>> tableRowData = Arrays.asList(
+        KV.of(1, new TableRow(1)),
+        KV.of(3, new TableRow(3)),
+        KV.of(5, new TableRow(5))
+    );
+
+    // Create PCollections from the dummy data
+    PCollection<KV<Integer, Employee>> employees = p.apply("CreateEmployeeData", Create.of(employeeData));
+    PCollection<KV<Integer, TableRow>> tableRows = p.apply("CreateTableRowData", Create.of(tableRowData));
+
+    final TupleTag<Employee> employeeTag = new TupleTag<>();
+    final TupleTag<TableRow> tableRowTag = new TupleTag<>();
+
+    PCollection<KV<Integer, CoGbkResult>> grouped =
+        KeyedPCollectionTuple.of(employeeTag, employees)
+                             .and(tableRowTag, tableRows)
+                             .apply(CoGroupByKey.create());
+
+    PCollection<Employee> missingEmployees = grouped.apply(ParDo.of(new DoFn<KV<Integer, CoGbkResult>, Employee>() {
+        @ProcessElement
+        public void processElement(ProcessContext c) {
+            KV<Integer, CoGbkResult> e = c.element();
+            Iterable<Employee> employeeGroup = e.getValue().getAll(employeeTag);
+            Iterable<TableRow> tableRowGroup = e.getValue().getAll(tableRowTag);
+
+            if (employeeGroup.iterator().hasNext() && !tableRowGroup.iterator().hasNext()) {
+                for (Employee emp : employeeGroup) {
+                    c.output(emp);
+                }
+            }
+        }
+    }));
+
+    p.run().waitUntilFinish();
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 PCollection<Employee> missingEmployees = grouped.apply(ParDo.of(new DoFn<KV<Integer, CoGbkResult>, Employee>() {
     @ProcessElement
     public void processElement(ProcessContext c) {
