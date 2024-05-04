@@ -1,3 +1,137 @@
+import org.apache.beam.sdk.Pipeline;
+import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
+import org.apache.beam.sdk.io.gcp.bigquery.BigQueryInsertError;
+import org.apache.beam.sdk.io.gcp.pubsub.PubsubIO;
+import org.apache.beam.sdk.options.Default;
+import org.apache.beam.sdk.options.Description;
+import org.apache.beam.sdk.options.PipelineOptions;
+import org.apache.beam.sdk.options.PipelineOptionsFactory;
+import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.transforms.ParDo;
+import org.apache.beam.sdk.transforms.SerializableFunction;
+import org.apache.beam.sdk.transforms.Sum;
+import org.apache.beam.sdk.transforms.windowing.BoundedWindow;
+import org.apache.beam.sdk.transforms.windowing.GlobalWindow;
+import org.apache.beam.sdk.transforms.windowing.Window;
+import org.apache.beam.sdk.values.KV;
+import org.apache.beam.sdk.values.PCollection;
+import org.apache.beam.sdk.values.PCollectionView;
+import org.apache.beam.sdk.values.TypeDescriptor;
+import org.apache.beam.sdk.values.TypedValue;
+import org.joda.time.Duration;
+
+public class DataflowBatch {
+    public interface MyOptions extends PipelineOptions {
+        @Description("Input Pub/Sub topic")
+        @Default.String("projects/YOUR_PROJECT_ID/topics/YOUR_TOPIC")
+        String getInputTopic();
+        void setInputTopic(String value);
+
+        @Description("Output BigQuery table")
+        @Default.String("YOUR_PROJECT_ID:YOUR_DATASET.YOUR_TABLE")
+        String getOutputTable();
+        void setOutputTable(String value);
+    }
+
+    public static void main(String[] args) {
+        MyOptions options = PipelineOptionsFactory.fromArgs(args).withValidation().as(MyOptions.class);
+
+        Pipeline pipeline = Pipeline.create(options);
+
+        PCollection<KV<Integer, EmployeePojo>> transformedRecords = pipeline
+            .apply("Read from Pub/Sub", PubsubIO.readAvros(EmployeePojo.class).fromTopic(options.getInputTopic()))
+            .apply("Transform Avro to Full Name", ParDo.of(new TransformToFullNameFn()))
+            .apply("Window into Global Window", Window.into(new GlobalWindow()));
+
+        PCollection<EmployeePojo> successfullyInsertedRecords = transformedRecords
+            .apply("Insert into BigQuery",
+                BigQueryIO.<EmployeePojo>write()
+                    .to(options.getOutputTable())
+                    .withWriteDisposition(BigQueryIO.Write.WriteDisposition.WRITE_APPEND)
+                    .withCreateDisposition(BigQueryIO.Write.CreateDisposition.CREATE_IF_NEEDED)
+                    .withExtendedErrorInfo()
+                    .withMethod(BigQueryIO.Write.Method.STORAGE_WRITE_API)
+                    .withFormatFunction(new SerializableFunction<EmployeePojo, TableRow>() {
+                        @Override
+                        public TableRow apply(EmployeePojo input) {
+                            TableRow row = new TableRow();
+                            row.set("employeeId", input.getId());
+                            row.set("fullName", input.getFullName());
+                            return row;
+                        }
+                    }));
+
+        PCollectionView<Iterable<TableRow>> successfulRecordsView = successfullyInsertedRecords
+            .apply("Convert to View", ParDo.of(new ConvertToIterableFn()))
+            .apply("Collect Successful Records", View.asIterable());
+
+        PCollection<EmployeePojo> missingRecords = transformedRecords
+            .apply("Identify Missing Records", ParDo.of(new IdentifyMissingRecordsFn(successfulRecordsView)));
+
+        missingRecords
+            .apply("Write Missing Records to BigQuery",
+                BigQueryIO.<EmployeePojo>write()
+                    .to(options.getOutputTable())
+                    .withWriteDisposition(BigQueryIO.Write.WriteDisposition.WRITE_APPEND)
+                    .withCreateDisposition(BigQueryIO.Write.CreateDisposition.CREATE_IF_NEEDED)
+                    .withExtendedErrorInfo()
+                    .withMethod(BigQueryIO.Write.Method.STORAGE_WRITE_API)
+                    .withFormatFunction(new SerializableFunction<EmployeePojo, TableRow>() {
+                        @Override
+                        public TableRow apply(EmployeePojo input) {
+                            TableRow row = new TableRow();
+                            row.set("employeeId", input.getId());
+                            row.set("fullName", input.getFullName());
+                            return row;
+                        }
+                    }));
+
+        pipeline.run().waitUntilFinish();
+    }
+
+    public static class TransformToFullNameFn extends DoFn<EmployeePojo, KV<Integer, EmployeePojo>> {
+        @ProcessElement
+        public void processElement(@Element EmployeePojo input, OutputReceiver<KV<Integer, EmployeePojo>> out) {
+            // Transform input to include full name
+            input.setFullName(input.getFirstName() + " " + input.getLastName());
+            out.output(KV.of(input.getId(), input));
+        }
+    }
+
+    public static class ConvertToIterableFn extends DoFn<EmployeePojo, Iterable<TableRow>> {
+        @ProcessElement
+        public void processElement(@Element EmployeePojo input, OutputReceiver<Iterable<TableRow>> out) {
+            out.output(TypedValue.of(TableRow.class, input.toTableRow()));
+        }
+    }
+
+    public static class IdentifyMissingRecordsFn extends DoFn<KV<Integer, EmployeePojo>, EmployeePojo> {
+        private final PCollectionView<Iterable<TableRow>> successfulRecordsView;
+
+        public IdentifyMissingRecordsFn(PCollectionView<Iterable<TableRow>> successfulRecordsView) {
+            this.successfulRecordsView = successfulRecordsView;
+        }
+
+        @ProcessElement
+        public void processElement(@Element KV<Integer, EmployeePojo> input, BoundedWindow window, OutputReceiver<EmployeePojo> out) {
+            Iterable<TableRow> successfulRecords = this.successfulRecordsView.get(window);
+            boolean found = false;
+            for (TableRow record : successfulRecords) {
+                if (record.get("employeeId").equals(input.getValue().getId())) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                out.output(input.getValue());
+            }
+        }
+    }
+}
+
+
+
+
 import org.apache.beam.sdk.coders.AtomicCoder;
 import org.apache.beam.sdk.coders.Coder;
 import org.apache.beam.sdk.coders.CoderException;
