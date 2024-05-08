@@ -1,3 +1,11 @@
+Cloud Scheduler: Triggers the process.
+Secret Manager: Fetches the API key securely.
+BigQuery: Reads the initial 100 records.
+API Call: Using the fetched API key, calls the external API.
+Process API Response: Handles and processes the data returned from the API.
+Update BigQuery: Updates the records in BigQuery based on the API response.
+Cloud Logging: Logs the operation details.
+
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryInsertError;
