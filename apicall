@@ -1,3 +1,15 @@
+SELECT 
+  PARSE_TIMESTAMP("%Y-%m-%d %H:%M:%S %Ez", "2024-05-10 09:52:17.863000 +00:00", "UTC") as utc_timestamp
+FROM 
+  your_table;
+
+-- If the string is just a datetime without timezone
+SELECT 
+  TIMESTAMP("2024-05-10T09:52:17.863000", "UTC") as utc_timestamp
+FROM 
+  your_table;
+
+
 Cloud Scheduler: Triggers the process.
 Secret Manager: Fetches the API key securely.
 BigQuery: Reads the initial 100 records.
