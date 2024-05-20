@@ -1,3 +1,51 @@
+from airflow import DAG
+from airflow.providers.google.cloud.transfers.bigquery_to_gcs import BigQueryToGCSOperator
+from airflow.utils.dates import days_ago
+
+default_args = {
+    'owner': 'airflow',
+    'start_date': days_ago(1),
+}
+
+dag = DAG(
+    'example_partitioned_bigquery_to_gcs',
+    default_args=default_args,
+    schedule_interval=None,
+)
+
+# Example: Suppose you want to create 50 files and have 60000 rows in total
+total_rows = 60000  # Replace with the actual number of rows in your BigQuery table
+desired_files = 50
+rows_per_file = total_rows // desired_files
+
+# Define the partitions (example with 5 partitions, adjust as needed)
+partitions = [
+    {'start_id': i * rows_per_file, 'end_id': (i + 1) * rows_per_file - 1}
+    for i in range(desired_files)
+]
+
+# Create tasks for each partition
+for i, partition in enumerate(partitions):
+    task = BigQueryToGCSOperator(
+        task_id=f'export_partition_{i}',
+        source_project_dataset_table='your_project.your_dataset.your_table',
+        destination_cloud_storage_uris=[f'gs://your-bucket/your-folder/partition_{i}/*.json.gz'],
+        export_format='NEWLINE_DELIMITED_JSON',
+        compression='GZIP',
+        sql=f"""
+            SELECT * FROM `your_project.your_dataset.your_table`
+            WHERE id BETWEEN {partition['start_id']} AND {partition['end_id']}
+        """,
+        dag=dag,
+    )
+
+# This will create 50 partitions, each having approximately rows_per_file rows
+
+
+
+
+
+
 SELECT 
   PARSE_TIMESTAMP("%Y-%m-%d %H:%M:%S %Ez", "2024-05-10 09:52:17.863000 +00:00", "UTC") as utc_timestamp
 FROM 
