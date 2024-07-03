@@ -1,27 +1,34 @@
+public class BigQueryActiveJobsMonitor {
 
-public class BigQueryMonitor {
+    private static final BigQuery bigQuery = BigQueryOptions.getDefaultInstance().getService();
 
     public static void main(String[] args) {
-        BigQuery bigQuery = BigQueryOptions.getDefaultInstance().getService();
-
-        try {
-            int runningQueries = countRunningQueries(bigQuery);
-            System.out.println("Number of parallel running queries: " + runningQueries);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        // Start a thread to log the number of active running queries periodically
+        new Thread(() -> {
+            while (true) {
+                try {
+                    int runningQueriesCount = getActiveRunningQueriesCount();
+                    System.out.println("Number of active running queries: " + runningQueriesCount);
+                    Thread.sleep(5000); // Adjust the interval as needed
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
     }
 
-    private static int countRunningQueries(BigQuery bigQuery) {
+    private static int getActiveRunningQueriesCount() {
         int runningQueriesCount = 0;
 
-        // List jobs in the project
-        for (Job job : bigQuery.listJobs().iterateAll()) {
-            JobStatus status = job.getStatus();
-            JobStatistics statistics = job.getStatistics();
+        // List jobs in the project with a filter for running state
+        Iterator<Job> jobIterator = bigQuery.listJobs(JobListOption.stateFilter(JobStatus.State.RUNNING)).iterateAll().iterator();
 
-            // Check if the job is a query and its state is RUNNING
-            if (statistics instanceof QueryStatistics && status.getState() == JobStatus.State.RUNNING) {
+        while (jobIterator.hasNext()) {
+            Job job = jobIterator.next();
+            if (job.getStatistics() instanceof JobStatistics.QueryStatistics) {
                 runningQueriesCount++;
             }
         }
