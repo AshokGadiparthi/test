@@ -1,38 +1,58 @@
-public class BigQueryActiveJobsMonitor {
+git clone https://github.com/GoogleCloudPlatform/DataflowTemplates.git
+cd DataflowTemplates/v2/spanner-change-streams-to-bigquery
 
-    private static final BigQuery bigQuery = BigQueryOptions.getDefaultInstance().getService();
+mvn clean package -DskipTests
 
-    public static void main(String[] args) {
-        // Start a thread to log the number of active running queries periodically
-        new Thread(() -> {
-            while (true) {
-                try {
-                    int runningQueriesCount = getActiveRunningQueriesCount();
-                    System.out.println("Number of active running queries: " + runningQueriesCount);
-                    Thread.sleep(5000); // Adjust the interval as needed
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    break;
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        }).start();
-    }
 
-    private static int getActiveRunningQueriesCount() {
-        int runningQueriesCount = 0;
+gsutil mb -l us-central1 gs://my-bucket
+gsutil cp target/spanner-change-streams-to-bigquery-bundled-0.1.jar gs://my-bucket/templates/spanner-change-streams-to-bigquery.jar
 
-        // List jobs in the project with a filter for running state
-        Iterator<Job> jobIterator = bigQuery.listJobs(JobListOption.stateFilter(JobStatus.State.RUNNING)).iterateAll().iterator();
 
-        while (jobIterator.hasNext()) {
-            Job job = jobIterator.next();
-            if (job.getStatistics() instanceof JobStatistics.QueryStatistics) {
-                runningQueriesCount++;
-            }
-        }
-
-        return runningQueriesCount;
-    }
+{
+  "image": "gcr.io/dataflow-templates/latest/flex/Spanner_Change_Streams_to_BigQuery",
+  "metadata": {
+    "name": "Spanner Change Streams to BigQuery",
+    "description": "Streaming data from Spanner to BigQuery using Change Streams",
+    "parameters": [
+      {
+        "name": "spannerInstanceId",
+        "label": "Spanner Instance ID",
+        "helpText": "The Spanner instance ID",
+        "paramType": "TEXT"
+      },
+      {
+        "name": "spannerDatabaseId",
+        "label": "Spanner Database ID",
+        "helpText": "The Spanner database ID",
+        "paramType": "TEXT"
+      },
+      {
+        "name": "spannerChangeStreamName",
+        "label": "Spanner Change Stream Name",
+        "helpText": "The Spanner Change Stream Name",
+        "paramType": "TEXT"
+      },
+      {
+        "name": "bigQueryDataset",
+        "label": "BigQuery Dataset",
+        "helpText": "The BigQuery dataset name",
+        "paramType": "TEXT"
+      },
+      {
+        "name": "bigQueryTable",
+        "label": "BigQuery Table",
+        "helpText": "The BigQuery table name",
+        "paramType": "TEXT"
+      }
+    ]
+  }
 }
+
+
+gsutil cp spanner_to_bq_flex_template.json gs://my-bucket/templates/
+
+
+gcloud dataflow flex-template run "spanner-cdc-to-bq" \
+  --template-file-gcs-location="gs://my-bucket/templates/spanner_to_bq_flex_template.json" \
+  --parameters spannerInstanceId=my-instance,spannerDatabaseId=my-database,spannerChangeStreamName=SingerStream,bigQueryDataset=my_dataset,bigQueryTable=my_table \
+  --region=us-central1
