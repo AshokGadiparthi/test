@@ -45,8 +45,13 @@ gsutil cp target/spanner-change-streams-to-bigquery-bundled-0.1.jar gs://my-buck
         "paramType": "TEXT"
       }
     ]
+  },
+  "sdk_info": {
+    "language": "JAVA",
+    "version": "2.35.0"
   }
 }
+
 
 
 gsutil cp spanner_to_bq_flex_template.json gs://my-bucket/templates/
