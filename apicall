@@ -1,7 +1,10 @@
 import com.google.api.services.bigquery.model.TableRow;
-import com.google.cloud.bigquery.*;
+import com.google.cloud.bigquery.BigQuery;
+import com.google.cloud.bigquery.BigQueryOptions;
+import com.google.cloud.bigquery.QueryJobConfiguration;
+import com.google.cloud.bigquery.TableId;
+import com.google.cloud.bigquery.TableResult;
 import org.apache.beam.sdk.Pipeline;
-import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
 import org.apache.beam.sdk.io.gcp.pubsub.PubsubIO;
 import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
@@ -16,6 +19,15 @@ import org.json.JSONObject;
 public class SpannerToBigQueryCDC {
 
     public interface Options extends PipelineOptions {
+        @Description("BigQuery Dataset Name")
+        @Default.String("your_dataset")
+        String getDataset();
+        void setDataset(String dataset);
+
+        @Description("BigQuery Table Name")
+        @Default.String("dim_customer")
+        String getTable();
+        void setTable(String table);
     }
 
     public static void main(String[] args) {
@@ -24,18 +36,14 @@ public class SpannerToBigQueryCDC {
         Pipeline pipeline = Pipeline.create(options);
 
         String pubSubSubscription = "projects/your-project/subscriptions/your-subscription";
-        String stagingTableSpec = "your-project:your_dataset.stg_customer";
-        String dimTableSpec = "your-project:your_dataset.dim_customer";
+        String datasetName = options.getDataset();
+        String tableName = options.getTable();
+        String tableSpec = String.format("%s.%s", datasetName, tableName);
 
         pipeline
             .apply("ReadMessages", PubsubIO.readStrings().fromSubscription(pubSubSubscription))
             .apply("ParseMessages", ParDo.of(new ParseMessageFn()))
-            .apply("WriteToBigQueryStaging", BigQueryIO.writeTableRows()
-                .to(stagingTableSpec)
-                .withCreateDisposition(BigQueryIO.Write.CreateDisposition.CREATE_IF_NEEDED)
-                .withWriteDisposition(BigQueryIO.Write.WriteDisposition.WRITE_APPEND)
-                .withSchema(getStagingSchema()))
-            .apply("MergeToBigQueryDim", new MergeToBigQuery(dimTableSpec));
+            .apply("ProcessCDC", ParDo.of(new ProcessCDCFn(tableSpec)));
 
         pipeline.run().waitUntilFinish();
     }
@@ -61,78 +69,56 @@ public class SpannerToBigQueryCDC {
         }
     }
 
-    private static TableSchema getStagingSchema() {
-        return new TableSchema().setFields(
-            ImmutableList.of(
-                new TableFieldSchema().setName("cust_id").setType("STRING"),
-                new TableFieldSchema().setName("acct_num").setType("STRING"),
-                new TableFieldSchema().setName("COL3").setType("INTEGER"),
-                new TableFieldSchema().setName("COL4").setType("STRING"),
-                new TableFieldSchema().setName("COL5").setType("INTEGER"),
-                new TableFieldSchema().setName("modType").setType("STRING")
-            )
-        );
-    }
+    static class ProcessCDCFn extends DoFn<TableRow, Void> {
+        private final String tableSpec;
 
-    static class MergeToBigQuery extends PTransform<PCollection<TableRow>, PDone> {
-        private final String dimTableSpec;
-
-        MergeToBigQuery(String dimTableSpec) {
-            this.dimTableSpec = dimTableSpec;
+        ProcessCDCFn(String tableSpec) {
+            this.tableSpec = tableSpec;
         }
 
-        @Override
-        public PDone expand(PCollection<TableRow> input) {
-            input.apply("MergeToBigQueryDim", ParDo.of(new DoFn<TableRow, Void>() {
-                @ProcessElement
-                public void processElement(ProcessContext c) {
-                    TableRow row = c.element();
-                    String modType = (String) row.get("modType");
+        @ProcessElement
+        public void processElement(@Element TableRow row) {
+            String modType = (String) row.get("modType");
+            String custId = (String) row.get("cust_id");
+            String query = "";
 
-                    String query = "";
-                    if ("INSERT".equals(modType)) {
-                        query = String.format(
-                            "MERGE INTO `%s` a " +
-                            "USING " +
-                            "(SELECT * FROM `%s`) b " +
-                            "ON a.cust_id = b.cust_id " +
-                            "WHEN NOT MATCHED THEN " +
-                            "INSERT (cust_id, acct_num, COL3, COL4, COL5) " +
-                            "VALUES (b.cust_id, b.acct_num, b.COL3, b.COL4, b.COL5)",
-                            dimTableSpec, stagingTableSpec
-                        );
-                    } else if ("UPDATE".equals(modType)) {
-                        query = String.format(
-                            "MERGE INTO `%s` a " +
-                            "USING " +
-                            "(SELECT * FROM `%s` WHERE modType = 'UPDATE') b " +
-                            "ON a.cust_id = b.cust_id " +
-                            "WHEN MATCHED THEN " +
-                            "UPDATE SET a.COL3 = b.COL3, a.COL4 = b.COL4, a.COL5 = b.COL5",
-                            dimTableSpec, stagingTableSpec
-                        );
-                    } else if ("DELETE".equals(modType)) {
-                        query = String.format(
-                            "MERGE INTO `%s` a " +
-                            "USING " +
-                            "(SELECT * FROM `%s` WHERE modType = 'DELETE') b " +
-                            "ON a.cust_id = b.cust_id " +
-                            "WHEN MATCHED THEN " +
-                            "DELETE WHERE a.cust_id = b.cust_id",
-                            dimTableSpec, stagingTableSpec
-                        );
-                    }
+            if ("INSERT".equals(modType)) {
+                query = String.format(
+                    "INSERT INTO `%s` (cust_id, acct_num, COL3, COL4, COL5) " +
+                    "VALUES ('%s', '%s', %d, '%s', %d)",
+                    tableSpec,
+                    custId,
+                    row.get("acct_num"),
+                    row.get("COL3"),
+                    row.get("COL4"),
+                    row.get("COL5")
+                );
+            } else if ("UPDATE".equals(modType)) {
+                query = String.format(
+                    "UPDATE `%s` SET acct_num = '%s', COL3 = %d, COL4 = '%s', COL5 = %d " +
+                    "WHERE cust_id = '%s'",
+                    tableSpec,
+                    row.get("acct_num"),
+                    row.get("COL3"),
+                    row.get("COL4"),
+                    row.get("COL5"),
+                    custId
+                );
+            } else if ("DELETE".equals(modType)) {
+                query = String.format(
+                    "DELETE FROM `%s` WHERE cust_id = '%s'",
+                    tableSpec,
+                    custId
+                );
+            }
 
-                    try {
-                        BigQuery bigquery = BigQueryOptions.getDefaultInstance().getService();
-                        QueryJobConfiguration queryConfig = QueryJobConfiguration.newBuilder(query).build();
-                        bigquery.query(queryConfig);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }));
-            return PDone.in(input.getPipeline());
+            try {
+                BigQuery bigquery = BigQueryOptions.getDefaultInstance().getService();
+                QueryJobConfiguration queryConfig = QueryJobConfiguration.newBuilder(query).build();
+                bigquery.query(queryConfig);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
     }
 }
