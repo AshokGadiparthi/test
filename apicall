@@ -3,14 +3,20 @@ import com.google.cloud.bigquery.*;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
 import org.apache.beam.sdk.io.gcp.pubsub.PubsubIO;
+import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.transforms.MapElements;
 import org.apache.beam.sdk.transforms.ParDo;
-import org.apache.beam.sdk.transforms.PTransform;
+import org.apache.beam.sdk.transforms.SimpleFunction;
 import org.apache.beam.sdk.values.PCollection;
+import org.apache.beam.sdk.values.PDone;
 import org.json.JSONObject;
 
-public class PubSubToBigQueryCDC {
+public class SpannerToBigQueryCDC {
+
+    public interface Options extends PipelineOptions {
+    }
 
     public static void main(String[] args) {
         PipelineOptionsFactory.register(Options.class);
@@ -23,7 +29,7 @@ public class PubSubToBigQueryCDC {
 
         pipeline
             .apply("ReadMessages", PubsubIO.readStrings().fromSubscription(pubSubSubscription))
-            .apply("ProcessMessages", ParDo.of(new ProcessMessageFn()))
+            .apply("ParseMessages", ParDo.of(new ParseMessageFn()))
             .apply("WriteToBigQueryStaging", BigQueryIO.writeTableRows()
                 .to(stagingTableSpec)
                 .withCreateDisposition(BigQueryIO.Write.CreateDisposition.CREATE_IF_NEEDED)
@@ -34,25 +40,23 @@ public class PubSubToBigQueryCDC {
         pipeline.run().waitUntilFinish();
     }
 
-    public interface Options extends DataflowPipelineOptions {
-    }
-
-    static class ProcessMessageFn extends DoFn<String, TableRow> {
+    static class ParseMessageFn extends DoFn<String, TableRow> {
         @ProcessElement
         public void processElement(@Element String message, OutputReceiver<TableRow> receiver) {
             JSONObject json = new JSONObject(message);
-            String operation = json.getString("operation"); // insert, update, delete
+            String modType = json.getString("modType");
+            JSONObject mod = json.getJSONArray("mods").getJSONObject(0);
+            JSONObject newValues = new JSONObject(mod.getString("newValuesJson"));
+            JSONObject keys = new JSONObject(mod.getString("keysJson"));
+
             TableRow row = new TableRow()
-                .set("customer_id", json.getInt("customer_id"))
-                .set("customer_name", json.getString("customer_name"))
-                .set("gender", json.getString("gender"))
-                .set("age", json.getInt("age"))
-                .set("home_address", json.getString("home_address"))
-                .set("zip_code", json.getInt("zip_code"))
-                .set("city", json.getString("city"))
-                .set("state", json.getString("state"))
-                .set("country", json.getString("country"))
-                .set("operation", operation);
+                .set("cust_id", keys.optString("cust_id", null))
+                .set("acct_num", newValues.optString("acct_num", null))
+                .set("COL3", newValues.optInt("COL3", -1))
+                .set("COL4", newValues.optString("COL4", null))
+                .set("COL5", newValues.optInt("COL5", -1))
+                .set("modType", modType);
+
             receiver.output(row);
         }
     }
@@ -60,16 +64,12 @@ public class PubSubToBigQueryCDC {
     private static TableSchema getStagingSchema() {
         return new TableSchema().setFields(
             ImmutableList.of(
-                new TableFieldSchema().setName("customer_id").setType("INTEGER"),
-                new TableFieldSchema().setName("customer_name").setType("STRING"),
-                new TableFieldSchema().setName("gender").setType("STRING"),
-                new TableFieldSchema().setName("age").setType("INTEGER"),
-                new TableFieldSchema().setName("home_address").setType("STRING"),
-                new TableFieldSchema().setName("zip_code").setType("INTEGER"),
-                new TableFieldSchema().setName("city").setType("STRING"),
-                new TableFieldSchema().setName("state").setType("STRING"),
-                new TableFieldSchema().setName("country").setType("STRING"),
-                new TableFieldSchema().setName("operation").setType("STRING")
+                new TableFieldSchema().setName("cust_id").setType("STRING"),
+                new TableFieldSchema().setName("acct_num").setType("STRING"),
+                new TableFieldSchema().setName("COL3").setType("INTEGER"),
+                new TableFieldSchema().setName("COL4").setType("STRING"),
+                new TableFieldSchema().setName("COL5").setType("INTEGER"),
+                new TableFieldSchema().setName("modType").setType("STRING")
             )
         );
     }
@@ -83,27 +83,45 @@ public class PubSubToBigQueryCDC {
 
         @Override
         public PDone expand(PCollection<TableRow> input) {
-            input.apply("WriteToBigQueryDim", ParDo.of(new DoFn<TableRow, Void>() {
+            input.apply("MergeToBigQueryDim", ParDo.of(new DoFn<TableRow, Void>() {
                 @ProcessElement
                 public void processElement(ProcessContext c) {
                     TableRow row = c.element();
-                    String query = String.format(
-                        "MERGE INTO %s a " +
-                        "USING " +
-                        "( " +
-                        "select customer_id as mergeKey, * from %s " +
-                        "union all " +
-                        "select NULL as mergeKey, a.* from %s a join %s b " +
-                        "on a.customer_id = b.customer_id and b.country != a.country " +
-                        ") b " +
-                        "ON a.customer_id = b.mergeKey " +
-                        "WHEN MATCHED and b.country != a.country THEN " +
-                        "UPDATE SET a.endDate = CURRENT_DATE() - 1 " +
-                        "WHEN NOT MATCHED " +
-                        "THEN INSERT (customer_id, customer_name, gender, age, home_address, zip_code, city, state, country, startDate, endDate) " +
-                        "VALUES (customer_id, customer_name, gender, age, home_address, zip_code, city, state, country, CURRENT_DATE(), '9999-12-31')",
-                        dimTableSpec, "your_dataset.stg_customer", "your_dataset.stg_customer", dimTableSpec
-                    );
+                    String modType = (String) row.get("modType");
+
+                    String query = "";
+                    if ("INSERT".equals(modType)) {
+                        query = String.format(
+                            "MERGE INTO `%s` a " +
+                            "USING " +
+                            "(SELECT * FROM `%s`) b " +
+                            "ON a.cust_id = b.cust_id " +
+                            "WHEN NOT MATCHED THEN " +
+                            "INSERT (cust_id, acct_num, COL3, COL4, COL5) " +
+                            "VALUES (b.cust_id, b.acct_num, b.COL3, b.COL4, b.COL5)",
+                            dimTableSpec, stagingTableSpec
+                        );
+                    } else if ("UPDATE".equals(modType)) {
+                        query = String.format(
+                            "MERGE INTO `%s` a " +
+                            "USING " +
+                            "(SELECT * FROM `%s` WHERE modType = 'UPDATE') b " +
+                            "ON a.cust_id = b.cust_id " +
+                            "WHEN MATCHED THEN " +
+                            "UPDATE SET a.COL3 = b.COL3, a.COL4 = b.COL4, a.COL5 = b.COL5",
+                            dimTableSpec, stagingTableSpec
+                        );
+                    } else if ("DELETE".equals(modType)) {
+                        query = String.format(
+                            "MERGE INTO `%s` a " +
+                            "USING " +
+                            "(SELECT * FROM `%s` WHERE modType = 'DELETE') b " +
+                            "ON a.cust_id = b.cust_id " +
+                            "WHEN MATCHED THEN " +
+                            "DELETE WHERE a.cust_id = b.cust_id",
+                            dimTableSpec, stagingTableSpec
+                        );
+                    }
 
                     try {
                         BigQuery bigquery = BigQueryOptions.getDefaultInstance().getService();
