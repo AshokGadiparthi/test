@@ -1,63 +1,71 @@
-git clone https://github.com/GoogleCloudPlatform/DataflowTemplates.git
-cd DataflowTemplates/v2/spanner-change-streams-to-bigquery
+import com.google.api.services.bigquery.model.TableRow;
+import com.google.cloud.bigquery.*;
+import org.apache.beam.sdk.Pipeline;
+import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
+import org.apache.beam.sdk.io.gcp.pubsub.PubsubIO;
+import org.apache.beam.sdk.options.PipelineOptionsFactory;
+import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.transforms.ParDo;
+import org.apache.beam.sdk.transforms.PTransform;
+import org.apache.beam.sdk.values.PCollection;
+import org.apache.beam.sdk.values.PDone;
+import org.json.JSONObject;
 
-mvn clean package -DskipTests
+public class PubSubToBigQuery {
+    public static void main(String[] args) {
+        PipelineOptionsFactory.register(Options.class);
+        Options options = PipelineOptionsFactory.fromArgs(args).withValidation().as(Options.class);
+        Pipeline pipeline = Pipeline.create(options);
 
+        String pubSubSubscription = "projects/your-project/subscriptions/your-subscription";
+        String bigQueryTableSpec = "your-project:your_dataset.your_table";
 
-gsutil mb -l us-central1 gs://my-bucket
-gsutil cp target/spanner-change-streams-to-bigquery-bundled-0.1.jar gs://my-bucket/templates/spanner-change-streams-to-bigquery.jar
+        pipeline
+            .apply("ReadMessages", PubsubIO.readStrings().fromSubscription(pubSubSubscription))
+            .apply("ProcessMessages", ParDo.of(new ProcessMessageFn()))
+            .apply("WriteToBigQuery", BigQueryIO.writeTableRows()
+                .to(bigQueryTableSpec)
+                .withCreateDisposition(BigQueryIO.Write.CreateDisposition.CREATE_IF_NEEDED)
+                .withWriteDisposition(BigQueryIO.Write.WriteDisposition.WRITE_APPEND)
+                .withSchema(getSchema()));
 
+        pipeline.run().waitUntilFinish();
+    }
 
-{
-  "image": "gcr.io/dataflow-templates/latest/flex/Spanner_Change_Streams_to_BigQuery",
-  "metadata": {
-    "name": "Spanner Change Streams to BigQuery",
-    "description": "Streaming data from Spanner to BigQuery using Change Streams",
-    "parameters": [
-      {
-        "name": "spannerInstanceId",
-        "label": "Spanner Instance ID",
-        "helpText": "The Spanner instance ID",
-        "paramType": "TEXT"
-      },
-      {
-        "name": "spannerDatabaseId",
-        "label": "Spanner Database ID",
-        "helpText": "The Spanner database ID",
-        "paramType": "TEXT"
-      },
-      {
-        "name": "spannerChangeStreamName",
-        "label": "Spanner Change Stream Name",
-        "helpText": "The Spanner Change Stream Name",
-        "paramType": "TEXT"
-      },
-      {
-        "name": "bigQueryDataset",
-        "label": "BigQuery Dataset",
-        "helpText": "The BigQuery dataset name",
-        "paramType": "TEXT"
-      },
-      {
-        "name": "bigQueryTable",
-        "label": "BigQuery Table",
-        "helpText": "The BigQuery table name",
-        "paramType": "TEXT"
-      }
-    ]
-  },
-  "sdk_info": {
-    "language": "JAVA",
-    "version": "2.35.0"
-  }
+    public interface Options extends DataflowPipelineOptions {
+    }
+
+    static class ProcessMessageFn extends DoFn<String, TableRow> {
+        @ProcessElement
+        public void processElement(@Element String message, OutputReceiver<TableRow> receiver) {
+            JSONObject json = new JSONObject(message);
+            TableRow row = new TableRow()
+                .set("customer_id", json.getInt("customer_id"))
+                .set("customer_name", json.getString("customer_name"))
+                .set("gender", json.getString("gender"))
+                .set("age", json.getInt("age"))
+                .set("home_address", json.getString("home_address"))
+                .set("zip_code", json.getInt("zip_code"))
+                .set("city", json.getString("city"))
+                .set("state", json.getString("state"))
+                .set("country", json.getString("country"));
+            receiver.output(row);
+        }
+    }
+
+    private static TableSchema getSchema() {
+        return new TableSchema().setFields(
+            ImmutableList.of(
+                new TableFieldSchema().setName("customer_id").setType("INTEGER"),
+                new TableFieldSchema().setName("customer_name").setType("STRING"),
+                new TableFieldSchema().setName("gender").setType("STRING"),
+                new TableFieldSchema().setName("age").setType("INTEGER"),
+                new TableFieldSchema().setName("home_address").setType("STRING"),
+                new TableFieldSchema().setName("zip_code").setType("INTEGER"),
+                new TableFieldSchema().setName("city").setType("STRING"),
+                new TableFieldSchema().setName("state").setType("STRING"),
+                new TableFieldSchema().setName("country").setType("STRING")
+            )
+        );
+    }
 }
-
-
-
-gsutil cp spanner_to_bq_flex_template.json gs://my-bucket/templates/
-
-
-gcloud dataflow flex-template run "spanner-cdc-to-bq" \
-  --template-file-gcs-location="gs://my-bucket/templates/spanner_to_bq_flex_template.json" \
-  --parameters spannerInstanceId=my-instance,spannerDatabaseId=my-database,spannerChangeStreamName=SingerStream,bigQueryDataset=my_dataset,bigQueryTable=my_table \
-  --region=us-central1
