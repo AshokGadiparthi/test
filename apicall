@@ -9,11 +9,7 @@ import org.apache.beam.sdk.io.gcp.pubsub.PubsubIO;
 import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.transforms.DoFn;
-import org.apache.beam.sdk.transforms.MapElements;
 import org.apache.beam.sdk.transforms.ParDo;
-import org.apache.beam.sdk.transforms.SimpleFunction;
-import org.apache.beam.sdk.values.PCollection;
-import org.apache.beam.sdk.values.PDone;
 import org.json.JSONObject;
 
 public class SpannerToBigQueryCDC {
@@ -63,7 +59,8 @@ public class SpannerToBigQueryCDC {
                 .set("COL3", newValues.optInt("COL3", -1))
                 .set("COL4", newValues.optString("COL4", null))
                 .set("COL5", newValues.optInt("COL5", -1))
-                .set("modType", modType);
+                .set("modType", modType)
+                .set("newValuesJson", newValues.toString());
 
             receiver.output(row);
         }
@@ -80,6 +77,8 @@ public class SpannerToBigQueryCDC {
         public void processElement(@Element TableRow row) {
             String modType = (String) row.get("modType");
             String custId = (String) row.get("cust_id");
+            String newValuesJsonStr = (String) row.get("newValuesJson");
+            JSONObject newValuesJson = new JSONObject(newValuesJsonStr);
             String query = "";
 
             if ("INSERT".equals(modType)) {
@@ -94,16 +93,24 @@ public class SpannerToBigQueryCDC {
                     row.get("COL5")
                 );
             } else if ("UPDATE".equals(modType)) {
-                query = String.format(
-                    "UPDATE `%s` SET acct_num = '%s', COL3 = %d, COL4 = '%s', COL5 = %d " +
-                    "WHERE cust_id = '%s'",
-                    tableSpec,
-                    row.get("acct_num"),
-                    row.get("COL3"),
-                    row.get("COL4"),
-                    row.get("COL5"),
-                    custId
-                );
+                StringBuilder updateQueryBuilder = new StringBuilder();
+                updateQueryBuilder.append(String.format("UPDATE `%s` SET ", tableSpec));
+
+                boolean first = true;
+                for (String key : newValuesJson.keySet()) {
+                    if (!first) {
+                        updateQueryBuilder.append(", ");
+                    }
+                    updateQueryBuilder.append(key).append(" = ");
+                    if (newValuesJson.get(key) instanceof String) {
+                        updateQueryBuilder.append("'").append(newValuesJson.getString(key)).append("'");
+                    } else {
+                        updateQueryBuilder.append(newValuesJson.get(key));
+                    }
+                    first = false;
+                }
+                updateQueryBuilder.append(" WHERE cust_id = '").append(custId).append("'");
+                query = updateQueryBuilder.toString();
             } else if ("DELETE".equals(modType)) {
                 query = String.format(
                     "DELETE FROM `%s` WHERE cust_id = '%s'",
