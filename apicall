@@ -8,26 +8,28 @@ import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.values.PCollection;
-import org.apache.beam.sdk.values.PDone;
 import org.json.JSONObject;
 
-public class PubSubToBigQuery {
+public class PubSubToBigQueryCDC {
+
     public static void main(String[] args) {
         PipelineOptionsFactory.register(Options.class);
         Options options = PipelineOptionsFactory.fromArgs(args).withValidation().as(Options.class);
         Pipeline pipeline = Pipeline.create(options);
 
         String pubSubSubscription = "projects/your-project/subscriptions/your-subscription";
-        String bigQueryTableSpec = "your-project:your_dataset.your_table";
+        String stagingTableSpec = "your-project:your_dataset.stg_customer";
+        String dimTableSpec = "your-project:your_dataset.dim_customer";
 
         pipeline
             .apply("ReadMessages", PubsubIO.readStrings().fromSubscription(pubSubSubscription))
             .apply("ProcessMessages", ParDo.of(new ProcessMessageFn()))
-            .apply("WriteToBigQuery", BigQueryIO.writeTableRows()
-                .to(bigQueryTableSpec)
+            .apply("WriteToBigQueryStaging", BigQueryIO.writeTableRows()
+                .to(stagingTableSpec)
                 .withCreateDisposition(BigQueryIO.Write.CreateDisposition.CREATE_IF_NEEDED)
                 .withWriteDisposition(BigQueryIO.Write.WriteDisposition.WRITE_APPEND)
-                .withSchema(getSchema()));
+                .withSchema(getStagingSchema()))
+            .apply("MergeToBigQueryDim", new MergeToBigQuery(dimTableSpec));
 
         pipeline.run().waitUntilFinish();
     }
@@ -39,6 +41,7 @@ public class PubSubToBigQuery {
         @ProcessElement
         public void processElement(@Element String message, OutputReceiver<TableRow> receiver) {
             JSONObject json = new JSONObject(message);
+            String operation = json.getString("operation"); // insert, update, delete
             TableRow row = new TableRow()
                 .set("customer_id", json.getInt("customer_id"))
                 .set("customer_name", json.getString("customer_name"))
@@ -48,12 +51,13 @@ public class PubSubToBigQuery {
                 .set("zip_code", json.getInt("zip_code"))
                 .set("city", json.getString("city"))
                 .set("state", json.getString("state"))
-                .set("country", json.getString("country"));
+                .set("country", json.getString("country"))
+                .set("operation", operation);
             receiver.output(row);
         }
     }
 
-    private static TableSchema getSchema() {
+    private static TableSchema getStagingSchema() {
         return new TableSchema().setFields(
             ImmutableList.of(
                 new TableFieldSchema().setName("customer_id").setType("INTEGER"),
@@ -64,8 +68,53 @@ public class PubSubToBigQuery {
                 new TableFieldSchema().setName("zip_code").setType("INTEGER"),
                 new TableFieldSchema().setName("city").setType("STRING"),
                 new TableFieldSchema().setName("state").setType("STRING"),
-                new TableFieldSchema().setName("country").setType("STRING")
+                new TableFieldSchema().setName("country").setType("STRING"),
+                new TableFieldSchema().setName("operation").setType("STRING")
             )
         );
+    }
+
+    static class MergeToBigQuery extends PTransform<PCollection<TableRow>, PDone> {
+        private final String dimTableSpec;
+
+        MergeToBigQuery(String dimTableSpec) {
+            this.dimTableSpec = dimTableSpec;
+        }
+
+        @Override
+        public PDone expand(PCollection<TableRow> input) {
+            input.apply("WriteToBigQueryDim", ParDo.of(new DoFn<TableRow, Void>() {
+                @ProcessElement
+                public void processElement(ProcessContext c) {
+                    TableRow row = c.element();
+                    String query = String.format(
+                        "MERGE INTO %s a " +
+                        "USING " +
+                        "( " +
+                        "select customer_id as mergeKey, * from %s " +
+                        "union all " +
+                        "select NULL as mergeKey, a.* from %s a join %s b " +
+                        "on a.customer_id = b.customer_id and b.country != a.country " +
+                        ") b " +
+                        "ON a.customer_id = b.mergeKey " +
+                        "WHEN MATCHED and b.country != a.country THEN " +
+                        "UPDATE SET a.endDate = CURRENT_DATE() - 1 " +
+                        "WHEN NOT MATCHED " +
+                        "THEN INSERT (customer_id, customer_name, gender, age, home_address, zip_code, city, state, country, startDate, endDate) " +
+                        "VALUES (customer_id, customer_name, gender, age, home_address, zip_code, city, state, country, CURRENT_DATE(), '9999-12-31')",
+                        dimTableSpec, "your_dataset.stg_customer", "your_dataset.stg_customer", dimTableSpec
+                    );
+
+                    try {
+                        BigQuery bigquery = BigQueryOptions.getDefaultInstance().getService();
+                        QueryJobConfiguration queryConfig = QueryJobConfiguration.newBuilder(query).build();
+                        bigquery.query(queryConfig);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }));
+            return PDone.in(input.getPipeline());
+        }
     }
 }
