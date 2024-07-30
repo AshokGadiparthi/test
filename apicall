@@ -1,1 +1,4 @@
-I've completed the remaining part of job3 and successfully implemented CDC from Spanner to Pubsub to BQ using two Dataflow jobs: the first identifies changes in Spanner and writes logs to Pubsub, and the second subscribes to Pubsub messages, processes them based on 'modType' (Insert, Update, Delete), and replicates the changes in the BigQuery table
+// Convert input PCollection<String> to PCollection<KV<Void, String>>
+        PCollection<KV<Void, String>> keyedInput = input.apply(MapElements
+            .into(TypeDescriptors.kvs(TypeDescriptors.voids(), TypeDescriptors.strings()))
+            .via((String element) -> KV.of((Void) null, element)));
