@@ -1,4 +1,22 @@
-// Convert input PCollection<String> to PCollection<KV<Void, String>>
-        PCollection<KV<Void, String>> keyedInput = input.apply(MapElements
-            .into(TypeDescriptors.kvs(TypeDescriptors.voids(), TypeDescriptors.strings()))
-            .via((String element) -> KV.of((Void) null, element)));
+// Group elements into batches
+        PCollection<KV<Void, Iterable<String>>> batchedInput = keyedInput
+            .apply(GroupIntoBatches.ofSize(1000)); // Adjust batch size as needed
+
+        // Convert batches to TableRow and write to BigQuery
+        batchedInput.apply("ProcessBatch", ParDo.of(new DoFn<KV<Void, Iterable<String>>, TableRow>() {
+            @ProcessElement
+            public void processElement(@Element KV<Void, Iterable<String>> element, OutputReceiver<TableRow> out) {
+                for (String item : element.getValue()) {
+                    // Convert each string to a TableRow
+                    TableRow row = new TableRow();
+                    row.set("your_column_name", item); // Adjust the column name and value accordingly
+                    // Add additional columns as needed
+                    out.output(row);
+                }
+            }
+        }))
+        .apply("WriteToBigQuery", BigQueryIO.writeTableRows()
+            .to("your-project:your_dataset.your_table")
+            .withWriteDisposition(BigQueryIO.Write.WriteDisposition.WRITE_APPEND)
+        );
+
