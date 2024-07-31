@@ -1,20 +1,4 @@
-import com.google.cloud.bigquery.BigQuery;
-import com.google.cloud.bigquery.BigQueryOptions;
-import com.google.cloud.bigquery.Job;
-import com.google.cloud.bigquery.JobId;
-import com.google.cloud.bigquery.JobInfo;
-import com.google.cloud.bigquery.QueryJobConfiguration;
-import org.apache.beam.sdk.transforms.DoFn;
-import org.apache.beam.sdk.values.PCollection;
-import org.apache.beam.sdk.values.KV;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.*;
-
-public class BatchDmlFn extends DoFn<String, Void> {
-
-    private static final int MAX_CONCURRENT_DML = 2;
+private static final int MAX_CONCURRENT_DML = 2;
     private static final int BATCH_SIZE = 20;
 
     private transient BigQuery bigquery;
@@ -47,10 +31,10 @@ public class BatchDmlFn extends DoFn<String, Void> {
 
     private void executeBatch(List<String> queries) {
         ExecutorService executor = Executors.newFixedThreadPool(MAX_CONCURRENT_DML);
-        List<Future<Void>> futures = new ArrayList<>();
+        List<Callable<Void>> tasks = new ArrayList<>();
 
         for (List<String> subBatch : partition(queries, BATCH_SIZE)) {
-            Runnable task = () -> {
+            tasks.add(() -> {
                 try {
                     for (String dmlQuery : subBatch) {
                         JobId jobId = JobId.of("your_job_id");
@@ -64,19 +48,25 @@ public class BatchDmlFn extends DoFn<String, Void> {
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
-            };
-            futures.add(executor.submit(task));
+                return null; // Callable<Void> requires a return value, which is null here
+            });
         }
 
-        // Wait for all tasks to complete
-        for (Future<Void> future : futures) {
-            try {
-                future.get();
-            } catch (InterruptedException | ExecutionException e) {
-                e.printStackTrace();
+        try {
+            // Submit tasks and wait for all to complete
+            List<Future<Void>> futures = executor.invokeAll(tasks);
+            for (Future<Void> future : futures) {
+                try {
+                    future.get(); // Ensure any exceptions are propagated
+                } catch (InterruptedException | ExecutionException e) {
+                    e.printStackTrace();
+                }
             }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            executor.shutdown();
         }
-        executor.shutdown();
     }
 
     private <T> List<List<T>> partition(List<T> list, int size) {
@@ -86,4 +76,3 @@ public class BatchDmlFn extends DoFn<String, Void> {
         }
         return partitions;
     }
-}
