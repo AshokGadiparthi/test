@@ -1,38 +1,3 @@
-import com.google.api.services.bigquery.model.TableRow;
-import org.apache.beam.sdk.transforms.DoFn;
-import org.apache.beam.sdk.values.KV;
-
-public class TableRowToDmlFn extends DoFn<TableRow, String> {
-
-    @ProcessElement
-    public void processElement(ProcessContext c) {
-        TableRow row = c.element();
-        String operationType = (String) row.get("modType"); // Assumes `modType` field specifies operation type
-        String dmlQuery = "";
-
-        switch (operationType) {
-            case "INSERT":
-                dmlQuery = String.format("INSERT INTO `your_dataset.your_table` (field1, field2) VALUES (%s, %s)", 
-                        row.get("field1"), row.get("field2"));
-                break;
-            case "UPDATE":
-                dmlQuery = String.format("UPDATE `your_dataset.your_table` SET field1 = %s WHERE field2 = %s",
-                        row.get("field1"), row.get("field2"));
-                break;
-            case "DELETE":
-                dmlQuery = String.format("DELETE FROM `your_dataset.your_table` WHERE field1 = %s",
-                        row.get("field1"));
-                break;
-            default:
-                // Handle unexpected operation types
-                break;
-        }
-
-        c.output(dmlQuery);
-    }
-}
-
-
 import com.google.cloud.bigquery.BigQuery;
 import com.google.cloud.bigquery.BigQueryOptions;
 import com.google.cloud.bigquery.Job;
@@ -41,6 +6,7 @@ import com.google.cloud.bigquery.JobInfo;
 import com.google.cloud.bigquery.QueryJobConfiguration;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.values.PCollection;
+import org.apache.beam.sdk.values.KV;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -52,6 +18,7 @@ public class BatchDmlFn extends DoFn<String, Void> {
     private static final int BATCH_SIZE = 20;
 
     private transient BigQuery bigquery;
+    private List<String> batch = new ArrayList<>();
 
     @Setup
     public void setup() {
@@ -59,21 +26,22 @@ public class BatchDmlFn extends DoFn<String, Void> {
     }
 
     @ProcessElement
-    public void processElement(ProcessContext c, OutputReceiver<Void> out) {
-        List<String> queries = new ArrayList<>();
-        queries.add(c.element());
+    public void processElement(ProcessContext c) {
+        batch.add(c.element());
 
-        if (queries.size() >= BATCH_SIZE) {
-            // Execute the batch of DML queries
-            executeBatch(queries);
+        // If batch is full, process it
+        if (batch.size() >= BATCH_SIZE) {
+            executeBatch(new ArrayList<>(batch));
+            batch.clear();
         }
     }
 
     @FinishBundle
     public void finishBundle(FinishBundleContext c) {
-        // Process any remaining queries
+        // Process any remaining queries that didn't make up a full batch
         if (!batch.isEmpty()) {
-            executeBatch(batch);
+            executeBatch(new ArrayList<>(batch));
+            batch.clear();
         }
     }
 
@@ -81,10 +49,10 @@ public class BatchDmlFn extends DoFn<String, Void> {
         ExecutorService executor = Executors.newFixedThreadPool(MAX_CONCURRENT_DML);
         List<Future<Void>> futures = new ArrayList<>();
 
-        for (List<String> batch : partition(queries, BATCH_SIZE)) {
+        for (List<String> subBatch : partition(queries, BATCH_SIZE)) {
             Runnable task = () -> {
                 try {
-                    for (String dmlQuery : batch) {
+                    for (String dmlQuery : subBatch) {
                         JobId jobId = JobId.of("your_job_id");
                         QueryJobConfiguration queryConfig = QueryJobConfiguration.newBuilder(dmlQuery).build();
                         Job job = bigquery.create(JobInfo.newBuilder(queryConfig).setJobId(jobId).build());
@@ -117,34 +85,5 @@ public class BatchDmlFn extends DoFn<String, Void> {
             partitions.add(list.subList(i, Math.min(i + size, list.size())));
         }
         return partitions;
-    }
-}
-
-
-
-import org.apache.beam.sdk.Pipeline;
-import org.apache.beam.sdk.io.TextIO;
-import org.apache.beam.sdk.transforms.ParDo;
-import org.apache.beam.sdk.values.PCollection;
-import com.google.api.services.bigquery.model.TableRow;
-
-public class BigQueryDmlPipeline {
-
-    public static void main(String[] args) {
-        Pipeline p = Pipeline.create();
-
-        // Read JSON messages
-        PCollection<String> input = p.apply("ReadJsonMessages", TextIO.read().from("gs://your_bucket/your_file.json"));
-
-        // Convert JSON strings to TableRow
-        PCollection<TableRow> tableRows = input.apply("JsonToTableRow", ParDo.of(new JsonToTableRowFn()));
-
-        // Convert TableRow to DML queries
-        PCollection<String> dmlQueries = tableRows.apply("TableRowToDml", ParDo.of(new TableRowToDmlFn()));
-
-        // Batch and execute DML queries
-        dmlQueries.apply("BatchDml", ParDo.of(new BatchDmlFn()));
-
-        p.run().waitUntilFinish();
     }
 }
