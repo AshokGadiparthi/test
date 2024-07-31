@@ -1,20 +1,56 @@
+import com.google.api.services.bigquery.model.TableRow;
+import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.values.KV;
+
+public class TableRowToDmlFn extends DoFn<TableRow, KV<String, String>> {
+
+    @ProcessElement
+    public void processElement(ProcessContext c) {
+        TableRow row = c.element();
+        String operationType = (String) row.get("modType"); // Assumes `modType` field specifies operation type
+        String dmlQuery = "";
+
+        switch (operationType) {
+            case "INSERT":
+                dmlQuery = String.format("INSERT INTO `your_dataset.your_table` (field1, field2) VALUES (%s, %s)", 
+                        row.get("field1"), row.get("field2"));
+                break;
+            case "UPDATE":
+                dmlQuery = String.format("UPDATE `your_dataset.your_table` SET field1 = %s WHERE field2 = %s",
+                        row.get("field1"), row.get("field2"));
+                break;
+            case "DELETE":
+                dmlQuery = String.format("DELETE FROM `your_dataset.your_table` WHERE field1 = %s",
+                        row.get("field1"));
+                break;
+            default:
+                // Handle unexpected operation types
+                break;
+        }
+
+        c.output(KV.of(operationType, dmlQuery));
+    }
+}
+
+
 import com.google.cloud.bigquery.BigQuery;
 import com.google.cloud.bigquery.BigQueryOptions;
-import com.google.cloud.bigquery.InsertAllRequest;
-import com.google.cloud.bigquery.InsertAllResponse;
+import com.google.cloud.bigquery.QueryJobConfiguration;
+import com.google.cloud.bigquery.Job;
+import com.google.cloud.bigquery.JobId;
+import com.google.cloud.bigquery.JobInfo;
 import org.apache.beam.sdk.transforms.DoFn;
-import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.PCollection;
-import org.apache.beam.sdk.values.TypeDescriptor;
+import org.apache.beam.sdk.values.KV;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.*;
 
-public class BatchTableRowFn extends DoFn<TableRow, Void> {
+public class BatchDmlFn extends DoFn<KV<String, String>, Void> {
 
-    private static final int MAX_CONCURRENT_INSERTS = 2;
-    private static final int BATCH_SIZE = 20;
+    private static final int MAX_CONCURRENT_DML = 2;
+    private static final int MAX_BATCH_SIZE = 20;
 
     private transient BigQuery bigquery;
 
@@ -25,51 +61,49 @@ public class BatchTableRowFn extends DoFn<TableRow, Void> {
 
     @ProcessElement
     public void processElement(ProcessContext c, OutputReceiver<Void> out) {
-        // Create a batching buffer
-        List<TableRow> batch = new ArrayList<>();
-        batch.add(c.element());
+        List<KV<String, String>> queries = new ArrayList<>();
+        queries.add(c.element());
 
-        // If batch is full, process it
-        if (batch.size() >= BATCH_SIZE) {
-            // Execute batch insert
-            executeBatch(batch);
-            batch.clear();
+        if (queries.size() >= MAX_BATCH_SIZE) {
+            // Execute the batch of DML queries
+            executeBatch(queries);
         }
     }
 
     @FinishBundle
     public void finishBundle(FinishBundleContext c) {
-        // Process remaining elements
+        // Process any remaining queries
         if (!batch.isEmpty()) {
             executeBatch(batch);
         }
     }
 
-    private void executeBatch(List<TableRow> batch) {
-        ExecutorService executor = Executors.newFixedThreadPool(MAX_CONCURRENT_INSERTS);
-        List<Future<InsertAllResponse>> futures = new ArrayList<>();
+    private void executeBatch(List<KV<String, String>> queries) {
+        ExecutorService executor = Executors.newFixedThreadPool(MAX_CONCURRENT_DML);
+        List<Future<Void>> futures = new ArrayList<>();
 
-        // Submit batch insert tasks
-        Runnable task = () -> {
-            try {
-                // Prepare InsertAllRequest
-                InsertAllRequest.Builder builder = InsertAllRequest.newBuilder("your_dataset", "your_table");
-                for (TableRow row : batch) {
-                    builder.addRow(row);
+        for (List<KV<String, String>> batch : partition(queries, MAX_BATCH_SIZE)) {
+            Runnable task = () -> {
+                try {
+                    for (KV<String, String> kv : batch) {
+                        String dmlQuery = kv.getValue();
+                        JobId jobId = JobId.of("your_job_id");
+                        QueryJobConfiguration queryConfig = QueryJobConfiguration.newBuilder(dmlQuery).build();
+                        Job job = bigquery.create(JobInfo.newBuilder(queryConfig).setJobId(jobId).build());
+                        job = job.waitFor(); // Wait for the job to complete
+                        if (job.hasErrors()) {
+                            // Handle errors
+                        }
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
-                InsertAllRequest request = builder.build();
-                InsertAllResponse response = bigquery.insertAll(request);
-                if (response.hasErrors()) {
-                    // Handle errors
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        };
-        futures.add(executor.submit(task));
+            };
+            futures.add(executor.submit(task));
+        }
 
         // Wait for all tasks to complete
-        for (Future<InsertAllResponse> future : futures) {
+        for (Future<Void> future : futures) {
             try {
                 future.get();
             } catch (InterruptedException | ExecutionException e) {
@@ -77,5 +111,41 @@ public class BatchTableRowFn extends DoFn<TableRow, Void> {
             }
         }
         executor.shutdown();
+    }
+
+    private <T> List<List<T>> partition(List<T> list, int size) {
+        List<List<T>> partitions = new ArrayList<>();
+        for (int i = 0; i < list.size(); i += size) {
+            partitions.add(list.subList(i, Math.min(i + size, list.size())));
+        }
+        return partitions;
+    }
+}
+
+
+import org.apache.beam.sdk.Pipeline;
+import org.apache.beam.sdk.io.TextIO;
+import org.apache.beam.sdk.transforms.ParDo;
+import org.apache.beam.sdk.values.PCollection;
+import com.google.api.services.bigquery.model.TableRow;
+
+public class BigQueryDmlPipeline {
+
+    public static void main(String[] args) {
+        Pipeline p = Pipeline.create();
+
+        // Read JSON messages from source
+        PCollection<String> input = p.apply("ReadJsonMessages", TextIO.read().from("gs://your_bucket/your_file.json"));
+
+        // Convert JSON strings to TableRow
+        PCollection<TableRow> tableRows = input.apply("JsonToTableRow", ParDo.of(new JsonToTableRowFn()));
+
+        // Convert TableRow to DML queries
+        PCollection<KV<String, String>> dmlQueries = tableRows.apply("TableRowToDml", ParDo.of(new TableRowToDmlFn()));
+
+        // Batch and execute DML queries
+        dmlQueries.apply("BatchDml", ParDo.of(new BatchDmlFn()));
+
+        p.run().waitUntilFinish();
     }
 }
