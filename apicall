@@ -1,22 +1,81 @@
-// Group elements into batches
-        PCollection<KV<Void, Iterable<String>>> batchedInput = keyedInput
-            .apply(GroupIntoBatches.ofSize(1000)); // Adjust batch size as needed
+import com.google.cloud.bigquery.BigQuery;
+import com.google.cloud.bigquery.BigQueryOptions;
+import com.google.cloud.bigquery.InsertAllRequest;
+import com.google.cloud.bigquery.InsertAllResponse;
+import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.transforms.ParDo;
+import org.apache.beam.sdk.values.PCollection;
+import org.apache.beam.sdk.values.TypeDescriptor;
 
-        // Convert batches to TableRow and write to BigQuery
-        batchedInput.apply("ProcessBatch", ParDo.of(new DoFn<KV<Void, Iterable<String>>, TableRow>() {
-            @ProcessElement
-            public void processElement(@Element KV<Void, Iterable<String>> element, OutputReceiver<TableRow> out) {
-                for (String item : element.getValue()) {
-                    // Convert each string to a TableRow
-                    TableRow row = new TableRow();
-                    row.set("your_column_name", item); // Adjust the column name and value accordingly
-                    // Add additional columns as needed
-                    out.output(row);
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.*;
+
+public class BatchTableRowFn extends DoFn<TableRow, Void> {
+
+    private static final int MAX_CONCURRENT_INSERTS = 2;
+    private static final int BATCH_SIZE = 20;
+
+    private transient BigQuery bigquery;
+
+    @Setup
+    public void setup() {
+        bigquery = BigQueryOptions.getDefaultInstance().getService();
+    }
+
+    @ProcessElement
+    public void processElement(ProcessContext c, OutputReceiver<Void> out) {
+        // Create a batching buffer
+        List<TableRow> batch = new ArrayList<>();
+        batch.add(c.element());
+
+        // If batch is full, process it
+        if (batch.size() >= BATCH_SIZE) {
+            // Execute batch insert
+            executeBatch(batch);
+            batch.clear();
+        }
+    }
+
+    @FinishBundle
+    public void finishBundle(FinishBundleContext c) {
+        // Process remaining elements
+        if (!batch.isEmpty()) {
+            executeBatch(batch);
+        }
+    }
+
+    private void executeBatch(List<TableRow> batch) {
+        ExecutorService executor = Executors.newFixedThreadPool(MAX_CONCURRENT_INSERTS);
+        List<Future<InsertAllResponse>> futures = new ArrayList<>();
+
+        // Submit batch insert tasks
+        Runnable task = () -> {
+            try {
+                // Prepare InsertAllRequest
+                InsertAllRequest.Builder builder = InsertAllRequest.newBuilder("your_dataset", "your_table");
+                for (TableRow row : batch) {
+                    builder.addRow(row);
                 }
+                InsertAllRequest request = builder.build();
+                InsertAllResponse response = bigquery.insertAll(request);
+                if (response.hasErrors()) {
+                    // Handle errors
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
             }
-        }))
-        .apply("WriteToBigQuery", BigQueryIO.writeTableRows()
-            .to("your-project:your_dataset.your_table")
-            .withWriteDisposition(BigQueryIO.Write.WriteDisposition.WRITE_APPEND)
-        );
+        };
+        futures.add(executor.submit(task));
 
+        // Wait for all tasks to complete
+        for (Future<InsertAllResponse> future : futures) {
+            try {
+                future.get();
+            } catch (InterruptedException | ExecutionException e) {
+                e.printStackTrace();
+            }
+        }
+        executor.shutdown();
+    }
+}
