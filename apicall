@@ -2,7 +2,7 @@ import com.google.api.services.bigquery.model.TableRow;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.values.KV;
 
-public class TableRowToDmlFn extends DoFn<TableRow, KV<String, String>> {
+public class TableRowToDmlFn extends DoFn<TableRow, String> {
 
     @ProcessElement
     public void processElement(ProcessContext c) {
@@ -28,29 +28,28 @@ public class TableRowToDmlFn extends DoFn<TableRow, KV<String, String>> {
                 break;
         }
 
-        c.output(KV.of(operationType, dmlQuery));
+        c.output(dmlQuery);
     }
 }
 
 
 import com.google.cloud.bigquery.BigQuery;
 import com.google.cloud.bigquery.BigQueryOptions;
-import com.google.cloud.bigquery.QueryJobConfiguration;
 import com.google.cloud.bigquery.Job;
 import com.google.cloud.bigquery.JobId;
 import com.google.cloud.bigquery.JobInfo;
+import com.google.cloud.bigquery.QueryJobConfiguration;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.values.PCollection;
-import org.apache.beam.sdk.values.KV;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.*;
 
-public class BatchDmlFn extends DoFn<KV<String, String>, Void> {
+public class BatchDmlFn extends DoFn<String, Void> {
 
     private static final int MAX_CONCURRENT_DML = 2;
-    private static final int MAX_BATCH_SIZE = 20;
+    private static final int BATCH_SIZE = 20;
 
     private transient BigQuery bigquery;
 
@@ -61,10 +60,10 @@ public class BatchDmlFn extends DoFn<KV<String, String>, Void> {
 
     @ProcessElement
     public void processElement(ProcessContext c, OutputReceiver<Void> out) {
-        List<KV<String, String>> queries = new ArrayList<>();
+        List<String> queries = new ArrayList<>();
         queries.add(c.element());
 
-        if (queries.size() >= MAX_BATCH_SIZE) {
+        if (queries.size() >= BATCH_SIZE) {
             // Execute the batch of DML queries
             executeBatch(queries);
         }
@@ -78,15 +77,14 @@ public class BatchDmlFn extends DoFn<KV<String, String>, Void> {
         }
     }
 
-    private void executeBatch(List<KV<String, String>> queries) {
+    private void executeBatch(List<String> queries) {
         ExecutorService executor = Executors.newFixedThreadPool(MAX_CONCURRENT_DML);
         List<Future<Void>> futures = new ArrayList<>();
 
-        for (List<KV<String, String>> batch : partition(queries, MAX_BATCH_SIZE)) {
+        for (List<String> batch : partition(queries, BATCH_SIZE)) {
             Runnable task = () -> {
                 try {
-                    for (KV<String, String> kv : batch) {
-                        String dmlQuery = kv.getValue();
+                    for (String dmlQuery : batch) {
                         JobId jobId = JobId.of("your_job_id");
                         QueryJobConfiguration queryConfig = QueryJobConfiguration.newBuilder(dmlQuery).build();
                         Job job = bigquery.create(JobInfo.newBuilder(queryConfig).setJobId(jobId).build());
@@ -123,6 +121,7 @@ public class BatchDmlFn extends DoFn<KV<String, String>, Void> {
 }
 
 
+
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.TextIO;
 import org.apache.beam.sdk.transforms.ParDo;
@@ -134,14 +133,14 @@ public class BigQueryDmlPipeline {
     public static void main(String[] args) {
         Pipeline p = Pipeline.create();
 
-        // Read JSON messages from source
+        // Read JSON messages
         PCollection<String> input = p.apply("ReadJsonMessages", TextIO.read().from("gs://your_bucket/your_file.json"));
 
         // Convert JSON strings to TableRow
         PCollection<TableRow> tableRows = input.apply("JsonToTableRow", ParDo.of(new JsonToTableRowFn()));
 
         // Convert TableRow to DML queries
-        PCollection<KV<String, String>> dmlQueries = tableRows.apply("TableRowToDml", ParDo.of(new TableRowToDmlFn()));
+        PCollection<String> dmlQueries = tableRows.apply("TableRowToDml", ParDo.of(new TableRowToDmlFn()));
 
         // Batch and execute DML queries
         dmlQueries.apply("BatchDml", ParDo.of(new BatchDmlFn()));
