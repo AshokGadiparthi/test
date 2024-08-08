@@ -1,133 +1,23 @@
-Dear [Recipient's Name],
+1. Query Performance Monitoring
+Implementation: Regularly queried the INFORMATION_SCHEMA.JOBS_BY_PROJECT table to monitor the real-time status of queries, including those currently running, pending, or completed. Implemented automated scripts to track and visualize these metrics.
+Outcome: Enabled proactive identification of long-running or stalled queries, which allowed us to take timely action on optimization. This approach significantly improved performance and reduced operational costs by addressing issues before they escalated.
 
-I hope this message finds you well.
+2. Cost Analysis by Query
+Implementation: Analyzed the INFORMATION_SCHEMA.JOBS_BY_PROJECT table to assess the cost associated with each query by examining fields such as total_bytes_billed and the query_plan. Created detailed reports to identify queries with high costs.
+Outcome: Identified high-cost queries and focused optimization efforts on them. For instance, optimized query structure and reduced the volume of data scanned. This targeted approach led to a noticeable reduction in overall query costs.
 
-We have implemented two of the suggested solutions for handling BigQuery DML operations, but we are still encountering rate limit exceptions. Here’s a brief overview of the approaches we have tried and our current implementation:
+3. Query Optimization Insights
+Implementation: Utilized data from INFORMATION_SCHEMA.JOBS_BY_PROJECT to identify patterns in slow-running queries, pinpointing common bottlenecks and inefficient operations. Conducted detailed analysis of query execution details.
+Outcome: Gained actionable insights into query design improvements. Implemented changes such as restructuring queries, adding necessary indexes, and employing partitioning and clustering. These adjustments led to enhanced query performance and cost savings.
 
-Option 1: BigQuery Job for Merging Every 5 Minutes
+4. Pending Query Analysis
+Implementation: Monitored the INFORMATION_SCHEMA.JOBS_BY_PROJECT table to track pending queries and their estimated completion times. Implemented scheduling adjustments based on this data.
+Outcome: Optimized query load management and resource scheduling. Prioritized critical queries effectively, which reduced delays and associated costs from query queuing.
 
-We have implemented this solution but found it inadequate due to the requirement for real-time updates. This batch-based approach does not meet our needs.
-Option 2: BigQuery CDC to Merge Using Two Dataflow Jobs
+5. Query History and Performance Trends
+Implementation: Analyzed historical data from INFORMATION_SCHEMA.JOBS to identify long-term trends in query performance and cost. Developed dashboards to visualize performance metrics over time.
+Outcome: Provided a comprehensive view of performance trends, allowing for strategic long-term optimizations. This historical perspective helped in identifying and addressing recurring issues, leading to sustained improvements in cost management.
 
-We have set up one Dataflow job to write logs to a Pub/Sub topic and another job to read from Pub/Sub and perform DML operations (insert, delete, update). Despite this, we are still experiencing rate limit exceptions.
-Current Implementation:
-
-We have created a custom Dataflow function BatchDmlFn as shown below, which is intended to batch DML operations and execute them concurrently. However, we are still facing rate limit issues.
-
-java
-Copy code
-import com.google.cloud.bigquery.BigQuery;
-import com.google.cloud.bigquery.BigQueryOptions;
-import com.google.cloud.bigquery.Job;
-import com.google.cloud.bigquery.JobId;
-import com.google.cloud.bigquery.JobInfo;
-import com.google.cloud.bigquery.QueryJobConfiguration;
-import org.apache.beam.sdk.transforms.DoFn;
-import org.apache.beam.sdk.values.PCollection;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.*;
-
-public class BatchDmlFn extends DoFn<String, Void> {
-
-    private static final int MAX_CONCURRENT_DML = 2;
-    private static final int BATCH_SIZE = 20;
-
-    private transient BigQuery bigquery;
-    private List<String> batch = new ArrayList<>();
-
-    @Setup
-    public void setup() {
-        bigquery = BigQueryOptions.getDefaultInstance().getService();
-    }
-
-    @ProcessElement
-    public void processElement(ProcessContext c) {
-        batch.add(c.element());
-
-        if (batch.size() >= BATCH_SIZE) {
-            executeBatch(new ArrayList<>(batch));
-            batch.clear();
-        }
-    }
-
-    @FinishBundle
-    public void finishBundle(FinishBundleContext c) {
-        if (!batch.isEmpty()) {
-            executeBatch(new ArrayList<>(batch));
-            batch.clear();
-        }
-    }
-
-    private void executeBatch(List<String> queries) {
-        ExecutorService executor = Executors.newFixedThreadPool(MAX_CONCURRENT_DML);
-        List<Callable<Void>> tasks = new ArrayList<>();
-
-        for (List<String> subBatch : partition(queries, BATCH_SIZE)) {
-            tasks.add(() -> {
-                try {
-                    for (String dmlQuery : subBatch) {
-                        JobId jobId = JobId.of("your_job_id");
-                        QueryJobConfiguration queryConfig = QueryJobConfiguration.newBuilder(dmlQuery).build();
-                        Job job = bigquery.create(JobInfo.newBuilder(queryConfig).setJobId(jobId).build());
-                        job = job.waitFor(); // Wait for the job to complete
-                        if (job.hasErrors()) {
-                            // Handle errors
-                        }
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-                return null;
-            });
-        }
-
-        try {
-            List<Future<Void>> futures = executor.invokeAll(tasks);
-            for (Future<Void> future : futures) {
-                try {
-                    future.get();
-                } catch (InterruptedException | ExecutionException e) {
-                    e.printStackTrace();
-                }
-            }
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        } finally {
-            executor.shutdown();
-        }
-    }
-
-    private <T> List<List<T>> partition(List<T> list, int size) {
-        List<List<T>> partitions = new ArrayList<>();
-        for (int i = 0; i < list.size(); i += size) {
-            partitions.add(list.subList(i, Math.min(i + size, list.size())));
-        }
-        return partitions;
-    }
-}
-Key Points About the Current Implementation:
-
-Concurrency Handling:
-
-The implementation uses a fixed thread pool with MAX_CONCURRENT_DML set to 2, to limit the number of concurrent DML operations.
-Batching Mechanism:
-
-Batches of size BATCH_SIZE (20) are processed to group DML operations and reduce the number of BigQuery jobs.
-Error Handling:
-
-The implementation includes basic error handling for job creation and execution.
-Rate Limit Exceptions:
-
-Despite the batching and concurrency controls, we continue to face rate limit exceptions.
-Further Assistance Required:
-
-We are exploring a third option and would appreciate any existing templates or guidance on a more efficient approach to handle DML operations within BigQuery limits.
-Please let us know if you can provide any additional support or if a working session could be arranged to discuss Option 3. We are keen to resolve this issue as promptly as possible.
-
-Thank you for your assistance.
-
-Best regards,
-[Your Name]
-[Your Contact Information]
+6. Optimizing Query Execution Plans
+Implementation: Analyzed the query_plan field from INFORMATION_SCHEMA.JOBS to review execution plans and identify inefficient operations such as full table scans.
+Outcome: Gained insights into query inefficiencies and implemented optimizations such as improved filtering, indexing, and query restructuring. This led to reduced data scanned, faster execution times, and overall cost savings.
