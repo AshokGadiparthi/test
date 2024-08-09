@@ -1,23 +1,117 @@
-1. Query Performance Monitoring
-Implementation: Regularly queried the INFORMATION_SCHEMA.JOBS_BY_PROJECT table to monitor the real-time status of queries, including those currently running, pending, or completed. Implemented automated scripts to track and visualize these metrics.
-Outcome: Enabled proactive identification of long-running or stalled queries, which allowed us to take timely action on optimization. This approach significantly improved performance and reduced operational costs by addressing issues before they escalated.
+mvn archetype:generate -DgroupId=com.example -DartifactId=dataflow-example -DarchetypeArtifactId=maven-archetype-quickstart -DinteractiveMode=false
+cd dataflow-example
 
-2. Cost Analysis by Query
-Implementation: Analyzed the INFORMATION_SCHEMA.JOBS_BY_PROJECT table to assess the cost associated with each query by examining fields such as total_bytes_billed and the query_plan. Created detailed reports to identify queries with high costs.
-Outcome: Identified high-cost queries and focused optimization efforts on them. For instance, optimized query structure and reduced the volume of data scanned. This targeted approach led to a noticeable reduction in overall query costs.
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/POM/4.0.0">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.example</groupId>
+    <artifactId>dataflow-example</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <properties>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <beam.version>2.45.0</beam.version> <!-- Check for latest version -->
+    </properties>
+    <dependencies>
+        <dependency>
+            <groupId>org.apache.beam</groupId>
+            <artifactId>beam-sdks-java-core</artifactId>
+            <version>${beam.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.beam</groupId>
+            <artifactId>beam-sdks-java-io-google-cloud-platform</artifactId>
+            <version>${beam.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <version>1.7.36</version>
+        </dependency>
+    </dependencies>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.8.1</version>
+                <configuration>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
 
-3. Query Optimization Insights
-Implementation: Utilized data from INFORMATION_SCHEMA.JOBS_BY_PROJECT to identify patterns in slow-running queries, pinpointing common bottlenecks and inefficient operations. Conducted detailed analysis of query execution details.
-Outcome: Gained actionable insights into query design improvements. Implemented changes such as restructuring queries, adding necessary indexes, and employing partitioning and clustering. These adjustments led to enhanced query performance and cost savings.
 
-4. Pending Query Analysis
-Implementation: Monitored the INFORMATION_SCHEMA.JOBS_BY_PROJECT table to track pending queries and their estimated completion times. Implemented scheduling adjustments based on this data.
-Outcome: Optimized query load management and resource scheduling. Prioritized critical queries effectively, which reduced delays and associated costs from query queuing.
+package com.example;
 
-5. Query History and Performance Trends
-Implementation: Analyzed historical data from INFORMATION_SCHEMA.JOBS to identify long-term trends in query performance and cost. Developed dashboards to visualize performance metrics over time.
-Outcome: Provided a comprehensive view of performance trends, allowing for strategic long-term optimizations. This historical perspective helped in identifying and addressing recurring issues, leading to sustained improvements in cost management.
+import org.apache.beam.runners.dataflow.options.DataflowPipelineOptions;
+import org.apache.beam.sdk.Pipeline;
+import org.apache.beam.sdk.io.TextIO;
+import org.apache.beam.sdk.transforms.MapElements;
+import org.apache.beam.sdk.transforms.SimpleFunction;
+import org.apache.beam.sdk.transforms.Count;
+import org.apache.beam.sdk.transforms.MapElements;
+import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.transforms.PTransform;
+import org.apache.beam.sdk.values.PCollection;
+import org.apache.beam.sdk.values.PCollectionView;
+import org.apache.beam.sdk.values.PDone;
+import org.apache.beam.sdk.values.KV;
+import org.apache.beam.sdk.options.PipelineOptionsFactory;
+import org.apache.beam.sdk.options.PipelineOptions;
+import org.apache.beam.sdk.transforms.FlatMapElements;
+import org.apache.beam.sdk.transforms.Summary;
+import org.apache.beam.sdk.transforms.Sum;
+import org.apache.beam.sdk.values.TypeDescriptor;
+import java.util.Arrays;
+import java.util.List;
+import org.apache.beam.sdk.values.PCollection;
+import org.apache.beam.sdk.transforms.MapElements;
+import org.apache.beam.sdk.transforms.SimpleFunction;
 
-6. Optimizing Query Execution Plans
-Implementation: Analyzed the query_plan field from INFORMATION_SCHEMA.JOBS to review execution plans and identify inefficient operations such as full table scans.
-Outcome: Gained insights into query inefficiencies and implemented optimizations such as improved filtering, indexing, and query restructuring. This led to reduced data scanned, faster execution times, and overall cost savings.
+public class WordCount {
+
+    public static void main(String[] args) {
+
+        // Create the PipelineOptions object
+        DataflowPipelineOptions options = PipelineOptionsFactory.fromArgs(args)
+                .withValidation()
+                .as(DataflowPipelineOptions.class);
+
+        // Set the runner to Dataflow
+        options.setRunner(DataflowRunner.class);
+
+        // Create the Pipeline object
+        Pipeline p = Pipeline.create(options);
+
+        // Define the pipeline steps
+        PCollection<String> lines = p.apply("ReadLines", TextIO.read().from("gs://your-bucket/input.txt"));
+        PCollection<String> words = lines.apply("ExtractWords", FlatMapElements
+                .into(TypeDescriptor.of(String.class))
+                .via((String line) -> Arrays.asList(line.split("[^\\p{L}]+"))));
+        PCollection<KV<String, Long>> wordCounts = words.apply("CountWords", Count.perElement());
+
+        // Write the results to a file
+        wordCounts.apply("FormatResults", MapElements
+                .into(TypeDescriptor.of(String.class))
+                .via((KV<String, Long> wordCount) -> wordCount.getKey() + ": " + wordCount.getValue()))
+                .apply("WriteResults", TextIO.write().to("gs://your-bucket/output").withSuffix(".txt"));
+
+        // Run the pipeline
+        p.run().waitUntilFinish();
+    }
+}
+
+
+mvn clean package
+
+
+mvn exec:java -Dexec.mainClass=com.example.WordCount \
+               -Dexec.args="--project=YOUR_PROJECT_ID \
+                             --stagingLocation=gs://YOUR_BUCKET/staging \
+                             --tempLocation=gs://YOUR_BUCKET/temp \
+                             --runner=DataflowRunner"
