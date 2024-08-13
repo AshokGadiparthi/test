@@ -1,135 +1,67 @@
-To create a Dataflow program in Java that reads a file from Google Cloud Storage (GCS) and writes the data into Redis in Google Cloud Platform (GCP), you'll need to use Apache Beam, which is a unified programming model for both batch and streaming data processing.
+import org.apache.beam.runners.dataflow.options.DataflowPipelineOptions;
+import org.apache.beam.sdk.Pipeline;
+import org.apache.beam.sdk.io.TextIO;
+import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.transforms.MapElements;
+import org.apache.beam.sdk.transforms.SimpleFunction;
+import org.apache.beam.sdk.values.PCollection;
+import org.apache.beam.sdk.values.TypeDescriptor;
 
-Here’s a step-by-step guide to accomplish this:
+import redis.clients.jedis.Jedis;
 
-### Prerequisites
-1. **Set up your GCP project and enable necessary APIs**:
-   - Google Cloud Storage
-   - Redis (via Memorystore)
+public class GcsToRedisPipeline {
 
-2. **Install necessary tools**:
-   - Java Development Kit (JDK)
-   - Apache Maven (for building the Java project)
-   - Apache Beam SDK for Java
+    public interface MyPipelineOptions extends DataflowPipelineOptions {
+    }
 
-### Sample Code
+    public static void main(String[] args) {
+        // Create and set up the pipeline options
+        MyPipelineOptions options = PipelineOptionsFactory.fromArgs(args).withValidation().as(MyPipelineOptions.class);
+        options.setRunner(DataflowRunner.class);
 
-1. **Add Dependencies**:
-   Add the following dependencies to your `pom.xml` file for Apache Beam and Redis client.
+        // Create the Pipeline
+        Pipeline p = Pipeline.create(options);
 
-   ```xml
-   <dependencies>
-       <!-- Apache Beam -->
-       <dependency>
-           <groupId>org.apache.beam</groupId>
-           <artifactId>beam-sdks-java-core</artifactId>
-           <version>2.45.0</version>
-       </dependency>
-       <dependency>
-           <groupId>org.apache.beam</groupId>
-           <artifactId>beam-runners-google-cloud-dataflow-java</artifactId>
-           <version>2.45.0</version>
-       </dependency>
-       <!-- Redis Client -->
-       <dependency>
-           <groupId>redis.clients</groupId>
-           <artifactId>jedis</artifactId>
-           <version>3.7.1</version>
-       </dependency>
-   </dependencies>
-   ```
+        // Define your GCS file path
+        String gcsFilePath = "gs://your-bucket/path/to/your/file.csv";
 
-2. **Write the Dataflow Pipeline**:
+        // Read data from GCS
+        PCollection<String> lines = p.apply("ReadFromGCS", TextIO.read().from(gcsFilePath));
 
-   Create a Java class for your Dataflow pipeline.
+        // Transform data and write to Redis
+        PCollection<String> redisData = lines.apply("TransformToRedisFormat", MapElements
+                .into(TypeDescriptor.of(String.class))
+                .via((String line) -> {
+                    // Assuming CSV format: emp_no,emp_name,address,phone_number
+                    String[] fields = line.split(",");
+                    if (fields.length == 4) {
+                        String empNo = fields[0];
+                        String empName = fields[1];
+                        String address = fields[2];
+                        String phoneNumber = fields[3];
 
-   ```java
-   import org.apache.beam.runners.dataflow.options.DataflowPipelineOptions;
-   import org.apache.beam.sdk.Pipeline;
-   import org.apache.beam.sdk.io.TextIO;
-   import org.apache.beam.sdk.transforms.DoFn;
-   import org.apache.beam.sdk.transforms.MapElements;
-   import org.apache.beam.sdk.transforms.SimpleFunction;
-   import org.apache.beam.sdk.values.PCollection;
-   import org.apache.beam.sdk.values.TypeDescriptor;
+                        // Create a Redis key-value pair
+                        return String.format("employee:%s,%s,%s,%s", empNo, empName, address, phoneNumber);
+                    }
+                    return null;
+                }));
 
-   import redis.clients.jedis.Jedis;
-   
-   public class GcsToRedisPipeline {
+        redisData.apply("WriteToRedis", ParDo.of(new DoFn<String, Void>() {
+            @ProcessElement
+            public void processElement(ProcessContext c) {
+                String redisData = c.element();
+                if (redisData != null) {
+                    try (Jedis jedis = new Jedis("redis-instance-ip", 6379)) {
+                        String[] parts = redisData.split(",", 2);
+                        if (parts.length == 2) {
+                            jedis.set(parts[0], parts[1]);
+                        }
+                    }
+                }
+            }
+        }));
 
-       public interface MyPipelineOptions extends DataflowPipelineOptions {
-       }
-
-       public static void main(String[] args) {
-           // Create and set up the pipeline options
-           MyPipelineOptions options = PipelineOptionsFactory.fromArgs(args).withValidation().as(MyPipelineOptions.class);
-           options.setRunner(DataflowRunner.class);
-
-           // Create the Pipeline
-           Pipeline p = Pipeline.create(options);
-
-           // Define your GCS file path
-           String gcsFilePath = "gs://your-bucket/path/to/your/file.csv";
-
-           // Read data from GCS
-           PCollection<String> lines = p.apply("ReadFromGCS", TextIO.read().from(gcsFilePath));
-
-           // Transform data and write to Redis
-           lines.apply("TransformToRedisFormat", MapElements
-                   .into(TypeDescriptor.of(String.class))
-                   .via((String line) -> {
-                       // Assuming CSV format: emp_no,emp_name,address,phone_number
-                       String[] fields = line.split(",");
-                       if (fields.length == 4) {
-                           String empNo = fields[0];
-                           String empName = fields[1];
-                           String address = fields[2];
-                           String phoneNumber = fields[3];
-                           
-                           // Create a Redis key-value pair
-                           return String.format("employee:%s,%s,%s,%s", empNo, empName, address, phoneNumber);
-                       }
-                       return null;
-                   })
-                   .withOutputType(TypeDescriptor.of(String.class)))
-               .apply("WriteToRedis", ParDo.of(new DoFn<String, Void>() {
-                   @ProcessElement
-                   public void processElement(ProcessContext c) {
-                       String redisData = c.element();
-                       try (Jedis jedis = new Jedis("redis-instance-ip", 6379)) {
-                           String[] parts = redisData.split(",", 2);
-                           if (parts.length == 2) {
-                               jedis.set(parts[0], parts[1]);
-                           }
-                       }
-                   }
-               }));
-
-           // Run the pipeline
-           p.run().waitUntilFinish();
-       }
-   }
-   ```
-
-### Explanation
-
-1. **Pipeline Setup**:
-   - **`PipelineOptionsFactory`**: Creates and validates the pipeline options.
-   - **`Pipeline.create()`**: Initializes the pipeline.
-
-2. **Read from GCS**:
-   - **`TextIO.read().from()`**: Reads the file from GCS.
-
-3. **Transform and Write to Redis**:
-   - **`MapElements`**: Transforms each line into a Redis-compatible format.
-   - **`ParDo`**: Processes each transformed line and writes it to Redis using Jedis, the Redis client library.
-
-4. **Run the Pipeline**:
-   - **`p.run().waitUntilFinish()`**: Executes the pipeline and waits for completion.
-
-### Notes
-
-- Replace `"gs://your-bucket/path/to/your/file.csv"` with the actual path to your file in GCS.
-- Replace `"redis-instance-ip"` with your Redis instance's IP address. Ensure your Redis instance is accessible from where the Dataflow job is running.
-
-Make sure to test this pipeline with a small dataset first and adjust it based on your actual requirements and environment.
+        // Run the pipeline
+        p.run().waitUntilFinish();
+    }
+}
