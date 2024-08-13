@@ -1,67 +1,53 @@
-import org.apache.beam.runners.dataflow.options.DataflowPipelineOptions;
+package com.viveknaskar;
+
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.TextIO;
+import org.apache.beam.sdk.io.redis.RedisConnectionConfiguration;
+import org.apache.beam.sdk.io.redis.RedisIO;
+import org.apache.beam.sdk.options.PipelineOptions;
+import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.transforms.DoFn;
-import org.apache.beam.sdk.transforms.MapElements;
-import org.apache.beam.sdk.transforms.SimpleFunction;
+import org.apache.beam.sdk.transforms.ParDo;
+import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
-import org.apache.beam.sdk.values.TypeDescriptor;
 
-import redis.clients.jedis.Jedis;
-
-public class GcsToRedisPipeline {
-
-    public interface MyPipelineOptions extends DataflowPipelineOptions {
-    }
+public class SimplePipeline {
 
     public static void main(String[] args) {
-        // Create and set up the pipeline options
-        MyPipelineOptions options = PipelineOptionsFactory.fromArgs(args).withValidation().as(MyPipelineOptions.class);
-        options.setRunner(DataflowRunner.class);
+        // Define pipeline options
+        PipelineOptionsFactory.register(PipelineOptions.class);
+        StorageToRedisOptions options = PipelineOptionsFactory.fromArgs(args)
+                .withValidation()
+                .as(StorageToRedisOptions.class);
 
-        // Create the Pipeline
+        // Create a Pipeline
         Pipeline p = Pipeline.create(options);
 
-        // Define your GCS file path
-        String gcsFilePath = "gs://your-bucket/path/to/your/file.csv";
+        // Read data from CSV file
+        PCollection<String> lines = p.apply(
+                "ReadLines", TextIO.read().from(options.getInputFile()));
 
-        // Read data from GCS
-        PCollection<String> lines = p.apply("ReadFromGCS", TextIO.read().from(gcsFilePath));
-
-        // Transform data and write to Redis
-        PCollection<String> redisData = lines.apply("TransformToRedisFormat", MapElements
-                .into(TypeDescriptor.of(String.class))
-                .via((String line) -> {
-                    // Assuming CSV format: emp_no,emp_name,address,phone_number
-                    String[] fields = line.split(",");
-                    if (fields.length == 4) {
-                        String empNo = fields[0];
-                        String empName = fields[1];
-                        String address = fields[2];
-                        String phoneNumber = fields[3];
-
-                        // Create a Redis key-value pair
-                        return String.format("employee:%s,%s,%s,%s", empNo, empName, address, phoneNumber);
-                    }
-                    return null;
-                }));
-
-        redisData.apply("WriteToRedis", ParDo.of(new DoFn<String, Void>() {
+        // Process each line and create key-value pairs for Redis
+        PCollection<KV<String, String>> kvPairs = lines.apply("ParseCSV", ParDo.of(new DoFn<String, KV<String, String>>() {
             @ProcessElement
             public void processElement(ProcessContext c) {
-                String redisData = c.element();
-                if (redisData != null) {
-                    try (Jedis jedis = new Jedis("redis-instance-ip", 6379)) {
-                        String[] parts = redisData.split(",", 2);
-                        if (parts.length == 2) {
-                            jedis.set(parts[0], parts[1]);
-                        }
-                    }
+                String[] fields = c.element().split(",");
+                if (fields.length == 3) { // Assuming the CSV has 3 fields
+                    String clientId = fields[0];
+                    String name = fields[1];
+                    String address = fields[2];
+                    c.output(KV.of(clientId, name + "," + address));
                 }
             }
         }));
+
+        // Write data to Redis
+        kvPairs.apply("WriteToRedis", RedisIO.write()
+                .withMethod(RedisIO.Write.Method.SET) // Use SET command to store the key-value pair
+                .withConnectionConfiguration(RedisConnectionConfiguration.create(options.getRedisHost(), options.getRedisPort())));
 
         // Run the pipeline
         p.run().waitUntilFinish();
     }
 }
+
