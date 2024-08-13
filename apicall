@@ -1,19 +1,24 @@
-mvn archetype:generate -DgroupId=com.example -DartifactId=dataflow-example -DarchetypeArtifactId=maven-archetype-quickstart -DinteractiveMode=false
-cd dataflow-example
-
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/POM/4.0.0">
+
     <modelVersion>4.0.0</modelVersion>
+
     <groupId>com.example</groupId>
-    <artifactId>dataflow-example</artifactId>
+    <artifactId>my-dataflow-project</artifactId>
     <version>1.0-SNAPSHOT</version>
+    <packaging>jar</packaging>
+
     <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
-        <beam.version>2.45.0</beam.version> <!-- Check for latest version -->
+        <beam.version>2.45.0</beam.version>
+        <google.cloud.version>1.113.6</google.cloud.version>
     </properties>
+
     <dependencies>
+        <!-- Apache Beam SDK -->
         <dependency>
             <groupId>org.apache.beam</groupId>
             <artifactId>beam-sdks-java-core</artifactId>
@@ -21,17 +26,38 @@ cd dataflow-example
         </dependency>
         <dependency>
             <groupId>org.apache.beam</groupId>
-            <artifactId>beam-sdks-java-io-google-cloud-platform</artifactId>
+            <artifactId>beam-runners-google-cloud-dataflow-java</artifactId>
             <version>${beam.version}</version>
         </dependency>
+        <!-- Google Cloud Spanner -->
+        <dependency>
+            <groupId>com.google.cloud</groupId>
+            <artifactId>google-cloud-spanner</artifactId>
+            <version>${google.cloud.version}</version>
+        </dependency>
+        <!-- Google Cloud BigQuery -->
+        <dependency>
+            <groupId>com.google.cloud</groupId>
+            <artifactId>google-cloud-bigquery</artifactId>
+            <version>${google.cloud.version}</version>
+        </dependency>
+        <!-- SLF4J Logger -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-simple</artifactId>
             <version>1.7.36</version>
         </dependency>
+        <!-- Apache Beam Runner for DirectRunner (optional, for local testing) -->
+        <dependency>
+            <groupId>org.apache.beam</groupId>
+            <artifactId>beam-runners-direct-java</artifactId>
+            <version>${beam.version}</version>
+        </dependency>
     </dependencies>
+
     <build>
         <plugins>
+            <!-- Maven Compiler Plugin -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -41,77 +67,23 @@ cd dataflow-example
                     <target>1.8</target>
                 </configuration>
             </plugin>
+            <!-- Exec Maven Plugin for running Java classes -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.0.0</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <mainClass>${exec.mainClass}</mainClass>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
+
 </project>
-
-
-package com.example;
-
-import org.apache.beam.runners.dataflow.options.DataflowPipelineOptions;
-import org.apache.beam.sdk.Pipeline;
-import org.apache.beam.sdk.io.TextIO;
-import org.apache.beam.sdk.transforms.MapElements;
-import org.apache.beam.sdk.transforms.SimpleFunction;
-import org.apache.beam.sdk.transforms.Count;
-import org.apache.beam.sdk.transforms.MapElements;
-import org.apache.beam.sdk.transforms.DoFn;
-import org.apache.beam.sdk.transforms.PTransform;
-import org.apache.beam.sdk.values.PCollection;
-import org.apache.beam.sdk.values.PCollectionView;
-import org.apache.beam.sdk.values.PDone;
-import org.apache.beam.sdk.values.KV;
-import org.apache.beam.sdk.options.PipelineOptionsFactory;
-import org.apache.beam.sdk.options.PipelineOptions;
-import org.apache.beam.sdk.transforms.FlatMapElements;
-import org.apache.beam.sdk.transforms.Summary;
-import org.apache.beam.sdk.transforms.Sum;
-import org.apache.beam.sdk.values.TypeDescriptor;
-import java.util.Arrays;
-import java.util.List;
-import org.apache.beam.sdk.values.PCollection;
-import org.apache.beam.sdk.transforms.MapElements;
-import org.apache.beam.sdk.transforms.SimpleFunction;
-
-public class WordCount {
-
-    public static void main(String[] args) {
-
-        // Create the PipelineOptions object
-        DataflowPipelineOptions options = PipelineOptionsFactory.fromArgs(args)
-                .withValidation()
-                .as(DataflowPipelineOptions.class);
-
-        // Set the runner to Dataflow
-        options.setRunner(DataflowRunner.class);
-
-        // Create the Pipeline object
-        Pipeline p = Pipeline.create(options);
-
-        // Define the pipeline steps
-        PCollection<String> lines = p.apply("ReadLines", TextIO.read().from("gs://your-bucket/input.txt"));
-        PCollection<String> words = lines.apply("ExtractWords", FlatMapElements
-                .into(TypeDescriptor.of(String.class))
-                .via((String line) -> Arrays.asList(line.split("[^\\p{L}]+"))));
-        PCollection<KV<String, Long>> wordCounts = words.apply("CountWords", Count.perElement());
-
-        // Write the results to a file
-        wordCounts.apply("FormatResults", MapElements
-                .into(TypeDescriptor.of(String.class))
-                .via((KV<String, Long> wordCount) -> wordCount.getKey() + ": " + wordCount.getValue()))
-                .apply("WriteResults", TextIO.write().to("gs://your-bucket/output").withSuffix(".txt"));
-
-        // Run the pipeline
-        p.run().waitUntilFinish();
-    }
-}
-
-
-mvn clean package
-
-
-mvn exec:java -Dexec.mainClass=com.example.WordCount \
-               -Dexec.args="--project=YOUR_PROJECT_ID \
-                             --stagingLocation=gs://YOUR_BUCKET/staging \
-                             --tempLocation=gs://YOUR_BUCKET/temp \
-                             --runner=DataflowRunner"
