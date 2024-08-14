@@ -1,1 +1,5 @@
-openssl pkcs12 -export -in mycert.pem -inkey mykey.pem -out keystore.p12 -name myalias -passout pass:myPKCS12Password
+We are currently facing performance issues with our critical BigQuery jobs, which are running slower than expected due to resource constraints. This is impacting our execution times and overall efficiency.
+
+To address this, we request an increase in our BigQuery slots to better accommodate our workload.
+
+Your assistance in expediting this request would be greatly appreciated.
