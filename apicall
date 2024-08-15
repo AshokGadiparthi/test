@@ -1,5 +1,13 @@
-We are currently facing performance issues with our critical BigQuery jobs, which are running slower than expected due to resource constraints. This is impacting our execution times and overall efficiency.
-
-To address this, we request an increase in our BigQuery slots to better accommodate our workload.
-
-Your assistance in expediting this request would be greatly appreciated.
+<build>
+  <plugins>
+    <plugin>
+      <groupId>org.apache.maven.plugins</groupId>
+      <artifactId>maven-compiler-plugin</artifactId>
+      <version>3.8.1</version> <!-- Or a later version -->
+      <configuration>
+        <source>1.8</source>
+        <target>1.8</target>
+      </configuration>
+    </plugin>
+  </plugins>
+</build>
