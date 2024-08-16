@@ -1,3 +1,10 @@
+import org.apache.beam.sdk.Pipeline;
+import org.apache.beam.sdk.io.TextIO;
+import org.apache.beam.sdk.options.PipelineOptions;
+import org.apache.beam.sdk.options.PipelineOptionsFactory;
+import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.transforms.ParDo;
+import org.apache.beam.sdk.values.PCollection;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisShardInfo;
@@ -8,43 +15,65 @@ import java.io.FileInputStream;
 import java.security.KeyStore;
 import java.security.Security;
 
-public class RedisConnector {
+public class RedisDataflowPipeline {
 
-    public static void main(String[] args) throws Exception {
-        // Redis instance details
-        String redisHost = "<YOUR_REDIS_HOST>";  // e.g., 10.0.0.1
-        int redisPort = 6379;  // Default Redis port
-        String redisAuthPassword = "<YOUR_REDIS_AUTH_PASSWORD>";  // Your Redis AUTH password
-        String pemFilePath = "/path/to/your/certificate.pem";  // Path to the PEM file
+    public static void main(String[] args) {
 
-        // Initialize SSL context with the PEM file
-        SSLContext sslContext = SSLContext.getInstance("TLS");
-        TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-        KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
+        // Pipeline options
+        PipelineOptions options = PipelineOptionsFactory.create();
+        Pipeline pipeline = Pipeline.create(options);
 
-        // Load PEM file into the keystore
-        FileInputStream fis = new FileInputStream(pemFilePath);
-        ks.load(null, null);
-        ks.setCertificateEntry("caCert", SecurityUtils.loadPEMCertificate(fis));
+        // Apply a ParDo to read data from Redis
+        PCollection<String> redisData = pipeline.apply("ReadFromRedis", ParDo.of(new RedisReadFn()));
 
-        // Initialize TrustManager with the keystore
-        tmf.init(ks);
-        sslContext.init(null, tmf.getTrustManagers(), null);
+        // Write the data to a text file as an example output
+        redisData.apply(TextIO.write().to("gs://your-bucket/output/redis-output").withSuffix(".txt"));
 
-        // Add BouncyCastle as a security provider
-        Security.addProvider(new BouncyCastleProvider());
+        // Run the pipeline
+        pipeline.run().waitUntilFinish();
+    }
 
-        // Configure Jedis client
-        JedisShardInfo shardInfo = new JedisShardInfo(redisHost, redisPort, true);
-        shardInfo.setPassword(redisAuthPassword);
-        shardInfo.setSsl(true);
-        shardInfo.setSslContext(sslContext);
+    static class RedisReadFn extends DoFn<Void, String> {
 
-        // Create Jedis instance
-        try (Jedis jedis = new Jedis(shardInfo)) {
-            // Test the connection
-            String response = jedis.ping();
-            System.out.println("Redis PING Response: " + response);
+        @ProcessElement
+        public void processElement(ProcessContext c) throws Exception {
+            // Redis connection details
+            String redisHost = "<YOUR_REDIS_HOST>";
+            int redisPort = 6379;
+            String redisAuthPassword = "<YOUR_REDIS_AUTH_PASSWORD>";
+            String pemFilePath = "/path/to/your/certificate.pem";
+
+            // Initialize SSL context with the PEM file
+            SSLContext sslContext = SSLContext.getInstance("TLS");
+            TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+            KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
+
+            // Load PEM file into the keystore
+            FileInputStream fis = new FileInputStream(pemFilePath);
+            ks.load(null, null);
+            ks.setCertificateEntry("caCert", SecurityUtils.loadPEMCertificate(fis));
+
+            // Initialize TrustManager with the keystore
+            tmf.init(ks);
+            sslContext.init(null, tmf.getTrustManagers(), null);
+
+            // Add BouncyCastle as a security provider
+            Security.addProvider(new BouncyCastleProvider());
+
+            // Configure Jedis client
+            JedisShardInfo shardInfo = new JedisShardInfo(redisHost, redisPort, true);
+            shardInfo.setPassword(redisAuthPassword);
+            shardInfo.setSsl(true);
+            shardInfo.setSslContext(sslContext);
+
+            try (Jedis jedis = new Jedis(shardInfo)) {
+                // Read a key from Redis
+                String value = jedis.get("some-key");
+                // Output the value to the pipeline
+                if (value != null) {
+                    c.output(value);
+                }
+            }
         }
     }
 }
