@@ -1,89 +1,10 @@
-import com.google.cloud.storage.Blob;
-import com.google.cloud.storage.Storage;
-import com.google.cloud.storage.StorageOptions;
-import org.apache.beam.sdk.transforms.DoFn;
+File jksFile = new File("/tmp/" + jksFileName);
+                try (FileOutputStream outputStream = new FileOutputStream(jksFile);
+                     InputStream inputStream = new ByteArrayInputStream(blobContent)) {
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
-
-public class JksFileHandler {
-
-    public static class DownloadJksFileFn extends DoFn<Void, byte[]> {
-        private final String gcsUri;
-        private final String jksFileName;
-
-        public DownloadJksFileFn(String gcsUri, String jksFileName) {
-            this.gcsUri = gcsUri;
-            this.jksFileName = jksFileName;
-        }
-
-        @ProcessElement
-        public void processElement(ProcessContext c) {
-            try {
-                // Parse GCS URI
-                String bucketName = gcsUri.split("/")[2];
-                String blobName = gcsUri.substring(gcsUri.indexOf(bucketName) + bucketName.length() + 1);
-
-                // Initialize GCS client
-                Storage storage = StorageOptions.getDefaultInstance().getService();
-                Blob blob = storage.get(bucketName, blobName);
-
-                // Create /tmp directory if it doesn't exist
-                File tempDir = new File("/tmp");
-                if (!tempDir.exists()) {
-                    tempDir.mkdirs();
-                }
-
-                // Download the JKS file to /tmp
-                File jksFile = new File("/tmp/" + jksFileName);
-                try (InputStream inputStream = blob.getContent()) {
-                    try (FileOutputStream outputStream = new FileOutputStream(jksFile)) {
-                        byte[] buffer = new byte[1024];
-                        int bytesRead;
-                        while ((bytesRead = inputStream.read(buffer)) != -1) {
-                            outputStream.write(buffer, 0, bytesRead);
-                        }
+                    byte[] buffer = new byte[1024];
+                    int bytesRead;
+                    while ((bytesRead = inputStream.read(buffer)) != -1) {
+                        outputStream.write(buffer, 0, bytesRead);
                     }
                 }
-
-                // Convert the JKS file to byte array
-                byte[] jksFileBytes = Files.readAllBytes(jksFile.toPath());
-
-                // Output the byte array for further processing
-                c.output(jksFileBytes);
-
-            } catch (IOException e) {
-                e.printStackTrace();
-                // Handle exception (optional)
-            }
-        }
-    }
-}
-
-
-import org.apache.beam.sdk.Pipeline;
-import org.apache.beam.sdk.options.PipelineOptions;
-import org.apache.beam.sdk.options.PipelineOptionsFactory;
-import org.apache.beam.sdk.transforms.ParDo;
-
-public class JksFilePipeline {
-
-    public static void main(String[] args) {
-        // Pipeline options
-        PipelineOptions options = PipelineOptionsFactory.create();
-        Pipeline pipeline = Pipeline.create(options);
-
-        // Specify the GCS path to the JKS file
-        String gcsUri = "gs://your-bucket/path/to/file.jks";
-        String jksFileName = "file.jks";
-
-        // Apply the DownloadJksFileFn DoFn to the pipeline
-        pipeline.apply("ReadGcsAndConvertJksToByteArray", ParDo.of(new JksFileHandler.DownloadJksFileFn(gcsUri, jksFileName)));
-
-        // Run the pipeline
-        pipeline.run().waitUntilFinish();
-    }
-}
