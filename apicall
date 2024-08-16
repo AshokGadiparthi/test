@@ -1,79 +1,28 @@
-import org.apache.beam.sdk.Pipeline;
-import org.apache.beam.sdk.io.TextIO;
-import org.apache.beam.sdk.options.PipelineOptions;
-import org.apache.beam.sdk.options.PipelineOptionsFactory;
-import org.apache.beam.sdk.transforms.DoFn;
-import org.apache.beam.sdk.transforms.ParDo;
-import org.apache.beam.sdk.values.PCollection;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisShardInfo;
+<dependencies>
+    <!-- Google Cloud Dataflow SDK -->
+    <dependency>
+        <groupId>org.apache.beam</groupId>
+        <artifactId>beam-sdks-java-core</artifactId>
+        <version>2.48.0</version>
+    </dependency>
 
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManagerFactory;
-import java.io.FileInputStream;
-import java.security.KeyStore;
-import java.security.Security;
+    <dependency>
+        <groupId>org.apache.beam</groupId>
+        <artifactId>beam-runners-google-cloud-dataflow-java</artifactId>
+        <version>2.48.0</version>
+    </dependency>
 
-public class RedisDataflowPipeline {
-
-    public static void main(String[] args) {
-
-        // Pipeline options
-        PipelineOptions options = PipelineOptionsFactory.create();
-        Pipeline pipeline = Pipeline.create(options);
-
-        // Apply a ParDo to read data from Redis
-        PCollection<String> redisData = pipeline.apply("ReadFromRedis", ParDo.of(new RedisReadFn()));
-
-        // Write the data to a text file as an example output
-        redisData.apply(TextIO.write().to("gs://your-bucket/output/redis-output").withSuffix(".txt"));
-
-        // Run the pipeline
-        pipeline.run().waitUntilFinish();
-    }
-
-    static class RedisReadFn extends DoFn<Void, String> {
-
-        @ProcessElement
-        public void processElement(ProcessContext c) throws Exception {
-            // Redis connection details
-            String redisHost = "<YOUR_REDIS_HOST>";
-            int redisPort = 6379;
-            String redisAuthPassword = "<YOUR_REDIS_AUTH_PASSWORD>";
-            String pemFilePath = "/path/to/your/certificate.pem";
-
-            // Initialize SSL context with the PEM file
-            SSLContext sslContext = SSLContext.getInstance("TLS");
-            TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-            KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
-
-            // Load PEM file into the keystore
-            FileInputStream fis = new FileInputStream(pemFilePath);
-            ks.load(null, null);
-            ks.setCertificateEntry("caCert", SecurityUtils.loadPEMCertificate(fis));
-
-            // Initialize TrustManager with the keystore
-            tmf.init(ks);
-            sslContext.init(null, tmf.getTrustManagers(), null);
-
-            // Add BouncyCastle as a security provider
-            Security.addProvider(new BouncyCastleProvider());
-
-            // Configure Jedis client
-            JedisShardInfo shardInfo = new JedisShardInfo(redisHost, redisPort, true);
-            shardInfo.setPassword(redisAuthPassword);
-            shardInfo.setSsl(true);
-            shardInfo.setSslContext(sslContext);
-
-            try (Jedis jedis = new Jedis(shardInfo)) {
-                // Read a key from Redis
-                String value = jedis.get("some-key");
-                // Output the value to the pipeline
-                if (value != null) {
-                    c.output(value);
-                }
-            }
-        }
-    }
-}
+    <!-- Jedis client for Redis connection -->
+    <dependency>
+        <groupId>redis.clients</groupId>
+        <artifactId>jedis</artifactId>
+        <version>4.2.3</version>
+    </dependency>
+    
+    <!-- Bouncy Castle provider for PEM file handling -->
+    <dependency>
+        <groupId>org.bouncycastle</groupId>
+        <artifactId>bcprov-jdk15on</artifactId>
+        <version>1.70</version>
+    </dependency>
+</dependencies>
