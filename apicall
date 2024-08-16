@@ -1,13 +1,50 @@
-<build>
-  <plugins>
-    <plugin>
-      <groupId>org.apache.maven.plugins</groupId>
-      <artifactId>maven-compiler-plugin</artifactId>
-      <version>3.8.1</version> <!-- Or a later version -->
-      <configuration>
-        <source>1.8</source>
-        <target>1.8</target>
-      </configuration>
-    </plugin>
-  </plugins>
-</build>
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisShardInfo;
+
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManagerFactory;
+import java.io.FileInputStream;
+import java.security.KeyStore;
+import java.security.Security;
+
+public class RedisConnector {
+
+    public static void main(String[] args) throws Exception {
+        // Redis instance details
+        String redisHost = "<YOUR_REDIS_HOST>";  // e.g., 10.0.0.1
+        int redisPort = 6379;  // Default Redis port
+        String redisAuthPassword = "<YOUR_REDIS_AUTH_PASSWORD>";  // Your Redis AUTH password
+        String pemFilePath = "/path/to/your/certificate.pem";  // Path to the PEM file
+
+        // Initialize SSL context with the PEM file
+        SSLContext sslContext = SSLContext.getInstance("TLS");
+        TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+        KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
+
+        // Load PEM file into the keystore
+        FileInputStream fis = new FileInputStream(pemFilePath);
+        ks.load(null, null);
+        ks.setCertificateEntry("caCert", SecurityUtils.loadPEMCertificate(fis));
+
+        // Initialize TrustManager with the keystore
+        tmf.init(ks);
+        sslContext.init(null, tmf.getTrustManagers(), null);
+
+        // Add BouncyCastle as a security provider
+        Security.addProvider(new BouncyCastleProvider());
+
+        // Configure Jedis client
+        JedisShardInfo shardInfo = new JedisShardInfo(redisHost, redisPort, true);
+        shardInfo.setPassword(redisAuthPassword);
+        shardInfo.setSsl(true);
+        shardInfo.setSslContext(sslContext);
+
+        // Create Jedis instance
+        try (Jedis jedis = new Jedis(shardInfo)) {
+            // Test the connection
+            String response = jedis.ping();
+            System.out.println("Redis PING Response: " + response);
+        }
+    }
+}
