@@ -1,9 +1,6 @@
-keytool -genkeypair \
-    -alias mykeyalias \
-    -keyalg RSA \
-    -keysize 2048 \
-    -validity 365 \
-    -keystore mykeystore.jks \
-    -storepass mypassword \
-    -keypass mypassword \
-    -dname "CN=My Name, OU=My Org Unit, O=My Organization, L=My City, S=My State, C=My Country"
+openssl pkcs12 -export \
+    -in your_certificate.pem \
+    -inkey your_private_key.pem \
+    -out your_keystore.p12 \
+    -name youralias \
+    -passout pass:yourpassword
