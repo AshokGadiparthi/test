@@ -1,8 +1,9 @@
-String bucketName = gcsUri.split("/")[2];
-        String blobName = gcsUri.substring(gcsUri.indexOf(bucketName) + bucketName.length() + 1);
-
-        // Initialize GCS client
-        Storage storage = StorageOptions.getDefaultInstance().getService();
-
-        // Retrieve and return the Blob object
-        return storage.get(bucketName, blobName);
+keytool -genkeypair \
+    -alias mykeyalias \
+    -keyalg RSA \
+    -keysize 2048 \
+    -validity 365 \
+    -keystore mykeystore.jks \
+    -storepass mypassword \
+    -keypass mypassword \
+    -dname "CN=My Name, OU=My Org Unit, O=My Organization, L=My City, S=My State, C=My Country"
