@@ -1,5 +1,51 @@
-<dependency>
-    <groupId>redis.clients</groupId>
-    <artifactId>jedis</artifactId>
-    <version>4.3.1</version>
-</dependency>
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.JedisPoolConfig;
+
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManagerFactory;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.security.KeyStore;
+
+public class RedisSSLExample {
+
+    public static void main(String[] args) {
+        // Configuration for your Redis instance
+        String redisHost = "your-redis-host";
+        int redisPort = 6379;
+        String redisAuth = "your-redis-auth-string";
+        String jksFilePath = "/path/to/your/keystore.jks";  // Update with the actual path
+        String jksPassword = "your-keystore-password";      // Keystore password
+
+        try {
+            // Load the JKS file
+            KeyStore keyStore = KeyStore.getInstance("JKS");
+            try (InputStream jksInputStream = new FileInputStream(jksFilePath)) {
+                keyStore.load(jksInputStream, jksPassword.toCharArray());
+            }
+
+            // Set up TrustManagerFactory with the keyStore
+            TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+            tmf.init(keyStore);
+
+            // Create an SSLContext with the trust store
+            SSLContext sslContext = SSLContext.getInstance("TLS");
+            sslContext.init(null, tmf.getTrustManagers(), null);
+
+            // Configure Jedis pool with SSL context
+            JedisPoolConfig poolConfig = new JedisPoolConfig();
+            JedisPool jedisPool = new JedisPool(poolConfig, redisHost, redisPort, 2000, redisAuth, true, sslContext.getSocketFactory(), null, null, null);
+
+            // Use Jedis to connect to Redis with SSL
+            try (Jedis jedis = jedisPool.getResource()) {
+                // Example: Set and get a value in Redis
+                jedis.set("key", "value");
+                String value = jedis.get("key");
+                System.out.println("Redis Value: " + value);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
