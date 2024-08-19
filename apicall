@@ -1,40 +1,47 @@
+import apache_beam as beam
 import redis
-import ssl
 
-# Configuration for your Redis instance
-redis_host = "your-redis-host"
-redis_port = 6379  # Default Redis port
-redis_password = "your-redis-auth-string"  # Replace with your Redis AUTH string
-cert_file = "/path/to/your_cert.pem"  # Path to your PEM file
+class RedisReadFn(beam.DoFn):
+    def __init__(self, redis_host, redis_port, redis_password):
+        self.redis_host = redis_host
+        self.redis_port = redis_port
+        self.redis_password = redis_password
 
-try:
-    # Create an SSL context with the PEM file
-    ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-    ssl_context.load_cert_chain(certfile=cert_file)
+    def setup(self):
+        # Create a Redis client
+        self.redis_client = redis.StrictRedis(
+            host=self.redis_host,
+            port=self.redis_port,
+            password=self.redis_password,
+            ssl=True,
+            decode_responses=True
+        )
 
-    # Create a Redis connection
-    r = redis.StrictRedis(
-        host=redis_host,
-        port=redis_port,
-        password=redis_password,
-        ssl=True,
-        ssl_context=ssl_context,
-        decode_responses=True
-    )
+    def process(self, element):
+        # Example operation: get a value from Redis
+        key = element
+        value = self.redis_client.get(key)
+        yield (key, value)
 
-    # Test the connection
-    response = r.ping()
-    if response:
-        print("Connected to Redis successfully!")
-    else:
-        print("Failed to connect to Redis.")
+def run_pipeline():
+    # Configuration for Redis
+    redis_host = 'your-redis-host'
+    redis_port = 6379
+    redis_password = 'your-redis-auth-string'
 
-    # Set a value in Redis
-    r.set("test_key", "Hello, Redis!")
+    # Create a Beam pipeline
+    with beam.Pipeline(runner='DirectRunner') as p:
+        # Example input data (keys to retrieve from Redis)
+        keys = p | 'CreateKeys' >> beam.Create(['key1', 'key2'])
 
-    # Get the value back
-    value = r.get("test_key")
-    print(f"Value from Redis: {value}")
+        # Read from Redis
+        redis_results = (
+            keys
+            | 'ReadFromRedis' >> beam.ParDo(RedisReadFn(redis_host, redis_port, redis_password))
+        )
 
-except Exception as e:
-    print(f"Error connecting to Redis: {e}")
+        # Print results
+        redis_results | 'PrintResults' >> beam.Map(lambda x: print(f"Key: {x[0]}, Value: {x[1]}"))
+
+if __name__ == '__main__':
+    run_pipeline()
