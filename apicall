@@ -1,110 +1,37 @@
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import org.apache.beam.sdk.Pipeline;
-import org.apache.beam.sdk.io.FileSystems;
+import org.apache.beam.sdk.io.FileIO;
 import org.apache.beam.sdk.io.fs.MatchResult;
 import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.PCollection;
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPool;
-import redis.clients.jedis.JedisPoolConfig;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.util.Set;
-import java.util.zip.GZIPInputStream;
-
-public class GCSJsonToRedisWithVerification {
+public class GCSJsonToRedisWithJedisPipeline {
 
     public static void main(String[] args) {
         // Step 1: Define Pipeline Options
         PipelineOptions options = PipelineOptionsFactory.create();
         Pipeline p = Pipeline.create(options);
 
-        // Step 2: Match all .gz files in the GCS directory
+        // Step 2: Use FileIO to match all .gz files and read as PCollection
         String inputPattern = "gs://your-bucket/your-path-to-gz-files/*.gz";
-        PCollection<MatchResult.Metadata> matchedFiles = FileSystems.match(inputPattern);
+        PCollection<MatchResult.Metadata> matchedFiles = p.apply(FileIO.match().filepattern(inputPattern))
+                                                         .apply(FileIO.readMatches());
 
-        // Step 3: Process each .gz file
-        matchedFiles.apply(ParDo.of(new ProcessGzFiles()));
+        // Step 3: Process each file in the PCollection
+        matchedFiles.apply("ProcessFiles", ParDo.of(new ProcessGzFiles()));
 
         // Step 4: Run the pipeline
         p.run().waitUntilFinish();
-
-        // Step 5: Verify data in Redis
-        verifyRedisData();
     }
 
     static class ProcessGzFiles extends DoFn<MatchResult.Metadata, Void> {
-
         @ProcessElement
-        public void processElement(@Element MatchResult.Metadata element, OutputReceiver<Void> receiver) throws Exception {
-            // Step 3.1: Initialize Redis Connection
-            String redisHost = "your-redis-host";
-            int redisPort = 6379;
-            String redisAuth = "your-redis-auth-string";
-            JedisPoolConfig poolConfig = new JedisPoolConfig();
-            JedisPool jedisPool = new JedisPool(poolConfig, redisHost, redisPort, 2000, redisAuth);
-
-            // Step 3.2: Read GCS File
-            GcsPath gcsPath = GcsPath.fromUri(element.resourceId().toString());
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(new GZIPInputStream(FileSystems.open(gcsPath))))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    // Parse each JSON line
-                    JsonObject jsonObject = JsonParser.parseString(line).getAsJsonObject();
-
-                    // Extract fields
-                    String custId = jsonObject.get("cust_id").getAsString();
-                    String acctNum = jsonObject.get("acct_num").getAsString();
-                    String mtn = jsonObject.get("mtn").getAsString();
-                    String redisKey = String.format("cust:%s:acct:%s:mtn:%s", custId, acctNum, mtn);
-
-                    // Store in Redis
-                    try (Jedis jedis = jedisPool.getResource()) {
-                        jedis.hset(redisKey, "cust_line_seq_id", jsonObject.get("cust_line_seq_id").getAsString());
-                        jedis.hset(redisKey, "crm_cust_line_hash", jsonObject.get("crm_cust_line_hash").getAsString());
-                        jedis.hset(redisKey, "omni_cust_hash", jsonObject.get("omni_cust_hash").getAsString());
-                        jedis.hset(redisKey, "moni_mtn_hash", jsonObject.get("moni_mtn_hash").getAsString());
-                        jedis.hset(redisKey, "process_dt", jsonObject.get("process_dt").getAsString());
-                    }
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            } finally {
-                jedisPool.close();
-            }
-        }
-    }
-
-    public static void verifyRedisData() {
-        // Step 5: Initialize Redis Connection
-        String redisHost = "your-redis-host";
-        int redisPort = 6379;
-        String redisAuth = "your-redis-auth-string";
-        JedisPoolConfig poolConfig = new JedisPoolConfig();
-        JedisPool jedisPool = new JedisPool(poolConfig, redisHost, redisPort, 2000, redisAuth);
-
-        try (Jedis jedis = jedisPool.getResource()) {
-            // Fetch all keys matching the pattern
-            Set<String> keys = jedis.keys("cust:*:acct:*:mtn:*");
-
-            // Display total records
-            System.out.println("Total records in Redis: " + keys.size());
-
-            // Display a sample record
-            if (!keys.isEmpty()) {
-                String sampleKey = keys.iterator().next();
-                System.out.println("Sample Redis Key: " + sampleKey);
-                System.out.println("Sample Redis Data: " + jedis.hgetAll(sampleKey));
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            jedisPool.close();
+        public void processElement(@Element MatchResult.Metadata metadata, OutputReceiver<Void> receiver) {
+            // Your logic to process each file
+            System.out.println("Processing file: " + metadata.resourceId());
+            // Implement your Redis connection and processing logic here
         }
     }
 }
