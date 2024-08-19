@@ -16,17 +16,14 @@ def access_secret_version(project_id, secret_id, version_id="latest"):
     Returns:
     str: The secret payload.
     """
-    # Create the Secret Manager client.
     client = secretmanager.SecretManagerServiceClient()
-
-    # Build the resource name of the secret version.
     name = f"projects/{project_id}/secrets/{secret_id}/versions/{version_id}"
-
-    # Access the secret version.
     response = client.access_secret_version(name=name)
-
-    # Return the decoded payload.
     return response.payload.data.decode("UTF-8")
+
+def add_base64_padding(base64_str):
+    """Add padding to a base64 string if necessary."""
+    return base64_str + '==' if len(base64_str) % 4 != 0 else base64_str
 
 def save_jks_to_temp_file(jks_base64):
     """
@@ -38,7 +35,8 @@ def save_jks_to_temp_file(jks_base64):
     Returns:
     str: The path to the temporary JKS file.
     """
-    jks_data = base64.b64decode(jks_base64)
+    jks_base64_padded = add_base64_padding(jks_base64)
+    jks_data = base64.b64decode(jks_base64_padded)
     temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".jks")
     with open(temp_file.name, "wb") as file:
         file.write(jks_data)
@@ -53,7 +51,6 @@ def test_keystore(jks_path, jks_password):
     jks_password (str): The password for the JKS file.
     """
     try:
-        # Load the JKS file into an SSL context
         ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
         ssl_context.load_cert_chain(certfile=jks_path, password=jks_password)
         print("Keystore loaded successfully.")
@@ -66,22 +63,12 @@ def main():
     password_secret_id = "your-password-secret-id"
 
     try:
-        # Access the JKS file (assumed to be base64-encoded).
         jks_base64 = access_secret_version(project_id, jks_secret_id)
-        
-        # Access the JKS password.
         jks_password = access_secret_version(project_id, password_secret_id)
-
-        # Save the JKS file to a temporary location.
         jks_path = save_jks_to_temp_file(jks_base64)
         print(f"JKS file saved to {jks_path}")
-
-        # Test loading the keystore.
         test_keystore(jks_path, jks_password)
-
-        # Clean up the temporary file after testing
         os.remove(jks_path)
-
     except Exception as e:
         print(f"An error occurred: {e}")
 
