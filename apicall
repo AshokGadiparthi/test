@@ -1,16 +1,24 @@
 import redis
+import ssl
 
 # Configuration for your Redis instance
 redis_host = "your-redis-host"
 redis_port = 6379  # Default Redis port
 redis_password = "your-redis-auth-string"  # Replace with your Redis AUTH string
+cert_file = "/path/to/your_cert.pem"  # Path to your PEM file
 
 try:
+    # Create an SSL context with the PEM file
+    ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+    ssl_context.load_cert_chain(certfile=cert_file)
+
     # Create a Redis connection
     r = redis.StrictRedis(
         host=redis_host,
         port=redis_port,
         password=redis_password,
+        ssl=True,
+        ssl_context=ssl_context,
         decode_responses=True
     )
 
@@ -23,7 +31,7 @@ try:
 
     # Set a value in Redis
     r.set("test_key", "Hello, Redis!")
-    
+
     # Get the value back
     value = r.get("test_key")
     print(f"Value from Redis: {value}")
