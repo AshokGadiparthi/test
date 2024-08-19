@@ -1,51 +1,32 @@
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPool;
-import redis.clients.jedis.JedisPoolConfig;
+import redis
 
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManagerFactory;
-import java.io.FileInputStream;
-import java.io.InputStream;
-import java.security.KeyStore;
+# Configuration for your Redis instance
+redis_host = "your-redis-host"
+redis_port = 6379  # Default Redis port
+redis_password = "your-redis-auth-string"  # Replace with your Redis AUTH string
 
-public class RedisSSLExample {
+try:
+    # Create a Redis connection
+    r = redis.StrictRedis(
+        host=redis_host,
+        port=redis_port,
+        password=redis_password,
+        decode_responses=True
+    )
 
-    public static void main(String[] args) {
-        // Configuration for your Redis instance
-        String redisHost = "your-redis-host";
-        int redisPort = 6379;
-        String redisAuth = "your-redis-auth-string";
-        String jksFilePath = "/path/to/your/keystore.jks";  // Update with the actual path
-        String jksPassword = "your-keystore-password";      // Keystore password
+    # Test the connection
+    response = r.ping()
+    if response:
+        print("Connected to Redis successfully!")
+    else:
+        print("Failed to connect to Redis.")
 
-        try {
-            // Load the JKS file
-            KeyStore keyStore = KeyStore.getInstance("JKS");
-            try (InputStream jksInputStream = new FileInputStream(jksFilePath)) {
-                keyStore.load(jksInputStream, jksPassword.toCharArray());
-            }
+    # Set a value in Redis
+    r.set("test_key", "Hello, Redis!")
+    
+    # Get the value back
+    value = r.get("test_key")
+    print(f"Value from Redis: {value}")
 
-            // Set up TrustManagerFactory with the keyStore
-            TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-            tmf.init(keyStore);
-
-            // Create an SSLContext with the trust store
-            SSLContext sslContext = SSLContext.getInstance("TLS");
-            sslContext.init(null, tmf.getTrustManagers(), null);
-
-            // Configure Jedis pool with SSL context
-            JedisPoolConfig poolConfig = new JedisPoolConfig();
-            JedisPool jedisPool = new JedisPool(poolConfig, redisHost, redisPort, 2000, redisAuth, true, sslContext.getSocketFactory(), null, null, null);
-
-            // Use Jedis to connect to Redis with SSL
-            try (Jedis jedis = jedisPool.getResource()) {
-                // Example: Set and get a value in Redis
-                jedis.set("key", "value");
-                String value = jedis.get("key");
-                System.out.println("Redis Value: " + value);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-}
+except Exception as e:
+    print(f"Error connecting to Redis: {e}")
