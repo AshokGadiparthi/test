@@ -1,5 +1,8 @@
 from google.cloud import secretmanager
-import json
+import base64
+import os
+import ssl
+import tempfile
 
 def access_secret_version(project_id, secret_id, version_id="latest"):
     """
@@ -25,42 +28,59 @@ def access_secret_version(project_id, secret_id, version_id="latest"):
     # Return the decoded payload.
     return response.payload.data.decode("UTF-8")
 
-def verify_credentials(credentials):
+def save_jks_to_temp_file(jks_base64):
     """
-    Verify the credentials. This function can be customized
-    based on what you need to verify.
+    Save the JKS file from its base64 representation to a temporary file.
 
     Args:
-    credentials (dict): The credentials in dictionary format.
+    jks_base64 (str): The base64-encoded JKS file.
 
     Returns:
-    bool: True if credentials are verified, False otherwise.
+    str: The path to the temporary JKS file.
     """
-    # Example: Check if the credentials have a specific key.
-    required_keys = ["username", "password"]
-    for key in required_keys:
-        if key not in credentials:
-            return False
+    jks_data = base64.b64decode(jks_base64)
+    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".jks")
+    with open(temp_file.name, "wb") as file:
+        file.write(jks_data)
+    return temp_file.name
 
-    # You can add more checks depending on your verification logic.
-    return True
+def test_keystore(jks_path, jks_password):
+    """
+    Test loading the keystore to ensure it can be read without errors.
+
+    Args:
+    jks_path (str): The path to the JKS file.
+    jks_password (str): The password for the JKS file.
+    """
+    try:
+        # Load the JKS file into an SSL context
+        ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+        ssl_context.load_cert_chain(certfile=jks_path, password=jks_password)
+        print("Keystore loaded successfully.")
+    except Exception as e:
+        print(f"Error loading keystore: {e}")
 
 def main():
     project_id = "your-project-id"
-    secret_id = "your-secret-id"
+    jks_secret_id = "your-jks-secret-id"
+    password_secret_id = "your-password-secret-id"
 
     try:
-        # Access the secret credentials.
-        secret = access_secret_version(project_id, secret_id)
+        # Access the JKS file (assumed to be base64-encoded).
+        jks_base64 = access_secret_version(project_id, jks_secret_id)
+        
+        # Access the JKS password.
+        jks_password = access_secret_version(project_id, password_secret_id)
 
-        # Parse the secret as a JSON object.
-        credentials = json.loads(secret)
+        # Save the JKS file to a temporary location.
+        jks_path = save_jks_to_temp_file(jks_base64)
+        print(f"JKS file saved to {jks_path}")
 
-        # Verify the credentials.
-        if verify_credentials(credentials):
-            print("Credentials are valid.")
-        else:
-            print("Credentials are invalid.")
+        # Test loading the keystore.
+        test_keystore(jks_path, jks_password)
+
+        # Clean up the temporary file after testing
+        os.remove(jks_path)
 
     except Exception as e:
         print(f"An error occurred: {e}")
