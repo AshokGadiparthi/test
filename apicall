@@ -33,7 +33,7 @@ public class GCSJsonToRedisWithJedisPipeline {
         // Step 3: Process each file, extract JSON content, and store in Redis
         matchedFiles
             .apply("ExtractFilePaths", ParDo.of(new ProcessGzFiles()))
-            .apply("ExtractJsonContent", ParDo.of(new ExtractJsonContent()))
+            .apply("ExtractJsonContent", ParDo.of(new ExtractJsonContent()))  // Updated to process within the existing pipeline
             .apply("StoreInRedis", ParDo.of(new StoreInRedis()));
 
         // Step 4: Run the pipeline
@@ -52,9 +52,10 @@ public class GCSJsonToRedisWithJedisPipeline {
     static class ExtractJsonContent extends DoFn<String, Map<String, String>> {
         @ProcessElement
         public void processElement(@Element String filePath, OutputReceiver<Map<String, String>> receiver) {
-            Pipeline p = Pipeline.create();
-            PCollection<String> jsonLines = p.apply("ReadGzFile", TextIO.read().from(filePath).withCompression(Compression.GZIP));
+            // Step 5: Read JSON content from the .gz file within the existing pipeline
+            PCollection<String> jsonLines = receiver.getPipeline().apply("ReadGzFile", TextIO.read().from(filePath).withCompression(Compression.GZIP));
 
+            // Convert each JSON line to a Map (assuming each line is a JSON object)
             jsonLines
                 .apply("ParseJson", MapElements.into(TypeDescriptor.of(Map.class))
                     .via((String json) -> new Gson().fromJson(json, Map.class)))
@@ -64,8 +65,6 @@ public class GCSJsonToRedisWithJedisPipeline {
                         receiver.output(c.element());
                     }
                 }));
-
-            p.run().waitUntilFinish();
         }
     }
 
