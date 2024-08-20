@@ -1,17 +1,12 @@
 import com.google.gson.Gson;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.Compression;
-import org.apache.beam.sdk.io.FileIO;
 import org.apache.beam.sdk.io.TextIO;
-import org.apache.beam.sdk.io.fs.MatchResult;
 import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.transforms.DoFn;
-import org.apache.beam.sdk.transforms.MapElements;
 import org.apache.beam.sdk.transforms.ParDo;
-import org.apache.beam.sdk.transforms.SimpleFunction;
 import org.apache.beam.sdk.values.PCollection;
-import org.apache.beam.sdk.values.TypeDescriptor;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
@@ -25,55 +20,23 @@ public class GCSJsonToRedisWithJedisPipeline {
         PipelineOptions options = PipelineOptionsFactory.create();
         Pipeline p = Pipeline.create(options);
 
-        // Step 2: Use FileIO to match all .gz files and read as PCollection
+        // Step 2: Read .gz JSON files and extract JSON content
         String inputPattern = "gs://your-bucket/your-path-to-gz-files/*.gz";
-        PCollection<MatchResult.Metadata> matchedFiles = p.apply("MatchFiles", FileIO.match().filepattern(inputPattern))
-                                                         .apply("ReadMatches", FileIO.readMatches());
+        PCollection<String> jsonLines = p.apply(TextIO.read().from(inputPattern).withCompression(Compression.GZIP));
 
-        // Step 3: Process each file, extract JSON content, and store in Redis
-        matchedFiles
-            .apply("ExtractFilePaths", ParDo.of(new ProcessGzFiles()))
-            .apply("ExtractJsonContent", ParDo.of(new ExtractJsonContent()))  // Updated to process within the existing pipeline
-            .apply("StoreInRedis", ParDo.of(new StoreInRedis()));
+        // Step 3: Parse JSON content and store it in Redis
+        jsonLines.apply("ParseAndStoreInRedis", ParDo.of(new ParseAndStoreInRedis()));
 
         // Step 4: Run the pipeline
         p.run().waitUntilFinish();
     }
 
-    static class ProcessGzFiles extends DoFn<MatchResult.Metadata, String> {
-        @ProcessElement
-        public void processElement(@Element MatchResult.Metadata metadata, OutputReceiver<String> receiver) {
-            String filePath = metadata.resourceId().toString();
-            System.out.println("Processing file: " + filePath);
-            receiver.output(filePath);
-        }
-    }
-
-    static class ExtractJsonContent extends DoFn<String, Map<String, String>> {
-        @ProcessElement
-        public void processElement(@Element String filePath, OutputReceiver<Map<String, String>> receiver) {
-            // Step 5: Read JSON content from the .gz file within the existing pipeline
-            PCollection<String> jsonLines = receiver.getPipeline().apply("ReadGzFile", TextIO.read().from(filePath).withCompression(Compression.GZIP));
-
-            // Convert each JSON line to a Map (assuming each line is a JSON object)
-            jsonLines
-                .apply("ParseJson", MapElements.into(TypeDescriptor.of(Map.class))
-                    .via((String json) -> new Gson().fromJson(json, Map.class)))
-                .apply("OutputJsonMap", ParDo.of(new DoFn<Map<String, String>, Void>() {
-                    @ProcessElement
-                    public void processElement(ProcessContext c) {
-                        receiver.output(c.element());
-                    }
-                }));
-        }
-    }
-
-    static class StoreInRedis extends DoFn<Map<String, String>, Void> {
+    static class ParseAndStoreInRedis extends DoFn<String, Void> {
         private transient JedisPool jedisPool;
 
         @Setup
         public void setup() {
-            // Step 6: Configure Jedis pool for Redis connection
+            // Step 5: Configure Jedis pool for Redis connection
             JedisPoolConfig poolConfig = new JedisPoolConfig();
             String redisHost = "your-redis-host";
             int redisPort = 6379;
@@ -82,12 +45,15 @@ public class GCSJsonToRedisWithJedisPipeline {
         }
 
         @ProcessElement
-        public void processElement(@Element Map<String, String> jsonMap, OutputReceiver<Void> receiver) {
+        public void processElement(@Element String jsonLine, OutputReceiver<Void> receiver) {
             try (Jedis jedis = jedisPool.getResource()) {
-                // Create a unique key for each record using cust_id, acct_num, and mtn
+                // Step 6: Parse JSON line into a Map
+                Map<String, String> jsonMap = new Gson().fromJson(jsonLine, Map.class);
+
+                // Step 7: Create a unique key for each record using cust_id, acct_num, and mtn
                 String key = String.format("%s:%s:%s", jsonMap.get("cust_id"), jsonMap.get("acct_num"), jsonMap.get("mtn"));
 
-                // Store each field in Redis
+                // Step 8: Store each field in Redis
                 jedis.hset(key, "cust_line_seq_id", jsonMap.get("cust_line_seq_id"));
                 jedis.hset(key, "crm_cust_line_hash", jsonMap.get("crm_cust_line_hash"));
                 jedis.hset(key, "omni_cust_hash", jsonMap.get("omni_cust_hash"));
