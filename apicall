@@ -10,7 +10,10 @@ import org.apache.beam.sdk.values.PCollection;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
+import redis.clients.jedis.Pipeline;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 public class GCSJsonToRedisWithJedisPipeline {
@@ -33,11 +36,20 @@ public class GCSJsonToRedisWithJedisPipeline {
 
     static class ParseAndStoreInRedis extends DoFn<String, Void> {
         private transient JedisPool jedisPool;
+        private static final int BATCH_SIZE = 500; // Batch size for Redis operations
+        private List<Map<String, String>> batchList = new ArrayList<>();
 
         @Setup
         public void setup() {
             // Step 5: Configure Jedis pool for Redis connection
             JedisPoolConfig poolConfig = new JedisPoolConfig();
+            poolConfig.setMaxTotal(128); // Adjust pool settings as needed
+            poolConfig.setMaxIdle(128);
+            poolConfig.setMinIdle(16);
+            poolConfig.setTestOnBorrow(true);
+            poolConfig.setTestOnReturn(true);
+            poolConfig.setTestWhileIdle(true);
+
             String redisHost = "your-redis-host";
             int redisPort = 6379;
             String redisAuth = "your-redis-auth-string";
@@ -46,23 +58,56 @@ public class GCSJsonToRedisWithJedisPipeline {
 
         @ProcessElement
         public void processElement(@Element String jsonLine, OutputReceiver<Void> receiver) {
+            // Step 6: Parse JSON line into a Map
+            Map<String, String> jsonMap = new Gson().fromJson(jsonLine, Map.class);
+            batchList.add(jsonMap);
+
+            // Step 7: Check if the batch size has been reached
+            if (batchList.size() >= BATCH_SIZE) {
+                flushBatch();
+            }
+        }
+
+        // Step 8: Flush the batch to Redis
+        private void flushBatch() {
             try (Jedis jedis = jedisPool.getResource()) {
-                // Step 6: Parse JSON line into a Map
-                Map<String, String> jsonMap = new Gson().fromJson(jsonLine, Map.class);
+                Pipeline pipeline = jedis.pipelined();
 
-                // Step 7: Create a unique key for each record using cust_id, acct_num, and mtn
-                String key = String.format("%s:%s:%s", jsonMap.get("cust_id"), jsonMap.get("acct_num"), jsonMap.get("mtn"));
+                for (Map<String, String> jsonMap : batchList) {
+                    String key = String.format("%s:%s:%s", 
+                                               jsonMap.getOrDefault("cust_id", ""), 
+                                               jsonMap.getOrDefault("acct_num", ""), 
+                                               jsonMap.getOrDefault("mtn", ""));
 
-                // Step 8: Store each field in Redis
-                jedis.hset(key, "cust_line_seq_id", jsonMap.get("cust_line_seq_id"));
-                jedis.hset(key, "crm_cust_line_hash", jsonMap.get("crm_cust_line_hash"));
-                jedis.hset(key, "omni_cust_hash", jsonMap.get("omni_cust_hash"));
-                jedis.hset(key, "moni_mtn_hash", jsonMap.get("moni_mtn_hash"));
-                jedis.hset(key, "process_dt", jsonMap.get("process_dt"));
+                    if (jsonMap.get("cust_line_seq_id") != null && !jsonMap.get("cust_line_seq_id").isEmpty()) {
+                        pipeline.hset(key, "cust_line_seq_id", jsonMap.get("cust_line_seq_id"));
+                    }
+                    if (jsonMap.get("crm_cust_line_hash") != null && !jsonMap.get("crm_cust_line_hash").isEmpty()) {
+                        pipeline.hset(key, "crm_cust_line_hash", jsonMap.get("crm_cust_line_hash"));
+                    }
+                    if (jsonMap.get("omni_cust_hash") != null && !jsonMap.get("omni_cust_hash").isEmpty()) {
+                        pipeline.hset(key, "omni_cust_hash", jsonMap.get("omni_cust_hash"));
+                    }
+                    if (jsonMap.get("moni_mtn_hash") != null && !jsonMap.get("moni_mtn_hash").isEmpty()) {
+                        pipeline.hset(key, "moni_mtn_hash", jsonMap.get("moni_mtn_hash"));
+                    }
+                    if (jsonMap.get("process_dt") != null && !jsonMap.get("process_dt").isEmpty()) {
+                        pipeline.hset(key, "process_dt", jsonMap.get("process_dt"));
+                    }
+                }
 
-                System.out.println("Stored key in Redis: " + key);
+                pipeline.sync(); // Execute the batched commands
+                batchList.clear(); // Clear the batch after processing
             } catch (Exception e) {
                 e.printStackTrace();
+            }
+        }
+
+        @FinishBundle
+        public void finishBundle() {
+            // Step 9: Ensure any remaining data in the batch is flushed to Redis
+            if (!batchList.isEmpty()) {
+                flushBatch();
             }
         }
 
