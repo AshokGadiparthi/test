@@ -1,4 +1,94 @@
-PCollection<String> windowedJsonLines = jsonLines.apply(
-                Window.<String>into(FixedWindows.of(Duration.standardMinutes(1))) // Adjust the window size as needed
-                        .triggering(AfterPane.elementCountAtLeast(500)) // Trigger when at least 500 elements are accumulated
-                        .discardingFiredPanes());
+import com.google.gson.Gson;
+import org.apache.beam.sdk.Pipeline;
+import org.apache.beam.sdk.io.Compression;
+import org.apache.beam.sdk.io.TextIO;
+import org.apache.beam.sdk.options.PipelineOptions;
+import org.apache.beam.sdk.options.PipelineOptionsFactory;
+import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.transforms.ParDo;
+import org.apache.beam.sdk.transforms.GroupIntoBatches;
+import org.apache.beam.sdk.values.KV;
+import org.apache.beam.sdk.values.PCollection;
+import org.apache.beam.sdk.values.PCollectionView;
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.JedisPoolConfig;
+
+import java.util.Map;
+
+public class GCSJsonToRedisWithJedisBatchPipeline {
+
+    public static void main(String[] args) {
+        // Step 1: Define Pipeline Options
+        PipelineOptions options = PipelineOptionsFactory.create();
+        Pipeline p = Pipeline.create(options);
+
+        // Step 2: Read .gz JSON files and extract JSON content
+        String inputPattern = "gs://your-bucket/your-path-to-gz-files/*.gz";
+        PCollection<String> jsonLines = p.apply(TextIO.read().from(inputPattern).withCompression(Compression.GZIP));
+
+        // Step 3: Assign each line a key (e.g., all elements share the same key "batch").
+        PCollection<KV<String, String>> keyedJsonLines = jsonLines.apply(
+                "AddKey", ParDo.of(new DoFn<String, KV<String, String>>() {
+                    @ProcessElement
+                    public void processElement(@Element String jsonLine, OutputReceiver<KV<String, String>> receiver) {
+                        receiver.output(KV.of("batch", jsonLine));
+                    }
+                }));
+
+        // Step 4: Group elements into batches of 500
+        PCollection<KV<String, Iterable<String>>> batchedJsonLines = keyedJsonLines.apply(
+                "BatchElements", GroupIntoBatches.<String, String>ofSize(500));
+
+        // Step 5: Parse JSON content and store it in Redis in batches
+        batchedJsonLines.apply("ParseAndStoreInRedis", ParDo.of(new ParseAndStoreInRedis()));
+
+        // Step 6: Run the pipeline
+        p.run().waitUntilFinish();
+    }
+
+    static class ParseAndStoreInRedis extends DoFn<KV<String, Iterable<String>>, Void> {
+        private transient JedisPool jedisPool;
+
+        @Setup
+        public void setup() {
+            // Step 7: Configure Jedis pool for Redis connection
+            JedisPoolConfig poolConfig = new JedisPoolConfig();
+            String redisHost = "your-redis-host";
+            int redisPort = 6379;
+            String redisAuth = "your-redis-auth-string";
+            jedisPool = new JedisPool(poolConfig, redisHost, redisPort, 2000, redisAuth);
+        }
+
+        @ProcessElement
+        public void processElement(@Element KV<String, Iterable<String>> element, OutputReceiver<Void> receiver) {
+            try (Jedis jedis = jedisPool.getResource()) {
+                for (String jsonLine : element.getValue()) {
+                    // Step 8: Parse JSON line into a Map
+                    Map<String, String> jsonMap = new Gson().fromJson(jsonLine, Map.class);
+
+                    // Step 9: Create a unique key for each record using cust_id, acct_num, and mtn
+                    String key = String.format("%s:%s:%s", jsonMap.get("cust_id"), jsonMap.get("acct_num"), jsonMap.get("mtn"));
+
+                    // Step 10: Store each field in Redis
+                    jedis.hset(key, "cust_line_seq_id", jsonMap.get("cust_line_seq_id"));
+                    jedis.hset(key, "crm_cust_line_hash", jsonMap.get("crm_cust_line_hash"));
+                    jedis.hset(key, "omni_cust_hash", jsonMap.get("omni_cust_hash"));
+                    jedis.hset(key, "moni_mtn_hash", jsonMap.get("moni_mtn_hash"));
+                    jedis.hset(key, "process_dt", jsonMap.get("process_dt"));
+
+                    System.out.println("Stored key in Redis: " + key);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        @Teardown
+        public void teardown() {
+            if (jedisPool != null) {
+                jedisPool.close();
+            }
+        }
+    }
+}
