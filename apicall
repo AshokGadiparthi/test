@@ -1,10 +1,13 @@
 import org.apache.beam.sdk.Pipeline;
+import org.apache.beam.sdk.io.CompressedSource;
 import org.apache.beam.sdk.io.FileIO;
-import org.apache.beam.sdk.io.fs.MatchResult;
+import org.apache.beam.sdk.io.TextIO;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.transforms.Create;
 import org.apache.beam.sdk.transforms.ParDo;
+import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.values.PCollection;
+import org.apache.beam.sdk.values.KV;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,8 +21,8 @@ public class DataflowBatchWrapper {
         MyPipelineOptions options = PipelineOptionsFactory.fromArgs(args).as(MyPipelineOptions.class);
         Pipeline p = Pipeline.create(options);
 
-        // List all input files
-        PCollection<MatchResult.Metadata> allFiles = p.apply("MatchFiles", FileIO.match().filepattern("gs://my-bucket/path/*"));
+        // List all .gz files
+        PCollection<MatchResult.Metadata> allFiles = p.apply("MatchFiles", FileIO.match().filepattern("gs://my-bucket/path/*.gz"));
 
         // Split files into batches
         PCollection<List<String>> fileBatches = allFiles.apply("BatchFiles", ParDo.of(new BatchFilesDoFn()));
@@ -65,16 +68,28 @@ public class DataflowBatchWrapper {
         public void processElement(ProcessContext c) {
             List<String> files = c.element();
 
-            // Trigger a new Dataflow job for this batch of files
+            // Create a new Dataflow pipeline for this batch
             MyPipelineOptions newOptions = PipelineOptionsFactory.fromArgs(options.asArgs()).as(MyPipelineOptions.class);
             Pipeline batchPipeline = Pipeline.create(newOptions);
 
-            // Add your existing Dataflow logic here, using 'files' as input
-            batchPipeline.apply("CreateFileList", Create.of(files))
-                         // add your custom processing pipeline here
-                         .apply(...);
+            // Decompress and read .gz files
+            for (String file : files) {
+                batchPipeline
+                    .apply("ReadGzFile-" + file, TextIO.read().from(file)
+                    .withCompression(CompressedSource.CompressionMode.GZIP))
+                    .apply("ProcessJson", ParDo.of(new ProcessJsonFn()));
+                    // Add further processing here
+            }
 
             batchPipeline.run().waitUntilFinish();
+        }
+    }
+
+    static class ProcessJsonFn extends DoFn<String, Void> {
+        @ProcessElement
+        public void processElement(ProcessContext c) {
+            String json = c.element();
+            // Parse and process JSON here
         }
     }
 }
