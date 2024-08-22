@@ -1,0 +1,95 @@
+import org.apache.beam.sdk.Pipeline;
+import org.apache.beam.sdk.io.CompressedSource;
+import org.apache.beam.sdk.io.FileIO;
+import org.apache.beam.sdk.io.TextIO;
+import org.apache.beam.sdk.options.PipelineOptionsFactory;
+import org.apache.beam.sdk.transforms.Create;
+import org.apache.beam.sdk.transforms.ParDo;
+import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.values.PCollection;
+import org.apache.beam.sdk.values.KV;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class DataflowBatchWrapper {
+
+    private static final long TARGET_BATCH_SIZE_MB = 700 * 1024 * 1024; // 700 MB in bytes
+
+    public static void main(String[] args) {
+        // Create Pipeline options
+        MyPipelineOptions options = PipelineOptionsFactory.fromArgs(args).as(MyPipelineOptions.class);
+        Pipeline p = Pipeline.create(options);
+
+        // List all .gz files
+        PCollection<MatchResult.Metadata> allFiles = p.apply("MatchFiles", FileIO.match().filepattern("gs://my-bucket/path/*.gz"));
+
+        // Split files into batches
+        PCollection<List<String>> fileBatches = allFiles.apply("BatchFiles", ParDo.of(new BatchFilesDoFn()));
+
+        // Process each batch
+        fileBatches.apply("ProcessBatches", ParDo.of(new ProcessBatchDoFn(options)));
+
+        p.run().waitUntilFinish();
+    }
+
+    static class BatchFilesDoFn extends DoFn<MatchResult.Metadata, List<String>> {
+        @ProcessElement
+        public void processElement(ProcessContext c) {
+            List<MatchResult.Metadata> files = c.element();
+            List<String> currentBatch = new ArrayList<>();
+            long currentBatchSize = 0;
+
+            for (MatchResult.Metadata file : files) {
+                long fileSize = file.resourceId().getCurrentSize();
+                if (currentBatchSize + fileSize > TARGET_BATCH_SIZE_MB) {
+                    c.output(currentBatch);
+                    currentBatch = new ArrayList<>();
+                    currentBatchSize = 0;
+                }
+                currentBatch.add(file.resourceId().toString());
+                currentBatchSize += fileSize;
+            }
+
+            if (!currentBatch.isEmpty()) {
+                c.output(currentBatch);
+            }
+        }
+    }
+
+    static class ProcessBatchDoFn extends DoFn<List<String>, Void> {
+        private final MyPipelineOptions options;
+
+        ProcessBatchDoFn(MyPipelineOptions options) {
+            this.options = options;
+        }
+
+        @ProcessElement
+        public void processElement(ProcessContext c) {
+            List<String> files = c.element();
+
+            // Create a new Dataflow pipeline for this batch
+            MyPipelineOptions newOptions = PipelineOptionsFactory.fromArgs(options.asArgs()).as(MyPipelineOptions.class);
+            Pipeline batchPipeline = Pipeline.create(newOptions);
+
+            // Decompress and read .gz files
+            for (String file : files) {
+                batchPipeline
+                    .apply("ReadGzFile-" + file, TextIO.read().from(file)
+                    .withCompression(CompressedSource.CompressionMode.GZIP))
+                    .apply("ProcessJson", ParDo.of(new ProcessJsonFn()));
+                    // Add further processing here
+            }
+
+            batchPipeline.run().waitUntilFinish();
+        }
+    }
+
+    static class ProcessJsonFn extends DoFn<String, Void> {
+        @ProcessElement
+        public void processElement(ProcessContext c) {
+            String json = c.element();
+            // Parse and process JSON here
+        }
+    }
+}
