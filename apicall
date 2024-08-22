@@ -1,58 +1,80 @@
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPool;
-import redis.clients.jedis.JedisPoolConfig;
-import redis.clients.jedis.Pipeline;
+import org.apache.beam.sdk.Pipeline;
+import org.apache.beam.sdk.io.FileIO;
+import org.apache.beam.sdk.io.fs.MatchResult;
+import org.apache.beam.sdk.options.PipelineOptionsFactory;
+import org.apache.beam.sdk.transforms.Create;
+import org.apache.beam.sdk.transforms.ParDo;
+import org.apache.beam.sdk.values.PCollection;
 
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
-public class GCSJsonToRedisWithPipelining {
+public class DataflowBatchWrapper {
 
-    private static final int BATCH_SIZE = 500; // Max number of operations per pipeline
+    private static final long TARGET_BATCH_SIZE_MB = 700 * 1024 * 1024; // 700 MB in bytes
 
     public static void main(String[] args) {
-        // Step 1: Set up the JedisPool
-        JedisPoolConfig poolConfig = new JedisPoolConfig();
-        poolConfig.setMaxTotal(10);  // Limit max total connections
-        poolConfig.setMaxIdle(5);    // Limit max idle connections
-        poolConfig.setMinIdle(1);    // Keep at least 1 connection idle
+        // Create Pipeline options
+        MyPipelineOptions options = PipelineOptionsFactory.fromArgs(args).as(MyPipelineOptions.class);
+        Pipeline p = Pipeline.create(options);
 
-        String redisHost = "your-redis-host";
-        int redisPort = 6379;
-        String redisAuth = "your-redis-auth-string";
-        JedisPool jedisPool = new JedisPool(poolConfig, redisHost, redisPort, 2000, redisAuth);
+        // List all input files
+        PCollection<MatchResult.Metadata> allFiles = p.apply("MatchFiles", FileIO.match().filepattern("gs://my-bucket/path/*"));
 
-        try (Jedis jedis = jedisPool.getResource()) {
-            Pipeline pipeline = jedis.pipelined();
+        // Split files into batches
+        PCollection<List<String>> fileBatches = allFiles.apply("BatchFiles", ParDo.of(new BatchFilesDoFn()));
 
-            int count = 0;
-            for (String jsonLine : jsonLines) {
-                Map<String, String> jsonMap = new Gson().fromJson(jsonLine, Map.class);
-                String key = String.format("%s:%s:%s", jsonMap.get("cust_id"), jsonMap.get("acct_num"), jsonMap.get("mtn"));
+        // Process each batch
+        fileBatches.apply("ProcessBatches", ParDo.of(new ProcessBatchDoFn(options)));
 
-                // Add commands to the pipeline
-                pipeline.hset(key, "cust_line_seq_id", jsonMap.get("cust_line_seq_id"));
-                pipeline.hset(key, "crm_cust_line_hash", jsonMap.get("crm_cust_line_hash"));
-                pipeline.hset(key, "omni_cust_hash", jsonMap.get("omni_cust_hash"));
-                pipeline.hset(key, "moni_mtn_hash", jsonMap.get("moni_mtn_hash"));
-                pipeline.hset(key, "process_dt", jsonMap.get("process_dt"));
+        p.run().waitUntilFinish();
+    }
 
-                count++;
+    static class BatchFilesDoFn extends DoFn<MatchResult.Metadata, List<String>> {
+        @ProcessElement
+        public void processElement(ProcessContext c) {
+            List<MatchResult.Metadata> files = c.element();
+            List<String> currentBatch = new ArrayList<>();
+            long currentBatchSize = 0;
 
-                // Execute and clear pipeline if it reaches the batch size
-                if (count >= BATCH_SIZE) {
-                    pipeline.sync();
-                    count = 0;
+            for (MatchResult.Metadata file : files) {
+                long fileSize = file.resourceId().getCurrentSize();
+                if (currentBatchSize + fileSize > TARGET_BATCH_SIZE_MB) {
+                    c.output(currentBatch);
+                    currentBatch = new ArrayList<>();
+                    currentBatchSize = 0;
                 }
+                currentBatch.add(file.resourceId().toString());
+                currentBatchSize += fileSize;
             }
 
-            // Execute any remaining commands in the pipeline
-            if (count > 0) {
-                pipeline.sync();
+            if (!currentBatch.isEmpty()) {
+                c.output(currentBatch);
             }
-        } finally {
-            if (jedisPool != null) {
-                jedisPool.close();
-            }
+        }
+    }
+
+    static class ProcessBatchDoFn extends DoFn<List<String>, Void> {
+        private final MyPipelineOptions options;
+
+        ProcessBatchDoFn(MyPipelineOptions options) {
+            this.options = options;
+        }
+
+        @ProcessElement
+        public void processElement(ProcessContext c) {
+            List<String> files = c.element();
+
+            // Trigger a new Dataflow job for this batch of files
+            MyPipelineOptions newOptions = PipelineOptionsFactory.fromArgs(options.asArgs()).as(MyPipelineOptions.class);
+            Pipeline batchPipeline = Pipeline.create(newOptions);
+
+            // Add your existing Dataflow logic here, using 'files' as input
+            batchPipeline.apply("CreateFileList", Create.of(files))
+                         // add your custom processing pipeline here
+                         .apply(...);
+
+            batchPipeline.run().waitUntilFinish();
         }
     }
 }
