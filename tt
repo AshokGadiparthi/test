@@ -1,1 +1,14 @@
-We attempted to create a GCP Dataflow Flex template in our development environment, but it failed with exceptions, pointing to a log location. However, upon reviewing the Cloud Build logs, no exceptions were found. We recommend reaching out to Google Cloud Support to investigate and resolve this issue with the Flex template deployment
+# Task 2: Run Dataflow job using Classic Template to load data from GCS to Redis
+    start_dataflow_job = DataflowTemplateOperator(
+        task_id='start_dataflow_job',
+        template='gs://your-bucket-name/templates/your-template-name',  # Path to the classic template
+        parameters={
+            'inputFile': 'gs://your-bucket-name/data/{{ ds }}/output_file.json',
+            'outputRedisHost': 'your_redis_host',
+            'outputRedisPort': 'your_redis_port',
+            'otherParameter': 'value'
+        },
+        gcp_conn_id='google_cloud_default',
+        location='your-dataflow-location',  # e.g., 'us-central1'
+        project_id='your-gcp-project-id'
+    )
