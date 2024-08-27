@@ -1,57 +1,6 @@
-import org.apache.beam.sdk.Pipeline;
-import org.apache.beam.sdk.io.TextIO;
-import org.apache.beam.sdk.transforms.DoFn;
-import org.apache.beam.sdk.transforms.ParDo;
-import org.apache.beam.sdk.values.PCollection;
-import redis.clients.jedis.Jedis;
-
-public class RedisReadSpecificKey {
-
-    public static void main(String[] args) {
-        Pipeline pipeline = Pipeline.create();
-
-        // Replace "your-specific-key" with the actual key you want to read
-        String keyToRead = "your-specific-key";
-
-        // Read the specific key's value from Redis
-        PCollection<String> redisData = pipeline.apply("ReadFromRedis", ParDo.of(new RedisReadFn(keyToRead)));
-
-        // Optionally write the data to a text file or process it further
-        redisData.apply("WriteToTextFile", TextIO.write().to("gs://your-bucket-name/output/redis_data.txt"));
-
-        // Run the pipeline
-        pipeline.run().waitUntilFinish();
-    }
-
-    public static class RedisReadFn extends DoFn<Void, String> {
-        private transient Jedis jedis;
-        private final String key;
-
-        public RedisReadFn(String key) {
-            this.key = key;
-        }
-
-        @Setup
-        public void setup() {
-            jedis = new Jedis("your-redis-host", 6379); // Replace with your Redis host and port
-        }
-
-        @ProcessElement
-        public void processElement(ProcessContext context) {
-            // Read the value for the specified key
-            String value = jedis.get(key);
-            if (value != null) {
-                context.output("Key: " + key + ", Value: " + value);
-            } else {
-                context.output("Key: " + key + " not found or has no value.");
-            }
-        }
-
-        @Teardown
-        public void teardown() {
-            if (jedis != null) {
-                jedis.close();
-            }
-        }
-    }
-}
+if (!responses.isEmpty() && responses.get(0) != null) {
+                    String value = (String) responses.get(0);
+                    context.output(value);
+                } else {
+                    System.out.println("Key " + key + " not found in Redis.");
+                }
