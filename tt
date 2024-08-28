@@ -1,6 +1,57 @@
-if (!responses.isEmpty() && responses.get(0) != null) {
-                    String value = (String) responses.get(0);
-                    context.output(value);
-                } else {
-                    System.out.println("Key " + key + " not found in Redis.");
-                }
+#!/bin/bash
+
+# Directory containing your 400 files
+input_dir="path_to_your_files"
+output_dir="path_to_output_files"
+mkdir -p $output_dir
+
+# Get the list of all files in the directory
+files=($input_dir/*)
+total_files=${#files[@]}
+files_per_output=20
+
+# Calculate how many files to combine into each output file
+files_per_batch=$((total_files / files_per_output))
+
+# Initialize counters
+file_count=1
+
+# Loop through each file
+for ((i=0; i<total_files; i+=files_per_batch)); do
+  output_file="$output_dir/output_file_$file_count.txt"
+  for ((j=0; j<files_per_batch; j++)); do
+    cat "${files[i+j]}" >> "$output_file"
+  done
+  ((file_count++))
+done
+
+
+
+
+
+import os
+
+# Directory containing your 400 files
+input_dir = "path_to_your_files"
+output_dir = "path_to_output_files"
+os.makedirs(output_dir, exist_ok=True)
+
+# Get the list of all files in the directory
+files = sorted(os.listdir(input_dir))
+total_files = len(files)
+files_per_output = 20
+
+# Calculate how many files to combine into each output file
+files_per_batch = total_files // files_per_output
+
+# Initialize counters
+file_count = 1
+
+for i in range(0, total_files, files_per_batch):
+    output_file = os.path.join(output_dir, f"output_file_{file_count}.txt")
+    with open(output_file, 'w') as outfile:
+        for j in range(files_per_batch):
+            if i + j < total_files:
+                with open(os.path.join(input_dir, files[i + j])) as infile:
+                    outfile.write(infile.read())
+    file_count += 1
