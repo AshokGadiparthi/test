@@ -1,65 +1,61 @@
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.beam.sdk.Pipeline;
+import org.apache.beam.sdk.io.Compression;
 import org.apache.beam.sdk.io.TextIO;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.transforms.DoFn;
-import org.apache.beam.sdk.transforms.MapElements;
 import org.apache.beam.sdk.transforms.ParDo;
-import org.apache.beam.sdk.transforms.SimpleFunction;
 import org.apache.beam.sdk.values.PCollection;
 import redis.clients.jedis.Jedis;
 
-public class RedisCheckAndLoad {
+import java.io.IOException;
+
+public class GCSJsonToRedis {
 
     public static void main(String[] args) {
         Pipeline pipeline = Pipeline.create(PipelineOptionsFactory.create());
 
-        // Specify Redis connection details
+        // Redis connection details
         String redisHost = "your-redis-host";
         int redisPort = 6379;
         String redisPassword = "your-redis-password";
-        String redisKey = "your-redis-key"; // The key you want to check
 
-        // Check if the key exists in Redis
-        PCollection<Boolean> isKeyPresent = pipeline.apply("Check Key in Redis", 
-            Create.of(redisKey))
-            .apply("Check in Redis", MapElements.via(new SimpleFunction<String, Boolean>() {
-                @Override
-                public Boolean apply(String key) {
-                    try (Jedis jedis = new Jedis(redisHost, redisPort)) {
-                        jedis.auth(redisPassword);
-                        return jedis.exists(key);
-                    }
-                }
-            }));
+        // GCS path to read the gzipped JSON files
+        String gcsPath = "gs://your-bucket/your-file.json.gz";
 
-        // Load data from GCS if the key is not present in Redis
-        isKeyPresent.apply("Load Data if Key Missing", ParDo.of(new DoFn<Boolean, String>() {
+        // Read the gzipped JSON file from GCS
+        PCollection<String> jsonLines = pipeline.apply("Read JSON from GCS", 
+            TextIO.read().from(gcsPath).withCompression(Compression.GZIP));
+
+        // Process each line in the JSON file
+        jsonLines.apply("Process JSON and Insert into Redis", ParDo.of(new DoFn<String, Void>() {
             @ProcessElement
             public void processElement(ProcessContext c) {
-                Boolean keyExists = c.element();
-                if (!keyExists) {
-                    // Load data from GCS and save it to Redis
-                    PipelineOptionsFactory.create();
-                    Pipeline tempPipeline = Pipeline.create();
+                String jsonLine = c.element();
+                try {
+                    ObjectMapper mapper = new ObjectMapper();
+                    JsonNode jsonNode = mapper.readTree(jsonLine);
 
-                    // Specify your GCS file path
-                    String gcsPath = "gs://your-bucket/your-file.txt";
-                    
-                    PCollection<String> gcsData = tempPipeline.apply("Read from GCS", TextIO.read().from(gcsPath));
+                    // Extract attributes to form the key
+                    String attr1 = jsonNode.get("attr1").asText();
+                    String attr2 = jsonNode.get("attr2").asText();
+                    String attr3 = jsonNode.get("attr3").asText();
 
-                    gcsData.apply("Write to Redis", ParDo.of(new DoFn<String, Void>() {
-                        @ProcessElement
-                        public void processElement(ProcessContext c) {
-                            try (Jedis jedis = new Jedis(redisHost, redisPort)) {
-                                jedis.auth(redisPassword);
-                                // Assuming GCS file contains lines like "key,value"
-                                String[] keyValue = c.element().split(",");
-                                jedis.set(keyValue[0], keyValue[1]);
-                            }
+                    String redisKey = attr1 + ":" + attr2 + ":" + attr3;
+
+                    // Redis connection
+                    try (Jedis jedis = new Jedis(redisHost, redisPort)) {
+                        jedis.auth(redisPassword);
+
+                        // Check if the key exists in Redis
+                        if (!jedis.exists(redisKey)) {
+                            // Convert the whole JSON object to string and store in Redis
+                            jedis.set(redisKey, jsonLine);
                         }
-                    }));
-
-                    tempPipeline.run().waitUntilFinish();
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
             }
         }));
