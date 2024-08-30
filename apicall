@@ -1,95 +1,69 @@
 import org.apache.beam.sdk.Pipeline;
-import org.apache.beam.sdk.io.CompressedSource;
-import org.apache.beam.sdk.io.FileIO;
 import org.apache.beam.sdk.io.TextIO;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
-import org.apache.beam.sdk.transforms.Create;
-import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.transforms.MapElements;
+import org.apache.beam.sdk.transforms.ParDo;
+import org.apache.beam.sdk.transforms.SimpleFunction;
 import org.apache.beam.sdk.values.PCollection;
-import org.apache.beam.sdk.values.KV;
+import redis.clients.jedis.Jedis;
 
-import java.util.ArrayList;
-import java.util.List;
-
-public class DataflowBatchWrapper {
-
-    private static final long TARGET_BATCH_SIZE_MB = 700 * 1024 * 1024; // 700 MB in bytes
+public class RedisCheckAndLoad {
 
     public static void main(String[] args) {
-        // Create Pipeline options
-        MyPipelineOptions options = PipelineOptionsFactory.fromArgs(args).as(MyPipelineOptions.class);
-        Pipeline p = Pipeline.create(options);
+        Pipeline pipeline = Pipeline.create(PipelineOptionsFactory.create());
 
-        // List all .gz files
-        PCollection<MatchResult.Metadata> allFiles = p.apply("MatchFiles", FileIO.match().filepattern("gs://my-bucket/path/*.gz"));
+        // Specify Redis connection details
+        String redisHost = "your-redis-host";
+        int redisPort = 6379;
+        String redisPassword = "your-redis-password";
+        String redisKey = "your-redis-key"; // The key you want to check
 
-        // Split files into batches
-        PCollection<List<String>> fileBatches = allFiles.apply("BatchFiles", ParDo.of(new BatchFilesDoFn()));
-
-        // Process each batch
-        fileBatches.apply("ProcessBatches", ParDo.of(new ProcessBatchDoFn(options)));
-
-        p.run().waitUntilFinish();
-    }
-
-    static class BatchFilesDoFn extends DoFn<MatchResult.Metadata, List<String>> {
-        @ProcessElement
-        public void processElement(ProcessContext c) {
-            List<MatchResult.Metadata> files = c.element();
-            List<String> currentBatch = new ArrayList<>();
-            long currentBatchSize = 0;
-
-            for (MatchResult.Metadata file : files) {
-                long fileSize = file.resourceId().getCurrentSize();
-                if (currentBatchSize + fileSize > TARGET_BATCH_SIZE_MB) {
-                    c.output(currentBatch);
-                    currentBatch = new ArrayList<>();
-                    currentBatchSize = 0;
+        // Check if the key exists in Redis
+        PCollection<Boolean> isKeyPresent = pipeline.apply("Check Key in Redis", 
+            Create.of(redisKey))
+            .apply("Check in Redis", MapElements.via(new SimpleFunction<String, Boolean>() {
+                @Override
+                public Boolean apply(String key) {
+                    try (Jedis jedis = new Jedis(redisHost, redisPort)) {
+                        jedis.auth(redisPassword);
+                        return jedis.exists(key);
+                    }
                 }
-                currentBatch.add(file.resourceId().toString());
-                currentBatchSize += fileSize;
+            }));
+
+        // Load data from GCS if the key is not present in Redis
+        isKeyPresent.apply("Load Data if Key Missing", ParDo.of(new DoFn<Boolean, String>() {
+            @ProcessElement
+            public void processElement(ProcessContext c) {
+                Boolean keyExists = c.element();
+                if (!keyExists) {
+                    // Load data from GCS and save it to Redis
+                    PipelineOptionsFactory.create();
+                    Pipeline tempPipeline = Pipeline.create();
+
+                    // Specify your GCS file path
+                    String gcsPath = "gs://your-bucket/your-file.txt";
+                    
+                    PCollection<String> gcsData = tempPipeline.apply("Read from GCS", TextIO.read().from(gcsPath));
+
+                    gcsData.apply("Write to Redis", ParDo.of(new DoFn<String, Void>() {
+                        @ProcessElement
+                        public void processElement(ProcessContext c) {
+                            try (Jedis jedis = new Jedis(redisHost, redisPort)) {
+                                jedis.auth(redisPassword);
+                                // Assuming GCS file contains lines like "key,value"
+                                String[] keyValue = c.element().split(",");
+                                jedis.set(keyValue[0], keyValue[1]);
+                            }
+                        }
+                    }));
+
+                    tempPipeline.run().waitUntilFinish();
+                }
             }
+        }));
 
-            if (!currentBatch.isEmpty()) {
-                c.output(currentBatch);
-            }
-        }
-    }
-
-    static class ProcessBatchDoFn extends DoFn<List<String>, Void> {
-        private final MyPipelineOptions options;
-
-        ProcessBatchDoFn(MyPipelineOptions options) {
-            this.options = options;
-        }
-
-        @ProcessElement
-        public void processElement(ProcessContext c) {
-            List<String> files = c.element();
-
-            // Create a new Dataflow pipeline for this batch
-            MyPipelineOptions newOptions = PipelineOptionsFactory.fromArgs(options.asArgs()).as(MyPipelineOptions.class);
-            Pipeline batchPipeline = Pipeline.create(newOptions);
-
-            // Decompress and read .gz files
-            for (String file : files) {
-                batchPipeline
-                    .apply("ReadGzFile-" + file, TextIO.read().from(file)
-                    .withCompression(CompressedSource.CompressionMode.GZIP))
-                    .apply("ProcessJson", ParDo.of(new ProcessJsonFn()));
-                    // Add further processing here
-            }
-
-            batchPipeline.run().waitUntilFinish();
-        }
-    }
-
-    static class ProcessJsonFn extends DoFn<String, Void> {
-        @ProcessElement
-        public void processElement(ProcessContext c) {
-            String json = c.element();
-            // Parse and process JSON here
-        }
+        pipeline.run().waitUntilFinish();
     }
 }
