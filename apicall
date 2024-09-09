@@ -1,16 +1,32 @@
-We are experiencing an issue with our Dataflow job related to Spanner change streams in our development environment. The Dataflow job ID is [insert failed Dataflow job ID here].
+I am writing to provide an update on the current status of the Spanner to BigQuery CDC (Change Data Capture) Dataflow job. Last week, we submitted the exact same code and command for the Dataflow job based on the solution provided by the Google team. However, the solution did not work as expected. After further investigation with Google support, it was revealed that the Dataflow job's corresponding metadata table in Spanner had no entries, which caused the entire functionality to fail.
 
-Issue Details:
+Today, we resubmitted the exact same job, code, and command, with no changes. Surprisingly, the solution is now working, and we observed entries in the Spanner metadata table. This suggests that the inconsistency may have been related to Google’s provided solution, and it raises concerns about the stability of this approach.
 
-Each time we launch the Dataflow job, a new metadata table is created in Spanner.
-In the previous successful runs, the metadata tables contain rows with partition information as expected.
-However, for the current job, the newly created metadata table is empty, which is causing the change stream processing to fail.
-We believe this issue is related to the Spanner metadata table that gets created by the Dataflow job.
-Steps Taken:
+Key Observations:
+Performance Delays:
+While the job is now running, we have observed significant delays in processing:
 
-We have verified that the job is correctly configured and have compared it with previous successful jobs.
-We've noticed that the issue seems to stem from the metadata table not being populated as it should be.
-Request: We require assistance from the Google Spanner-Dataflow engineering team to investigate and resolve this issue. We would like to understand why the metadata table is not being populated and what steps we can take to ensure that the change streams are processed correctly.
+Insert/Update operations are taking around 2-3 minutes to process.
+Delete operations, however, are taking more than 12 minutes to complete.
+These timings fall short of our expectations, as we were aiming for near real-time CDC changes.
 
-Please let us know if additional information or logs are required to assist with troubleshooting.
+Inconsistency Across Runs:
 
+The current deployed solution is inconsistent. We have observed that, despite submitting the same code and command as last week, only today did we start seeing entries in the Spanner metadata table.
+Given this inconsistency, we cannot proceed with bulk testing, as the solution is not even reliably handling a small number of records.
+Performance Issues Identified During Monitoring:
+During the monitoring of the job, we encountered the following issues:
+
+"PMJob is stuck due to failed and retried work item, Stage F121 has a high retry count of 353. This is usually caused by a single stuck work item being retried continuously."
+This indicates a bottleneck in the Dataflow job, likely contributing to the performance degradation and slow processing times. Geoff has been informed of these issues and is actively working with the Google engineering team to determine the cause of the delays, particularly regarding slow reads from the change stream partition.
+Next Steps:
+Rigorous Testing:
+In order to confirm that the job and POC are functioning as expected, we need to perform extensive testing, including bulk data testing. However, as mentioned, the current solution is not performing as required even for a small dataset, making it unsuitable for bulk testing at this stage.
+
+Follow-up with Google Support:
+Geoff is continuing to work with the Google engineering team to diagnose and resolve the slow processing times, specifically focusing on the change stream partition reads. We are awaiting further guidance and improvements from their end.
+
+Real-time Processing Expectation:
+Our goal remains to achieve real-time CDC changes, but with the current job performance and the observed delays, it is clear that the solution needs significant optimization before we can move forward with bulk testing in production.
+
+I will continue monitoring the progress closely and keep you updated on any developments. Should you need any additional information or clarifications, please let me know.
