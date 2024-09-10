@@ -1,15 +1,2 @@
-Thank you for your confirmation. We’ll have a detailed discussion during tomorrow morning’s call to finalize the approach for adding the timestamp columns to the solution.
+Everything is working as expected so far. However, I’d like to note that last week, the entire solution was not working, and yesterday's deployment even took significant time for processing just 3 records. Fortunately, today's deployment has met our expectations, but we’ll need a few more fresh deployments to confirm consistent performance.
 
-In the meantime, I wanted to share some observations from our latest bulk testing with 1000 records using the current deployment in the development environment (with 1 worker):
-
-Insert: Less than 5 seconds
-Update: Around 7 to 8 seconds
-Delete: Less than 3 seconds
-We tested with the following metrics:
-
-Insertion: 100 records
-Update: 800 records
-Deletion: 500 records
-Everything is working as expected so far. We’ll discuss more during the call tomorrow.
-
-Thanks again for your support, and I look forward to our discussion!
