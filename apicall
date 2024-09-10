@@ -1,128 +1,15 @@
-import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
+Thank you for your confirmation. We’ll have a detailed discussion during tomorrow morning’s call to finalize the approach for adding the timestamp columns to the solution.
 
-public class SpannerDataGenerator {
+In the meantime, I wanted to share some observations from our latest bulk testing with 1000 records using the current deployment in the development environment (with 1 worker):
 
-    public static void main(String[] args) {
-        // Define your table name and columns
-        String tableName = "SpannerToPubSubCDC";
-        String[] columns = {"cust_id", "acct_num", "selected_MTN", "mtn", "order_num"};
-        
-        // Generating 1000 insert statements
-        List<String> inserts = generateInsertStatements(tableName, columns, 1000);
-        
-        // Generating 800 update statements based on inserted data
-        List<String> updates = generateUpdateStatements(tableName, columns, inserts, 800);
-        
-        // Generating 500 delete statements based on inserted data
-        List<String> deletes = generateDeleteStatements(tableName, inserts, 500);
-        
-        // Output all statements
-        System.out.println("Insert Statements:");
-        inserts.forEach(System.out::println);
-        
-        System.out.println("\nUpdate Statements:");
-        updates.forEach(System.out::println);
-        
-        System.out.println("\nDelete Statements:");
-        deletes.forEach(System.out::println);
+Insert: Less than 5 seconds
+Update: Around 7 to 8 seconds
+Delete: Less than 3 seconds
+We tested with the following metrics:
 
-        // Validation Queries
-        System.out.println("\nValidation Queries:");
-        printValidationQueries(tableName, inserts, updates, deletes);
-    }
+Insertion: 100 records
+Update: 800 records
+Deletion: 500 records
+Everything is working as expected so far. We’ll discuss more during the call tomorrow.
 
-    // Method to generate mock insert statements
-    private static List<String> generateInsertStatements(String tableName, String[] columns, int count) {
-        Random random = new Random();
-        List<String> insertStatements = new ArrayList<>();
-        
-        for (int i = 1; i <= count; i++) {
-            // Generating mock data
-            String cust_id = String.valueOf(i);
-            String acct_num = String.valueOf(100000 + random.nextInt(900000));
-            String selected_MTN = String.valueOf(5000000000L + random.nextInt(999999999));
-            String mtn = String.valueOf(5000000000L + random.nextInt(999999999));
-            String order_num = String.valueOf(200000 + random.nextInt(900000));
-            
-            // Creating the SQL statement
-            String sql = String.format("INSERT INTO %s (%s) VALUES ('%s', '%s', '%s', '%s', '%s');",
-                    tableName, String.join(", ", columns), cust_id, acct_num, selected_MTN, mtn, order_num);
-            insertStatements.add(sql);
-        }
-        return insertStatements;
-    }
-
-    // Method to generate random update statements
-    private static List<String> generateUpdateStatements(String tableName, String[] columns, List<String> inserts, int count) {
-        Random random = new Random();
-        List<String> updateStatements = new ArrayList<>();
-        
-        // Selecting random records to update
-        List<String> randomInserts = random.ints(0, inserts.size())
-                .distinct()
-                .limit(count)
-                .mapToObj(inserts::get)
-                .collect(Collectors.toList());
-        
-        for (String insert : randomInserts) {
-            // Extracting cust_id from the insert statement
-            String cust_id = extractCustIdFromInsert(insert);
-            
-            // Generating new random values for update
-            String new_selected_MTN = String.valueOf(5000000000L + random.nextInt(999999999));
-            String new_mtn = String.valueOf(5000000000L + random.nextInt(999999999));
-            
-            // Creating the update SQL statement
-            String sql = String.format("UPDATE %s SET selected_MTN = '%s', mtn = '%s' WHERE cust_id = '%s';",
-                    tableName, new_selected_MTN, new_mtn, cust_id);
-            updateStatements.add(sql);
-        }
-        return updateStatements;
-    }
-
-    // Method to generate random delete statements
-    private static List<String> generateDeleteStatements(String tableName, List<String> inserts, int count) {
-        Random random = new Random();
-        List<String> deleteStatements = new ArrayList<>();
-        
-        // Selecting random records to delete
-        List<String> randomInserts = random.ints(0, inserts.size())
-                .distinct()
-                .limit(count)
-                .mapToObj(inserts::get)
-                .collect(Collectors.toList());
-        
-        for (String insert : randomInserts) {
-            // Extracting cust_id from the insert statement
-            String cust_id = extractCustIdFromInsert(insert);
-            
-            // Creating the delete SQL statement
-            String sql = String.format("DELETE FROM %s WHERE cust_id = '%s';", tableName, cust_id);
-            deleteStatements.add(sql);
-        }
-        return deleteStatements;
-    }
-
-    // Helper method to extract cust_id from insert statements
-    private static String extractCustIdFromInsert(String insertStatement) {
-        // Extracting the value from INSERT INTO ... VALUES ('cust_id',...
-        return insertStatement.split("'")[1];
-    }
-
-    // Method to print validation queries for insert, update, delete
-    private static void printValidationQueries(String tableName, List<String> inserts, List<String> updates, List<String> deletes) {
-        System.out.println("-- Validate total number of records inserted in Spanner:");
-        System.out.printf("SELECT COUNT(*) FROM %s WHERE cust_id IN (%s);\n", tableName,
-                inserts.stream().map(s -> extractCustIdFromInsert(s)).collect(Collectors.joining(", ")));
-
-        System.out.println("-- Validate total number of records updated in Spanner:");
-        System.out.printf("SELECT COUNT(*) FROM %s WHERE cust_id IN (%s) AND selected_MTN IS NOT NULL AND mtn IS NOT NULL;\n", 
-                tableName, updates.stream().map(s -> extractCustIdFromInsert(s)).collect(Collectors.joining(", ")));
-
-        System.out.println("-- Validate total number of records deleted from Spanner:");
-        System.out.printf("SELECT COUNT(*) FROM %s WHERE cust_id IN (%s);\n", tableName,
-                deletes.stream().map(s -> extractCustIdFromInsert(s)).collect(Collectors.joining(", ")));
-    }
-}
+Thanks again for your support, and I look forward to our discussion!
