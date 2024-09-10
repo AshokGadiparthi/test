@@ -1,32 +1,109 @@
-I am writing to provide an update on the current status of the Spanner to BigQuery CDC (Change Data Capture) Dataflow job. Last week, we submitted the exact same code and command for the Dataflow job based on the solution provided by the Google team. However, the solution did not work as expected. After further investigation with Google support, it was revealed that the Dataflow job's corresponding metadata table in Spanner had no entries, which caused the entire functionality to fail.
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
-Today, we resubmitted the exact same job, code, and command, with no changes. Surprisingly, the solution is now working, and we observed entries in the Spanner metadata table. This suggests that the inconsistency may have been related to Google’s provided solution, and it raises concerns about the stability of this approach.
+public class SpannerDataGenerator {
 
-Key Observations:
-Performance Delays:
-While the job is now running, we have observed significant delays in processing:
+    public static void main(String[] args) {
+        // Define your table name and columns
+        String tableName = "SpannerToPubSubCDC";
+        String[] columns = {"cust_id", "acct_num", "selected_MTN", "mtn", "order_num"};
+        
+        // Generating 1000 insert statements
+        List<String> inserts = generateInsertStatements(tableName, columns, 1000);
+        
+        // Generating 800 update statements based on inserted data
+        List<String> updates = generateUpdateStatements(tableName, columns, inserts, 800);
+        
+        // Generating 500 delete statements based on inserted data
+        List<String> deletes = generateDeleteStatements(tableName, inserts, 500);
+        
+        // Output all statements
+        System.out.println("Insert Statements:");
+        inserts.forEach(System.out::println);
+        
+        System.out.println("\nUpdate Statements:");
+        updates.forEach(System.out::println);
+        
+        System.out.println("\nDelete Statements:");
+        deletes.forEach(System.out::println);
+    }
 
-Insert/Update operations are taking around 2-3 minutes to process.
-Delete operations, however, are taking more than 12 minutes to complete.
-These timings fall short of our expectations, as we were aiming for near real-time CDC changes.
+    // Method to generate mock insert statements
+    private static List<String> generateInsertStatements(String tableName, String[] columns, int count) {
+        Random random = new Random();
+        List<String> insertStatements = new ArrayList<>();
+        
+        for (int i = 1; i <= count; i++) {
+            // Generating mock data
+            String cust_id = String.valueOf(i);
+            String acct_num = String.valueOf(100000 + random.nextInt(900000));
+            String selected_MTN = String.valueOf(5000000000L + random.nextInt(999999999));
+            String mtn = String.valueOf(5000000000L + random.nextInt(999999999));
+            String order_num = String.valueOf(200000 + random.nextInt(900000));
+            
+            // Creating the SQL statement
+            String sql = String.format("INSERT INTO %s (%s) VALUES ('%s', '%s', '%s', '%s', '%s');",
+                    tableName, String.join(", ", columns), cust_id, acct_num, selected_MTN, mtn, order_num);
+            insertStatements.add(sql);
+        }
+        return insertStatements;
+    }
 
-Inconsistency Across Runs:
+    // Method to generate random update statements
+    private static List<String> generateUpdateStatements(String tableName, String[] columns, List<String> inserts, int count) {
+        Random random = new Random();
+        List<String> updateStatements = new ArrayList<>();
+        
+        // Selecting random records to update
+        List<String> randomInserts = random.ints(0, inserts.size())
+                .distinct()
+                .limit(count)
+                .mapToObj(inserts::get)
+                .collect(Collectors.toList());
+        
+        for (String insert : randomInserts) {
+            // Extracting cust_id from the insert statement
+            String cust_id = extractCustIdFromInsert(insert);
+            
+            // Generating new random values for update
+            String new_selected_MTN = String.valueOf(5000000000L + random.nextInt(999999999));
+            String new_mtn = String.valueOf(5000000000L + random.nextInt(999999999));
+            
+            // Creating the update SQL statement
+            String sql = String.format("UPDATE %s SET selected_MTN = '%s', mtn = '%s' WHERE cust_id = '%s';",
+                    tableName, new_selected_MTN, new_mtn, cust_id);
+            updateStatements.add(sql);
+        }
+        return updateStatements;
+    }
 
-The current deployed solution is inconsistent. We have observed that, despite submitting the same code and command as last week, only today did we start seeing entries in the Spanner metadata table.
-Given this inconsistency, we cannot proceed with bulk testing, as the solution is not even reliably handling a small number of records.
-Performance Issues Identified During Monitoring:
-During the monitoring of the job, we encountered the following issues:
+    // Method to generate random delete statements
+    private static List<String> generateDeleteStatements(String tableName, List<String> inserts, int count) {
+        Random random = new Random();
+        List<String> deleteStatements = new ArrayList<>();
+        
+        // Selecting random records to delete
+        List<String> randomInserts = random.ints(0, inserts.size())
+                .distinct()
+                .limit(count)
+                .mapToObj(inserts::get)
+                .collect(Collectors.toList());
+        
+        for (String insert : randomInserts) {
+            // Extracting cust_id from the insert statement
+            String cust_id = extractCustIdFromInsert(insert);
+            
+            // Creating the delete SQL statement
+            String sql = String.format("DELETE FROM %s WHERE cust_id = '%s';", tableName, cust_id);
+            deleteStatements.add(sql);
+        }
+        return deleteStatements;
+    }
 
-"PMJob is stuck due to failed and retried work item, Stage F121 has a high retry count of 353. This is usually caused by a single stuck work item being retried continuously."
-This indicates a bottleneck in the Dataflow job, likely contributing to the performance degradation and slow processing times. Geoff has been informed of these issues and is actively working with the Google engineering team to determine the cause of the delays, particularly regarding slow reads from the change stream partition.
-Next Steps:
-Rigorous Testing:
-In order to confirm that the job and POC are functioning as expected, we need to perform extensive testing, including bulk data testing. However, as mentioned, the current solution is not performing as required even for a small dataset, making it unsuitable for bulk testing at this stage.
-
-Follow-up with Google Support:
-Geoff is continuing to work with the Google engineering team to diagnose and resolve the slow processing times, specifically focusing on the change stream partition reads. We are awaiting further guidance and improvements from their end.
-
-Real-time Processing Expectation:
-Our goal remains to achieve real-time CDC changes, but with the current job performance and the observed delays, it is clear that the solution needs significant optimization before we can move forward with bulk testing in production.
-
-I will continue monitoring the progress closely and keep you updated on any developments. Should you need any additional information or clarifications, please let me know.
+    // Helper method to extract cust_id from insert statements
+    private static String extractCustIdFromInsert(String insertStatement) {
+        String[] parts = insertStatement.split(",");
+        return parts[0].split("\\(")[1].replaceAll("'", "").trim();
+    }
+}
