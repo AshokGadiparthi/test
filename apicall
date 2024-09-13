@@ -1,2 +1,33 @@
-Everything is working as expected so far. However, I’d like to note that last week, the entire solution was not working, and yesterday's deployment even took significant time for processing just 3 records. Fortunately, today's deployment has met our expectations, but we’ll need a few more fresh deployments to confirm consistent performance.
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 
+public class FolderSelection {
+    public static void main(String[] args) {
+        // Get current date and subtract one day
+        LocalDate date = LocalDate.now().minusDays(1);
+        String formattedDate = date.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+
+        // Define morning and evening base folders
+        String morningBaseFolder = "/path/to/morning/folder/";
+        String eveningBaseFolder = "/path/to/evening/folder/";
+
+        // Get current time
+        LocalTime currentTime = LocalTime.now();
+        LocalTime noon = LocalTime.NOON;
+
+        // Check if current time is morning or evening
+        String selectedFolder;
+        if (currentTime.isBefore(noon)) {
+            // Morning: Select morning folder
+            selectedFolder = morningBaseFolder + formattedDate;
+        } else {
+            // Evening: Select evening folder
+            selectedFolder = eveningBaseFolder + formattedDate;
+        }
+
+        // Print the selected folder path
+        System.out.println("Selected Folder Path: " + selectedFolder);
+    }
+}
