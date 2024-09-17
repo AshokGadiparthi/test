@@ -1,95 +1,90 @@
-import org.apache.beam.sdk.Pipeline;
-import org.apache.beam.sdk.io.CompressedSource;
-import org.apache.beam.sdk.io.FileIO;
-import org.apache.beam.sdk.io.TextIO;
-import org.apache.beam.sdk.options.PipelineOptionsFactory;
-import org.apache.beam.sdk.transforms.Create;
-import org.apache.beam.sdk.transforms.ParDo;
-import org.apache.beam.sdk.transforms.DoFn;
-import org.apache.beam.sdk.values.PCollection;
-import org.apache.beam.sdk.values.KV;
+pip install google-cloud-spanner
 
-import java.util.ArrayList;
-import java.util.List;
 
-public class DataflowBatchWrapper {
+import concurrent.futures
+import random
+from google.cloud import spanner
+from google.cloud.spanner_v1 import KeySet
 
-    private static final long TARGET_BATCH_SIZE_MB = 700 * 1024 * 1024; // 700 MB in bytes
+# Spanner setup
+instance_id = "your-instance-id"
+database_id = "your-database-id"
+table_name = "SpannerToPubSubCDC"
 
-    public static void main(String[] args) {
-        // Create Pipeline options
-        MyPipelineOptions options = PipelineOptionsFactory.fromArgs(args).as(MyPipelineOptions.class);
-        Pipeline p = Pipeline.create(options);
+# Establish Spanner connection
+spanner_client = spanner.Client()
+instance = spanner_client.instance(instance_id)
+database = instance.database(database_id)
 
-        // List all .gz files
-        PCollection<MatchResult.Metadata> allFiles = p.apply("MatchFiles", FileIO.match().filepattern("gs://my-bucket/path/*.gz"));
+# Define the percentages for operations
+total_operations = 1_000_000
+insert_percentage = 0.30
+update_percentage = 0.40
+delete_percentage = 0.30
 
-        // Split files into batches
-        PCollection<List<String>> fileBatches = allFiles.apply("BatchFiles", ParDo.of(new BatchFilesDoFn()));
+insert_count = int(total_operations * insert_percentage)
+update_count = int(total_operations * update_percentage)
+delete_count = int(total_operations * delete_percentage)
 
-        // Process each batch
-        fileBatches.apply("ProcessBatches", ParDo.of(new ProcessBatchDoFn(options)));
 
-        p.run().waitUntilFinish();
-    }
+# Function to generate mock insert SQL statements
+def insert_data():
+    with database.batch() as batch:
+        for i in range(insert_count):
+            cust_id = i + 1
+            acct_num = random.randint(100000, 999999)
+            selected_mtn = random.randint(5000000000, 5999999999)
+            mtn = random.randint(5000000000, 5999999999)
+            order_num = random.randint(200000, 299999)
 
-    static class BatchFilesDoFn extends DoFn<MatchResult.Metadata, List<String>> {
-        @ProcessElement
-        public void processElement(ProcessContext c) {
-            List<MatchResult.Metadata> files = c.element();
-            List<String> currentBatch = new ArrayList<>();
-            long currentBatchSize = 0;
+            # Insert query
+            batch.insert(
+                table=table_name,
+                columns=("cust_id", "acct_num", "selected_MTN", "mtn", "order_num"),
+                values=[(cust_id, acct_num, selected_mtn, mtn, order_num)],
+            )
 
-            for (MatchResult.Metadata file : files) {
-                long fileSize = file.resourceId().getCurrentSize();
-                if (currentBatchSize + fileSize > TARGET_BATCH_SIZE_MB) {
-                    c.output(currentBatch);
-                    currentBatch = new ArrayList<>();
-                    currentBatchSize = 0;
-                }
-                currentBatch.add(file.resourceId().toString());
-                currentBatchSize += fileSize;
-            }
 
-            if (!currentBatch.isEmpty()) {
-                c.output(currentBatch);
-            }
-        }
-    }
+# Function to generate mock update SQL statements
+def update_data():
+    with database.snapshot() as snapshot:
+        with database.batch() as batch:
+            for i in range(update_count):
+                cust_id = random.randint(1, insert_count)
+                new_selected_mtn = random.randint(5000000000, 5999999999)
+                new_mtn = random.randint(5000000000, 5999999999)
 
-    static class ProcessBatchDoFn extends DoFn<List<String>, Void> {
-        private final MyPipelineOptions options;
+                # Update query
+                batch.update(
+                    table=table_name,
+                    columns=("cust_id", "selected_MTN", "mtn"),
+                    values=[(cust_id, new_selected_mtn, new_mtn)],
+                )
 
-        ProcessBatchDoFn(MyPipelineOptions options) {
-            this.options = options;
-        }
 
-        @ProcessElement
-        public void processElement(ProcessContext c) {
-            List<String> files = c.element();
+# Function to generate mock delete SQL statements
+def delete_data():
+    with database.snapshot() as snapshot:
+        with database.batch() as batch:
+            for i in range(delete_count):
+                cust_id = random.randint(1, insert_count)
 
-            // Create a new Dataflow pipeline for this batch
-            MyPipelineOptions newOptions = PipelineOptionsFactory.fromArgs(options.asArgs()).as(MyPipelineOptions.class);
-            Pipeline batchPipeline = Pipeline.create(newOptions);
+                # Delete query
+                batch.delete(table=table_name, keyset=KeySet(keys=[(cust_id,)]))
 
-            // Decompress and read .gz files
-            for (String file : files) {
-                batchPipeline
-                    .apply("ReadGzFile-" + file, TextIO.read().from(file)
-                    .withCompression(CompressedSource.CompressionMode.GZIP))
-                    .apply("ProcessJson", ParDo.of(new ProcessJsonFn()));
-                    // Add further processing here
-            }
 
-            batchPipeline.run().waitUntilFinish();
-        }
-    }
+# Function to run tasks in parallel using a ThreadPoolExecutor
+def run_operations():
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        # Submit parallel tasks
+        insert_task = executor.submit(insert_data)
+        update_task = executor.submit(update_data)
+        delete_task = executor.submit(delete_data)
 
-    static class ProcessJsonFn extends DoFn<String, Void> {
-        @ProcessElement
-        public void processElement(ProcessContext c) {
-            String json = c.element();
-            // Parse and process JSON here
-        }
-    }
-}
+        # Wait for all tasks to complete
+        concurrent.futures.wait([insert_task, update_task, delete_task])
+
+
+if __name__ == "__main__":
+    run_operations()
+    print("All operations completed.")
