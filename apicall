@@ -1,33 +1,46 @@
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
+from airflow import DAG
+from airflow.utils.dates import days_ago
+from airflow.operators.bash import BashOperator
+from datetime import datetime
 
-public class FolderSelection {
-    public static void main(String[] args) {
-        // Get current date and subtract one day
-        LocalDate date = LocalDate.now().minusDays(1);
-        String formattedDate = date.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
-
-        // Define morning and evening base folders
-        String morningBaseFolder = "/path/to/morning/folder/";
-        String eveningBaseFolder = "/path/to/evening/folder/";
-
-        // Get current time
-        LocalTime currentTime = LocalTime.now();
-        LocalTime noon = LocalTime.NOON;
-
-        // Check if current time is morning or evening
-        String selectedFolder;
-        if (currentTime.isBefore(noon)) {
-            // Morning: Select morning folder
-            selectedFolder = morningBaseFolder + formattedDate;
-        } else {
-            // Evening: Select evening folder
-            selectedFolder = eveningBaseFolder + formattedDate;
-        }
-
-        // Print the selected folder path
-        System.out.println("Selected Folder Path: " + selectedFolder);
-    }
+# Default args for the DAG
+default_args = {
+    'owner': 'airflow',
+    'start_date': days_ago(1),
+    'retries': 1,
 }
+
+with DAG(
+    'dataflow_dynamic_config_dag',
+    default_args=default_args,
+    schedule_interval='@daily',
+    catchup=False
+) as dag:
+
+    # Determine the dynamic config path and other variables based on the date and time
+    date_suffix = '{{ ds_nodash }}'  # current date without dashes
+    is_morning = '{{ execution_date.hour }} < 12'
+    
+    # Define dynamic paths based on the time of day
+    config_path = "{{ 'gs://your-bucket/morning-config' if is_morning else 'gs://your-bucket/evening-config' }}"
+    config_name = "config-{}".format(date_suffix)
+    job_name = "dataflow-job-{}".format(date_suffix)
+
+    # Bash command to run the Java command for creating the Dataflow template
+    create_template = BashOperator(
+        task_id='create_dataflow_template',
+        bash_command="""
+        java -DConfigpath={{ params.config_path }} \
+             -DConfigName={{ params.config_name }} \
+             -DjobName={{ params.job_name }} \
+             -DisProd=true \
+             -jar /path/cdp.jar
+        """,
+        params={
+            'config_path': config_path,
+            'config_name': config_name,
+            'job_name': job_name
+        }
+    )
+
+    create_template
