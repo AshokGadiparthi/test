@@ -1,46 +1,77 @@
-from airflow import DAG
-from airflow.utils.dates import days_ago
-from airflow.operators.bash import BashOperator
-from datetime import datetime
+import com.google.cloud.storage.Storage;
+import com.google.cloud.storage.StorageOptions;
+import com.google.cloud.storage.Blob;
+import org.apache.beam.sdk.Pipeline;
+import org.apache.beam.sdk.io.TextIO;
+import org.apache.beam.sdk.options.PipelineOptionsFactory;
+import org.apache.beam.sdk.options.ValueProvider;
+import org.apache.beam.sdk.transforms.Create;
+import org.apache.beam.sdk.transforms.ParDo;
+import org.apache.beam.sdk.values.PCollection;
+import org.apache.beam.sdk.values.PDone;
 
-# Default args for the DAG
-default_args = {
-    'owner': 'airflow',
-    'start_date': days_ago(1),
-    'retries': 1,
-}
+public class DataflowTemplateWithOptionalFile {
 
-with DAG(
-    'dataflow_dynamic_config_dag',
-    default_args=default_args,
-    schedule_interval='@daily',
-    catchup=False
-) as dag:
+    public interface MyPipelineOptions extends DataflowPipelineOptions {
+        ValueProvider<String> getInputFilePattern();
+        void setInputFilePattern(ValueProvider<String> inputFilePattern);
+    }
 
-    # Determine the dynamic config path and other variables based on the date and time
-    date_suffix = '{{ ds_nodash }}'  # current date without dashes
-    is_morning = '{{ execution_date.hour }} < 12'
-    
-    # Define dynamic paths based on the time of day
-    config_path = "{{ 'gs://your-bucket/morning-config' if is_morning else 'gs://your-bucket/evening-config' }}"
-    config_name = "config-{}".format(date_suffix)
-    job_name = "dataflow-job-{}".format(date_suffix)
+    public static void main(String[] args) {
+        MyPipelineOptions options = PipelineOptionsFactory.fromArgs(args)
+                .withValidation()
+                .as(MyPipelineOptions.class);
 
-    # Bash command to run the Java command for creating the Dataflow template
-    create_template = BashOperator(
-        task_id='create_dataflow_template',
-        bash_command="""
-        java -DConfigpath={{ params.config_path }} \
-             -DConfigName={{ params.config_name }} \
-             -DjobName={{ params.job_name }} \
-             -DisProd=true \
-             -jar /path/cdp.jar
-        """,
-        params={
-            'config_path': config_path,
-            'config_name': config_name,
-            'job_name': job_name
+        Pipeline pipeline = Pipeline.create(options);
+
+        // Dummy file pattern for template creation time
+        String dummyPattern = "gs://dummy-bucket/path-to-nonexistent-file.txt";
+        
+        PCollection<String> input = pipeline.apply("Check Input File",
+                Create.of("Checking if input file exists...")
+        );
+
+        // Check if the file exists at runtime
+        PCollection<String> fileExists = input.apply("Check GCS File", ParDo.of(new CheckFileExists(options.getInputFilePattern())));
+
+        // If the file exists, read from it
+        PCollection<String> lines = fileExists.apply("Read File",
+                TextIO.read().from(options.getInputFilePattern()).withCompression(TextIO.Compression.GZIP));
+
+        // Perform your operations on the input file data
+        lines.apply("Process Data", ParDo.of(new ProcessDataFn()));
+
+        pipeline.run();
+    }
+
+    // A DoFn to check if a file exists on GCS at runtime
+    static class CheckFileExists extends DoFn<String, String> {
+        private final ValueProvider<String> filePattern;
+
+        public CheckFileExists(ValueProvider<String> filePattern) {
+            this.filePattern = filePattern;
         }
-    )
 
-    create_template
+        @ProcessElement
+        public void processElement(ProcessContext c) {
+            Storage storage = StorageOptions.getDefaultInstance().getService();
+            String pattern = filePattern.get();
+            Blob blob = storage.get(BlobId.of("your-bucket-name", "path-to-file"));  // Adjust the bucket and file path accordingly
+
+            if (blob != null && blob.exists()) {
+                c.output(pattern);  // File exists, so output the pattern for reading
+            } else {
+                System.out.println("File does not exist, skipping...");
+            }
+        }
+    }
+    
+    // Dummy processing function
+    static class ProcessDataFn extends DoFn<String, Void> {
+        @ProcessElement
+        public void processElement(ProcessContext c) {
+            // Your processing logic here
+            System.out.println("Processing: " + c.element());
+        }
+    }
+}
