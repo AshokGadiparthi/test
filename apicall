@@ -1,6 +1,7 @@
 import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.StorageOptions;
 import com.google.cloud.storage.Blob;
+import com.google.cloud.storage.BlobId;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.TextIO;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
@@ -8,7 +9,6 @@ import org.apache.beam.sdk.options.ValueProvider;
 import org.apache.beam.sdk.transforms.Create;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.PCollection;
-import org.apache.beam.sdk.values.PDone;
 
 public class DataflowTemplateWithOptionalFile {
 
@@ -24,21 +24,26 @@ public class DataflowTemplateWithOptionalFile {
 
         Pipeline pipeline = Pipeline.create(options);
 
-        // Dummy file pattern for template creation time
+        // Placeholder pattern for template creation
         String dummyPattern = "gs://dummy-bucket/path-to-nonexistent-file.txt";
         
+        // Use the dummy pattern at template creation time (if input file not yet available)
+        ValueProvider<String> inputFilePattern = options.getInputFilePattern().isAccessible() ?
+                options.getInputFilePattern() : ValueProvider.StaticValueProvider.of(dummyPattern);
+
         PCollection<String> input = pipeline.apply("Check Input File",
                 Create.of("Checking if input file exists...")
         );
 
-        // Check if the file exists at runtime
-        PCollection<String> fileExists = input.apply("Check GCS File", ParDo.of(new CheckFileExists(options.getInputFilePattern())));
+        // Check if the file exists at runtime using the provided input pattern
+        PCollection<String> fileExists = input.apply("Check GCS File", 
+                ParDo.of(new CheckFileExists(inputFilePattern)));
 
-        // If the file exists, read from it
+        // If the file exists, read from it, otherwise skip
         PCollection<String> lines = fileExists.apply("Read File",
-                TextIO.read().from(options.getInputFilePattern()).withCompression(TextIO.Compression.GZIP));
+                TextIO.read().from(inputFilePattern).withCompression(TextIO.Compression.GZIP));
 
-        // Perform your operations on the input file data
+        // Process the data
         lines.apply("Process Data", ParDo.of(new ProcessDataFn()));
 
         pipeline.run();
@@ -56,16 +61,18 @@ public class DataflowTemplateWithOptionalFile {
         public void processElement(ProcessContext c) {
             Storage storage = StorageOptions.getDefaultInstance().getService();
             String pattern = filePattern.get();
-            Blob blob = storage.get(BlobId.of("your-bucket-name", "path-to-file"));  // Adjust the bucket and file path accordingly
+
+            // Replace "your-bucket-name" and "path-to-file" with actual GCS path logic
+            Blob blob = storage.get(BlobId.of("your-bucket-name", "path-to-file"));
 
             if (blob != null && blob.exists()) {
-                c.output(pattern);  // File exists, so output the pattern for reading
+                c.output(pattern);  // File exists, output the pattern for reading
             } else {
                 System.out.println("File does not exist, skipping...");
             }
         }
     }
-    
+
     // Dummy processing function
     static class ProcessDataFn extends DoFn<String, Void> {
         @ProcessElement
