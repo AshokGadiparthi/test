@@ -276,3 +276,79 @@ public class PubSubToSpanner {
     }
 }
 
+
+
+
+
+import com.google.cloud.spanner.DatabaseClient;
+import com.google.cloud.spanner.DatabaseId;
+import com.google.cloud.spanner.Spanner;
+import com.google.cloud.spanner.SpannerOptions;
+import com.google.cloud.spanner.Statement;
+import com.google.cloud.spanner.TransactionRunner.TransactionCallable;
+import org.apache.beam.sdk.Pipeline;
+import org.apache.beam.sdk.io.gcp.pubsub.PubsubIO;
+import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.transforms.ParDo;
+import org.apache.beam.sdk.values.PCollection;
+
+public class PubSubToSpanner {
+
+    public static void main(String[] args) {
+        Pipeline pipeline = Pipeline.create();
+
+        // Read messages from Pub/Sub subscription
+        String subscription = "projects/your-project-id/subscriptions/your-subscription-id";
+        PCollection<String> pubSubMessages = pipeline.apply("ReadFromPubSub",
+                PubsubIO.readStrings().fromSubscription(subscription));
+
+        // Process and write to Spanner
+        pubSubMessages.apply("ProcessMessages", ParDo.of(new ProcessPubSubMessageFn()));
+
+        pipeline.run().waitUntilFinish();
+    }
+
+    static class ProcessPubSubMessageFn extends DoFn<String, Void> {
+        private transient Spanner spanner;
+        private transient DatabaseClient dbClient;
+
+        @Setup
+        public void setup() {
+            // Initialize Spanner connection
+            SpannerOptions options = SpannerOptions.newBuilder().build();
+            spanner = options.getService();
+
+            // Get DatabaseId for your project, instance, and database
+            String projectId = options.getProjectId();  // or provide your project ID directly
+            String instanceId = "your-instance-id";
+            String databaseId = "your-database-id";
+
+            DatabaseId db = DatabaseId.of(projectId, instanceId, databaseId);
+            dbClient = spanner.getDatabaseClient(db);  // Use DatabaseId object to get the DatabaseClient
+        }
+
+        @ProcessElement
+        public void processElement(ProcessContext context) {
+            String sqlStatement = context.element();
+
+            // Submit SQL statement directly to Spanner within a transaction
+            dbClient.runTransaction((TransactionCallable<Void>) transaction -> {
+                try {
+                    transaction.executeUpdate(Statement.of(sqlStatement));
+                } catch (Exception e) {
+                    System.err.println("Failed to execute SQL: " + sqlStatement);
+                    e.printStackTrace();
+                }
+                return null;  // Return null because no value is needed
+            });
+        }
+
+        @Teardown
+        public void teardown() {
+            // Close Spanner connection
+            if (spanner != null) {
+                spanner.close();
+            }
+        }
+    }
+}
