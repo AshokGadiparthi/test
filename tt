@@ -533,3 +533,63 @@ public class PubSubToSpanner {
 }
 
 
+
+ppppppppp
+import com.google.cloud.spanner.Key;
+import com.google.cloud.spanner.Mutation;
+import java.util.ArrayList;
+import java.util.List;
+
+public class SpannerMutationHandler {
+
+    public List<Mutation> handleSqlStatement(String sqlStatement) {
+        List<Mutation> mutations = new ArrayList<>();
+
+        if (sqlStatement.startsWith("INSERT")) {
+            // Parse the INSERT statement (assumes VALUES keyword is present)
+            String[] values = sqlStatement.split("VALUES")[1].trim().replace(";", "").replace("(", "").replace(")", "").split(",");
+            String custId = values[0].replace("'", "").trim();
+            String acctNum = values[1].replace("'", "").trim();
+            String selectedMTN = values[2].replace("'", "").trim();
+            String mtn = values[3].replace("'", "").trim();
+            String orderNum = values[4].replace("'", "").trim();
+
+            // Create the INSERT Mutation
+            mutations.add(Mutation.newInsertBuilder("SpannerToPubsubCDC")
+                    .set("cust_id").to(custId)
+                    .set("acct_num").to(acctNum)
+                    .set("selected_MTN").to(selectedMTN)
+                    .set("mtn").to(mtn)
+                    .set("order_num").to(orderNum)
+                    .build());
+
+        } else if (sqlStatement.startsWith("UPDATE")) {
+            // Parse the UPDATE statement (assumes SET and WHERE keywords are present)
+            String setClause = sqlStatement.split("SET")[1].split("WHERE")[0].trim();
+            String[] setParts = setClause.split(",");
+
+            String selectedMTN = setParts[0].split("=")[1].replace("'", "").trim();
+            String mtn = setParts[1].split("=")[1].replace("'", "").trim();
+            String custId = sqlStatement.split("WHERE")[1].trim().split("=")[1].replace("'", "").trim();
+
+            // Create the UPDATE Mutation
+            mutations.add(Mutation.newUpdateBuilder("SpannerToPubsubCDC")
+                    .set("cust_id").to(custId)
+                    .set("selected_MTN").to(selectedMTN)
+                    .set("mtn").to(mtn)
+                    .build());
+
+        } else if (sqlStatement.startsWith("DELETE")) {
+            // Parse the DELETE statement (assumes WHERE keyword is present)
+            String custId = sqlStatement.split("WHERE")[1].trim().split("=")[1].replace("'", "").trim();
+
+            // Create the DELETE Mutation
+            mutations.add(Mutation.delete("SpannerToPubsubCDC", Key.of(custId)));
+        }
+
+        return mutations;
+    }
+}
+
+
+
