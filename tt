@@ -1,57 +1,170 @@
-#!/bin/bash
+import com.google.cloud.pubsub.v1.Publisher;
+import com.google.protobuf.ByteString;
+import com.google.pubsub.v1.PubsubMessage;
+import com.google.pubsub.v1.TopicName;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+import java.util.concurrent.ExecutionException;
 
-# Directory containing your 400 files
-input_dir="path_to_your_files"
-output_dir="path_to_output_files"
-mkdir -p $output_dir
+public class PubSubMessagePublisher {
 
-# Get the list of all files in the directory
-files=($input_dir/*)
-total_files=${#files[@]}
-files_per_output=20
+    public static void main(String[] args) throws IOException, ExecutionException, InterruptedException {
+        // Define Pub/Sub topic details
+        String projectId = "your-project-id";  // Update with your project ID
+        String topicId = "your-topic-id";  // Update with your topic ID
 
-# Calculate how many files to combine into each output file
-files_per_batch=$((total_files / files_per_output))
+        // Create Pub/Sub publisher
+        TopicName topicName = TopicName.of(projectId, topicId);
+        Publisher publisher = null;
 
-# Initialize counters
-file_count=1
+        try {
+            publisher = Publisher.newBuilder(topicName).build();
 
-# Loop through each file
-for ((i=0; i<total_files; i+=files_per_batch)); do
-  output_file="$output_dir/output_file_$file_count.txt"
-  for ((j=0; j<files_per_batch; j++)); do
-    cat "${files[i+j]}" >> "$output_file"
-  done
-  ((file_count++))
-done
+            // Generate and publish 1 million messages
+            String tableName = "SpannerToPubSubCDC";
+            String[] columns = {"cust_id", "acct_num", "selected_MTN", "mtn", "order_num"};
+
+            // Generate SQL statements
+            List<String> inserts = generateInsertStatements(tableName, columns, 1000000);
+            List<String> updates = generateUpdateStatements(tableName, columns, inserts, 800000);
+            List<String> deletes = generateDeleteStatements(tableName, inserts, 500000);
+
+            // Publish the SQL statements as Pub/Sub messages
+            publishMessages(publisher, inserts);
+            publishMessages(publisher, updates);
+            publishMessages(publisher, deletes);
+
+        } finally {
+            if (publisher != null) {
+                publisher.shutdown();
+            }
+        }
+    }
+
+    private static void publishMessages(Publisher publisher, List<String> messages) throws ExecutionException, InterruptedException {
+        for (String message : messages) {
+            ByteString data = ByteString.copyFromUtf8(message);
+            PubsubMessage pubsubMessage = PubsubMessage.newBuilder().setData(data).build();
+            publisher.publish(pubsubMessage).get();
+        }
+    }
+
+    private static List<String> generateInsertStatements(String tableName, String[] columns, int count) {
+        Random random = new Random();
+        List<String> insertStatements = new ArrayList<>();
+
+        for (int i = 1; i <= count; i++) {
+            String cust_id = String.valueOf(i);
+            String acct_num = String.valueOf(100000 + random.nextInt(900000));
+            String selected_MTN = String.valueOf(5000000000L + random.nextInt(999999999));
+            String mtn = String.valueOf(5000000000L + random.nextInt(999999999));
+            String order_num = String.valueOf(200000 + random.nextInt(900000));
+
+            String sql = String.format("INSERT INTO %s (%s) VALUES ('%s', '%s', '%s', '%s', '%s');",
+                    tableName, String.join(", ", columns), cust_id, acct_num, selected_MTN, mtn, order_num);
+            insertStatements.add(sql);
+        }
+        return insertStatements;
+    }
+
+    private static List<String> generateUpdateStatements(String tableName, String[] columns, List<String> inserts, int count) {
+        Random random = new Random();
+        List<String> updateStatements = new ArrayList<>();
+        List<String> randomInserts = new ArrayList<>(inserts.subList(0, count));
+
+        for (String insert : randomInserts) {
+            String cust_id = extractCustIdFromInsert(insert);
+            String new_selected_MTN = String.valueOf(5000000000L + random.nextInt(999999999));
+            String new_mtn = String.valueOf(5000000000L + random.nextInt(999999999));
+
+            String sql = String.format("UPDATE %s SET selected_MTN = '%s', mtn = '%s' WHERE cust_id = '%s';",
+                    tableName, new_selected_MTN, new_mtn, cust_id);
+            updateStatements.add(sql);
+        }
+        return updateStatements;
+    }
+
+    private static List<String> generateDeleteStatements(String tableName, List<String> inserts, int count) {
+        Random random = new Random();
+        List<String> deleteStatements = new ArrayList<>();
+        List<String> randomInserts = new ArrayList<>(inserts.subList(0, count));
+
+        for (String insert : randomInserts) {
+            String cust_id = extractCustIdFromInsert(insert);
+            String sql = String.format("DELETE FROM %s WHERE cust_id = '%s';", tableName, cust_id);
+            deleteStatements.add(sql);
+        }
+        return deleteStatements;
+    }
+
+    private static String extractCustIdFromInsert(String insertStatement) {
+        return insertStatement.split("'")[1];
+    }
+}
 
 
+import com.google.cloud.spanner.DatabaseClient;
+import com.google.cloud.spanner.Mutation;
+import com.google.cloud.spanner.Spanner;
+import com.google.cloud.spanner.SpannerOptions;
+import org.apache.beam.sdk.Pipeline;
+import org.apache.beam.sdk.io.gcp.pubsub.PubsubIO;
+import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.transforms.ParDo;
+import org.apache.beam.sdk.values.PCollection;
 
+public class PubSubToSpanner {
 
+    public static void main(String[] args) {
+        Pipeline pipeline = Pipeline.create();
 
-import os
+        // Read messages from Pub/Sub subscription
+        String subscription = "projects/your-project-id/subscriptions/your-subscription-id";
+        PCollection<String> pubSubMessages = pipeline.apply("ReadFromPubSub",
+                PubsubIO.readStrings().fromSubscription(subscription));
 
-# Directory containing your 400 files
-input_dir = "path_to_your_files"
-output_dir = "path_to_output_files"
-os.makedirs(output_dir, exist_ok=True)
+        // Process and write to Spanner
+        pubSubMessages.apply("ProcessMessages", ParDo.of(new ProcessPubSubMessageFn()));
 
-# Get the list of all files in the directory
-files = sorted(os.listdir(input_dir))
-total_files = len(files)
-files_per_output = 20
+        pipeline.run().waitUntilFinish();
+    }
 
-# Calculate how many files to combine into each output file
-files_per_batch = total_files // files_per_output
+    static class ProcessPubSubMessageFn extends DoFn<String, Void> {
+        private transient Spanner spanner;
+        private transient DatabaseClient dbClient;
 
-# Initialize counters
-file_count = 1
+        @Setup
+        public void setup() {
+            // Initialize Spanner connection
+            SpannerOptions options = SpannerOptions.newBuilder().build();
+            spanner = options.getService();
+            dbClient = spanner.getDatabaseClient(
+                    SpannerOptions.getDefaultProjectId(),
+                    "your-instance-id",
+                    "your-database-id"
+            );
+        }
 
-for i in range(0, total_files, files_per_batch):
-    output_file = os.path.join(output_dir, f"output_file_{file_count}.txt")
-    with open(output_file, 'w') as outfile:
-        for j in range(files_per_batch):
-            if i + j < total_files:
-                with open(os.path.join(input_dir, files[i + j])) as infile:
-                    outfile.write(infile.read())
-    file_count += 1
+        @ProcessElement
+        public void processElement(ProcessContext context) {
+            String sqlStatement = context.element();
+            // Handle INSERT/UPDATE/DELETE based on the SQL message
+            Mutation mutation = Mutation.newInsertOrUpdateBuilder("YourTableName")
+                    .set("your_column_name").to("some_value")  // parse sqlStatement to build the Mutation
+                    .build();
+
+            // Submit the mutation to Spanner
+            dbClient.write(List.of(mutation));
+        }
+
+        @Teardown
+        public void teardown() {
+            // Close Spanner connection
+            if (spanner != null) {
+                spanner.close();
+            }
+        }
+    }
+}
