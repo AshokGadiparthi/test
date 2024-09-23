@@ -425,3 +425,111 @@ public class PubSubToSpanner {
     }
 }
 
+
+
+import com.google.cloud.spanner.DatabaseClient;
+import com.google.cloud.spanner.DatabaseId;
+import com.google.cloud.spanner.Mutation;
+import com.google.cloud.spanner.Spanner;
+import com.google.cloud.spanner.SpannerOptions;
+import org.apache.beam.sdk.Pipeline;
+import org.apache.beam.sdk.io.gcp.pubsub.PubsubIO;
+import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.transforms.ParDo;
+import org.apache.beam.sdk.values.PCollection;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class PubSubToSpanner {
+
+    public static void main(String[] args) {
+        Pipeline pipeline = Pipeline.create();
+
+        // Read messages from Pub/Sub subscription
+        String subscription = "projects/your-project-id/subscriptions/your-subscription-id";
+        PCollection<String> pubSubMessages = pipeline.apply("ReadFromPubSub",
+                PubsubIO.readStrings().fromSubscription(subscription));
+
+        // Process and write to Spanner
+        pubSubMessages.apply("ProcessMessages", ParDo.of(new ProcessPubSubMessageFn()));
+
+        pipeline.run().waitUntilFinish();
+    }
+
+    static class ProcessPubSubMessageFn extends DoFn<String, Void> {
+        private transient Spanner spanner;
+        private transient DatabaseClient dbClient;
+
+        @Setup
+        public void setup() {
+            // Initialize Spanner connection
+            SpannerOptions options = SpannerOptions.newBuilder().build();
+            spanner = options.getService();
+
+            // Get DatabaseId for your project, instance, and database
+            String projectId = options.getProjectId();
+            String instanceId = "your-instance-id";
+            String databaseId = "your-database-id";
+
+            DatabaseId db = DatabaseId.of(projectId, instanceId, databaseId);
+            dbClient = spanner.getDatabaseClient(db);
+        }
+
+        @ProcessElement
+        public void processElement(ProcessContext context) {
+            String sqlStatement = context.element();
+            List<Mutation> mutations = new ArrayList<>();
+
+            // Convert SQL statement to Mutation (this is a simplified example)
+            if (sqlStatement.startsWith("INSERT")) {
+                // Parse the insert statement (simplified)
+                String[] parts = sqlStatement.split("VALUES")[1].trim().replace(";", "").split(",");
+                String custId = parts[0].replace("'", "").trim();
+                String acctNum = parts[1].replace("'", "").trim();
+                
+                // Create the Mutation
+                mutations.add(Mutation.newInsertBuilder("YourTableName")
+                        .set("cust_id").to(custId)
+                        .set("acct_num").to(acctNum)
+                        .build());
+            } else if (sqlStatement.startsWith("UPDATE")) {
+                // Parse the update statement (simplified)
+                String custId = sqlStatement.split("WHERE")[1].trim().split("=")[1].replace("'", "").trim();
+                String newAcctNum = "some_new_value"; // replace with actual new value extraction
+                
+                // Create the Mutation
+                mutations.add(Mutation.newUpdateBuilder("YourTableName")
+                        .set("cust_id").to(custId)
+                        .set("acct_num").to(newAcctNum)
+                        .build());
+            } else if (sqlStatement.startsWith("DELETE")) {
+                // Parse the delete statement (simplified)
+                String custId = sqlStatement.split("WHERE")[1].trim().split("=")[1].replace("'", "").trim();
+                
+                // Create the Mutation
+                mutations.add(Mutation.delete("YourTableName", Key.of(custId)));
+            }
+
+            // Submit mutations to Spanner
+            if (!mutations.isEmpty()) {
+                try {
+                    dbClient.write(mutations);
+                } catch (Exception e) {
+                    System.err.println("Failed to execute SQL: " + sqlStatement);
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        @Teardown
+        public void teardown() {
+            // Close Spanner connection
+            if (spanner != null) {
+                spanner.close();
+            }
+        }
+    }
+}
+
+
