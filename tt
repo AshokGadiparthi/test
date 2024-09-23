@@ -168,3 +168,33 @@ public class PubSubToSpanner {
         }
     }
 }
+
+
+
+
+import com.google.cloud.spanner.DatabaseClient;
+import com.google.cloud.spanner.DatabaseId;
+import com.google.cloud.spanner.Spanner;
+import com.google.cloud.spanner.SpannerOptions;
+
+public class SpannerExample {
+    public static void main(String[] args) {
+        // Initialize Spanner
+        SpannerOptions options = SpannerOptions.newBuilder().build();
+        Spanner spanner = options.getService();
+
+        // Define the project ID, instance ID, and database ID
+        String projectId = options.getProjectId();
+        String instanceId = "your-instance-id";
+        String databaseId = "your-database-id";
+
+        // Create a DatabaseId object
+        DatabaseId db = DatabaseId.of(projectId, instanceId, databaseId);
+
+        // Get the database client using the DatabaseId object
+        DatabaseClient dbClient = spanner.getDatabaseClient(db);
+
+        // Now dbClient is ready to interact with Spanner
+        System.out.println("Connected to Spanner database: " + db);
+    }
+}
