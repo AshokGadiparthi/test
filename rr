@@ -1,90 +1,98 @@
-pip install google-cloud-spanner
+import com.google.cloud.pubsub.v1.Publisher;
+import com.google.pubsub.v1.PubsubMessage;
+import com.google.pubsub.v1.TopicName;
+import com.google.api.core.ApiFuture;
+import com.google.api.core.ApiFutures;
+import com.google.protobuf.ByteString;
 
+import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.TimeUnit;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Random;
 
-import concurrent.futures
-import random
-from google.cloud import spanner
-from google.cloud.spanner_v1 import KeySet
+public class PubSubInsertQueryPublisher {
 
-# Spanner setup
-instance_id = "your-instance-id"
-database_id = "your-database-id"
-table_name = "SpannerToPubSubCDC"
+    private static final String PROJECT_ID = "your-project-id";
+    private static final String TOPIC_ID = "your-topic-id";
+    private static final int NUM_THREADS = 10; // Number of threads
+    private static final int TOTAL_MESSAGES = 1000000; // 1 million messages
+    private static final int TIME_LIMIT_MINUTES = 30;
 
-# Establish Spanner connection
-spanner_client = spanner.Client()
-instance = spanner_client.instance(instance_id)
-database = instance.database(database_id)
+    public static void main(String[] args) throws Exception {
+        TopicName topicName = TopicName.of(PROJECT_ID, TOPIC_ID);
+        Publisher publisher = Publisher.newBuilder(topicName).build();
 
-# Define the percentages for operations
-total_operations = 1_000_000
-insert_percentage = 0.30
-update_percentage = 0.40
-delete_percentage = 0.30
+        ExecutorService executor = Executors.newFixedThreadPool(NUM_THREADS);
+        AtomicLong sequenceNumber = new AtomicLong(1); // Atomic counter for unique sequence numbers
+        Random random = new Random(); // Random object for generating random strings
 
-insert_count = int(total_operations * insert_percentage)
-update_count = int(total_operations * update_percentage)
-delete_count = int(total_operations * delete_percentage)
+        // Define the total number of messages per thread
+        int messagesPerThread = TOTAL_MESSAGES / NUM_THREADS;
 
+        // Submit tasks to generate and publish messages in parallel
+        for (int i = 0; i < NUM_THREADS; i++) {
+            executor.submit(() -> {
+                List<ApiFuture<String>> futures = new ArrayList<>();
+                for (int j = 0; j < messagesPerThread; j++) {
+                    long seqNum = sequenceNumber.getAndIncrement(); // Get unique sequence number
 
-# Function to generate mock insert SQL statements
-def insert_data():
-    with database.batch() as batch:
-        for i in range(insert_count):
-            cust_id = i + 1
-            acct_num = random.randint(100000, 999999)
-            selected_mtn = random.randint(5000000000, 5999999999)
-            mtn = random.randint(5000000000, 5999999999)
-            order_num = random.randint(200000, 299999)
+                    // Generate random values for acct_num, selected_MTN, mtn, order_num
+                    String acctNum = getRandomString(random);
+                    String selectedMTN = getRandomString(random);
+                    String mtn = getRandomString(random);
+                    String orderNum = getRandomString(random);
 
-            # Insert query
-            batch.insert(
-                table=table_name,
-                columns=("cust_id", "acct_num", "selected_MTN", "mtn", "order_num"),
-                values=[(cust_id, acct_num, selected_mtn, mtn, order_num)],
-            )
+                    // Generate the INSERT SQL query
+                    String sqlInsertQuery = String.format(
+                        "INSERT INTO SpannerToPubsubCDC (cust_id, acct_num, selected_MTN, mtn, order_num) " +
+                        "VALUES ('%d', '%s', '%s', '%s', '%s');",
+                        seqNum, acctNum, selectedMTN, mtn, orderNum);
 
+                    // Create Pub/Sub message
+                    PubsubMessage message = PubsubMessage.newBuilder()
+                            .setData(ByteString.copyFromUtf8(sqlInsertQuery))
+                            .build();
 
-# Function to generate mock update SQL statements
-def update_data():
-    with database.snapshot() as snapshot:
-        with database.batch() as batch:
-            for i in range(update_count):
-                cust_id = random.randint(1, insert_count)
-                new_selected_mtn = random.randint(5000000000, 5999999999)
-                new_mtn = random.randint(5000000000, 5999999999)
+                    // Publish the message to Pub/Sub
+                    ApiFuture<String> messageIdFuture = publisher.publish(message);
+                    futures.add(messageIdFuture);
+                }
 
-                # Update query
-                batch.update(
-                    table=table_name,
-                    columns=("cust_id", "selected_MTN", "mtn"),
-                    values=[(cust_id, new_selected_mtn, new_mtn)],
-                )
+                // Wait for all messages in this thread to be sent
+                ApiFutures.allAsList(futures).get();
+            });
+        }
 
+        // Shutdown the executor after tasks are submitted
+        executor.shutdown();
 
-# Function to generate mock delete SQL statements
-def delete_data():
-    with database.snapshot() as snapshot:
-        with database.batch() as batch:
-            for i in range(delete_count):
-                cust_id = random.randint(1, insert_count)
+        // Wait for all tasks to complete within the time limit
+        if (!executor.awaitTermination(TIME_LIMIT_MINUTES, TimeUnit.MINUTES)) {
+            System.out.println("Not all tasks completed within the time limit.");
+            executor.shutdownNow();
+        }
 
-                # Delete query
-                batch.delete(table=table_name, keyset=KeySet(keys=[(cust_id,)]))
+        // Shutdown the Pub/Sub publisher
+        publisher.shutdown();
+        publisher.awaitTermination(1, TimeUnit.MINUTES);
 
+        System.out.println("Successfully published 1 million SQL insert messages to Pub/Sub.");
+    }
 
-# Function to run tasks in parallel using a ThreadPoolExecutor
-def run_operations():
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        # Submit parallel tasks
-        insert_task = executor.submit(insert_data)
-        update_task = executor.submit(update_data)
-        delete_task = executor.submit(delete_data)
+    // Helper method to generate a random string of a given length
+    private static String getRandomString(Random random) {
+        int length = 6; // Define length of the random string
+        String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"; // Characters to choose from
+        StringBuilder sb = new StringBuilder(length);
 
-        # Wait for all tasks to complete
-        concurrent.futures.wait([insert_task, update_task, delete_task])
+        for (int i = 0; i < length; i++) {
+            int index = random.nextInt(characters.length());
+            sb.append(characters.charAt(index));
+        }
 
-
-if __name__ == "__main__":
-    run_operations()
-    print("All operations completed.")
+        return sb.toString(); // Return the random string
+    }
+}
