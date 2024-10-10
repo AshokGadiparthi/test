@@ -84,3 +84,40 @@ public class Address {
     public String getZipcode() { return zipcode; }
     public void setZipcode(String zipcode) { this.zipcode = zipcode; }
 }
+
+
+[
+    {
+        "name": "empName",
+        "type": "STRING",
+        "mode": "REQUIRED"
+    },
+    {
+        "name": "address",
+        "type": "RECORD",
+        "mode": "REQUIRED",
+        "fields": [
+            {
+                "name": "street",
+                "type": "STRING",
+                "mode": "REQUIRED"
+            },
+            {
+                "name": "city",
+                "type": "STRING",
+                "mode": "REQUIRED"
+            },
+            {
+                "name": "zipcode",
+                "type": "STRING",
+                "mode": "REQUIRED"
+            }
+        ]
+    },
+    {
+        "name": "phoneNumber",
+        "type": "STRING",
+        "mode": "REQUIRED"
+    }
+]
+
