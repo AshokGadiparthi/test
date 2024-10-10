@@ -1,53 +1,86 @@
-import com.google.cloud.dataflow.sdk.Pipeline;
-import com.google.cloud.dataflow.sdk.options.Description;
-import com.google.cloud.dataflow.sdk.options.PipelineOptions;
-import com.google.cloud.dataflow.sdk.options.PipelineOptionsFactory;
-import com.google.cloud.dataflow.sdk.io.TextIO;
-import com.google.cloud.dataflow.sdk.transforms.Create;
-import com.google.cloud.dataflow.sdk.transforms.ParDo;
-import com.google.cloud.dataflow.sdk.transforms.DoFn;
-import com.google.cloud.dataflow.sdk.values.PCollection;
+import com.google.api.services.bigquery.model.TableRow;
+import org.apache.beam.sdk.Pipeline;
+import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
+import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.transforms.ParDo;
+import org.apache.beam.sdk.values.PCollection;
+import org.apache.beam.sdk.options.PipelineOptionsFactory;
 
-public class DataflowPipeline {
+public class BigQueryInsertExample {
 
-    // Define custom pipeline options
-    public interface MyOptions extends PipelineOptions {
-        @Description("Path of the input file")
-        String getInputFile();
-        void setInputFile(String value);
+    public static class ConvertToTableRowFn extends DoFn<Employee, TableRow> {
+        @ProcessElement
+        public void processElement(ProcessContext c) {
+            Employee employee = c.element();
+            
+            // Creating a nested struct for address
+            TableRow addressRow = new TableRow()
+                .set("street", employee.getAddress().getStreet())
+                .set("city", employee.getAddress().getCity())
+                .set("zipcode", employee.getAddress().getZipcode());
+            
+            // Creating the main TableRow for employee
+            TableRow row = new TableRow()
+                .set("empName", employee.getEmpName())
+                .set("address", addressRow)  // Nested struct (address)
+                .set("phoneNumber", employee.getPhoneNumber());
+            
+            c.output(row);
+        }
     }
 
     public static void main(String[] args) {
-        // Create pipeline options
-        MyOptions options = PipelineOptionsFactory.fromArgs(args).withValidation().as(MyOptions.class);
+        PipelineOptionsFactory.register(MyPipelineOptions.class);
+        MyPipelineOptions options = PipelineOptionsFactory.fromArgs(args).withValidation().as(MyPipelineOptions.class);
         Pipeline pipeline = Pipeline.create(options);
 
-        // Get input file path from the options, use a dummy pattern if not provided
-        String inputPattern = options.getInputFile() != null ? options.getInputFile() : "gs://dummy-bucket/dummy-file.txt";
+        // Assuming Employee objects are coming from some source
+        PCollection<Employee> employees = pipeline.apply(/* Your source here */);
 
-        // Check input file, create dummy data during template creation
-        PCollection<String> input;
-        if (options.getInputFile() != null) {
-            // Actual data reading from the input file if provided
-            input = pipeline.apply("Read Input File", TextIO.read().from(inputPattern).withCompression(TextIO.Compression.GZIP));
-        } else {
-            // Placeholder if no input file is provided (for template creation)
-            input = pipeline.apply("Check Input File", Create.of("Checking if input file exists..."));
-        }
+        // Convert Employee objects to BigQuery TableRow
+        PCollection<TableRow> tableRows = employees.apply(ParDo.of(new ConvertToTableRowFn()));
 
-        // Apply a transformation (example)
-        PCollection<String> transformedData = input.apply("Process Data", ParDo.of(new DoFn<String, String>() {
-            @ProcessElement
-            public void processElement(ProcessContext c) {
-                String line = c.element();
-                c.output("Processed: " + line);
-            }
-        }));
+        // Write the data to BigQuery
+        tableRows.apply(BigQueryIO.writeTableRows()
+            .to("your-project-id:your_dataset.your_table")
+            .withSchema(/* Provide your table schema here */)
+            .withWriteDisposition(BigQueryIO.Write.WriteDisposition.WRITE_APPEND)
+            .withCreateDisposition(BigQueryIO.Write.CreateDisposition.CREATE_NEVER));  // Adjust if table needs to be created
 
-        // Write the output to a file
-        transformedData.apply("Write Output", TextIO.write().to("gs://output-bucket/output-file").withSuffix(".txt"));
-
-        // Run the pipeline
-        pipeline.run();
+        pipeline.run().waitUntilFinish();
     }
+}
+
+// Employee class to model your data
+public class Employee {
+    private String empName;
+    private Address address;
+    private String phoneNumber;
+
+    // Getters and setters
+    public String getEmpName() { return empName; }
+    public void setEmpName(String empName) { this.empName = empName; }
+
+    public Address getAddress() { return address; }
+    public void setAddress(Address address) { this.address = address; }
+
+    public String getPhoneNumber() { return phoneNumber; }
+    public void setPhoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; }
+}
+
+// Address class to represent the nested struct
+public class Address {
+    private String street;
+    private String city;
+    private String zipcode;
+
+    // Getters and setters
+    public String getStreet() { return street; }
+    public void setStreet(String street) { this.street = street; }
+
+    public String getCity() { return city; }
+    public void setCity(String city) { this.city = city; }
+
+    public String getZipcode() { return zipcode; }
+    public void setZipcode(String zipcode) { this.zipcode = zipcode; }
 }
