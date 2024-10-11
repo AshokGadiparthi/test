@@ -1,8 +1,48 @@
-            .withFormatFunction(ac -> new TableRow()
-                .set("empName", ac.getEmpName())
-                .set("address", new TableRow()
-                    .set("street", ac.getAddress().getStreet())
-                    .set("city", ac.getAddress().getCity())
-                    .set("zipcode", ac.getAddress().getZipcode()))
-                .set("phoneNumber", ac.getPhoneNumber())
-            )
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+
+public class Main {
+    public static void main(String[] args) throws Exception {
+        // Sample data
+        String deviceId = "111";
+        String simId = null;  // Could be null or empty
+
+        // Initialize ObjectMapper
+        ObjectMapper mapper = new ObjectMapper();
+        
+        // Create root node
+        ObjectNode rootNode = mapper.createObjectNode();
+        
+        // Create devicePair array
+        ArrayNode devicePairArray = mapper.createArrayNode();
+        ObjectNode devicePairObject = mapper.createObjectNode();
+        
+        // Add deviceId
+        devicePairObject.put("deviceId", deviceId);
+        
+        // Conditionally add simId if it's not null or empty
+        if (simId != null && !simId.isEmpty()) {
+            devicePairObject.put("simId", simId);
+        }
+        
+        // Add device pair object to the array
+        devicePairArray.add(devicePairObject);
+        rootNode.set("devicePair", devicePairArray);
+        
+        // Create filters array
+        ArrayNode filtersArray = mapper.createArrayNode();
+        ObjectNode filterObject = mapper.createObjectNode();
+        filterObject.put("retriveIdPairDetails", true);
+        filtersArray.add(filterObject);
+        
+        // Add filters to root node
+        rootNode.set("filters", filtersArray);
+        
+        // Convert to JSON string with pretty printing
+        String jsonBody = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(rootNode);
+        
+        // Output the JSON string
+        System.out.println(jsonBody);
+    }
+}
