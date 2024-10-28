@@ -1,14 +1,9 @@
-// Capture and handle errors by printing or logging
-            .getFailedInsertsWithErr()
-            .apply("LogErrors", ParDo.of(new DoFn<BigQueryInsertError, Void>() {
-                @ProcessElement
-                public void processElement(ProcessContext c) {
-                    BigQueryInsertError insertError = c.element();
-                    // Access the error details
-                    String errorMessage = insertError.getError().toString();
-                    TableRow failedRow = insertError.getRow();
-                    // Print or log the error message and failed row
-                    System.out.println("Failed row: " + failedRow);
-                    System.out.println("Error: " + errorMessage);
-                }
-            }));
+Data Type Review: We confirmed that for primary data types like INT, FLOAT, and LONG, we are aligned with best practices as outlined in our project’s example repository. Geoff and I reviewed this together, and no changes are necessary for these types.
+
+DATE and TIMESTAMP Clarification: The primary area for clarification remains around handling DATE and TIMESTAMP fields. We discussed several aspects, including:
+
+Typecasting and Encoding/Decoding: We identified the need for additional guidance on typecasting techniques, as well as encoding and decoding methods for accurate handling and consistency across the dataset.
+DDL Examples: I shared sample DDL statements with Geoff, showcasing different data type examples to illustrate our current approach.
+Next Steps:
+
+Geoff will reach out to the relevant team members to verify the recommended practices for DATE and TIMESTAMP handling, especially focusing on edge cases like DELETE and UPDATE operations, to ensure we are following the most efficient and error-free processes.
