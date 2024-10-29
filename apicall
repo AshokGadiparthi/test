@@ -1,9 +1,8 @@
-// Example handling of a DATE or TIMESTAMP field
-                if (spannerRow.getColumnType("acct_estb_dt").equals(Type.date())) {
-                    LocalDateTime localDateTime = spannerRow.getDate("acct_estb_dt").toLocalDateTime();
-                    row.set("acct_estb_dt", localDateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
-                } else if (spannerRow.getColumnType("acct_estb_ts").equals(Type.timestamp())) {
-                    Instant spannerInstant = new Instant(spannerRow.getTimestamp("acct_estb_ts").toString());
-                    LocalDateTime localDateTime = LocalDateTime.ofInstant(spannerInstant.toInstant(), ZoneOffset.UTC);
-                    row.set("acct_estb_ts", localDateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+
+                // Handle TIMESTAMP field
+                if (spannerRow.getColumnType("acct_estb_ts").equals(Type.timestamp())) {
+                    Instant spannerInstant = Instant.parse(spannerRow.getTimestamp("acct_estb_ts").toString());
+                    java.time.Instant javaInstant = java.time.Instant.ofEpochMilli(spannerInstant.getMillis());
+                    LocalDateTime localDateTime = LocalDateTime.ofInstant(javaInstant, ZoneOffset.UTC);
+                    row.set("acct_estb_ts", localDateTime.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
                 }
