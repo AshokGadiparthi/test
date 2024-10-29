@@ -1,8 +1,10 @@
+String spannerInstant = "2024-01-01T00:00:00.000Z";
 
-                // Handle TIMESTAMP field
-                if (spannerRow.getColumnType("acct_estb_ts").equals(Type.timestamp())) {
-                    Instant spannerInstant = Instant.parse(spannerRow.getTimestamp("acct_estb_ts").toString());
-                    java.time.Instant javaInstant = java.time.Instant.ofEpochMilli(spannerInstant.getMillis());
-                    LocalDateTime localDateTime = LocalDateTime.ofInstant(javaInstant, ZoneOffset.UTC);
-                    row.set("acct_estb_ts", localDateTime.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
-                }
+        // Parse the string to Instant
+        Instant instant = Instant.parse(spannerInstant);
+
+        // Convert to LocalDateTime in UTC, then format to BigQuery DATETIME format
+        LocalDateTime localDateTime = LocalDateTime.ofInstant(instant, ZoneOffset.UTC);
+        String bigQueryDatetime = localDateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+
+        System.out.println("BigQuery DATETIME format: " + bigQueryDatetime);
