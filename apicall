@@ -1,10 +1,8 @@
-String spannerInstant = "2024-01-01T00:00:00.000Z";
+// Remove the 'Z' and milliseconds, if present
+        String trimmedTimestamp = spannerTimestamp.replace("Z", "").substring(0, 19);
 
-        // Parse the string to Instant
-        Instant instant = Instant.parse(spannerInstant);
+        // Parse the string to LocalDateTime
+        LocalDateTime localDateTime = LocalDateTime.parse(trimmedTimestamp);
 
-        // Convert to LocalDateTime in UTC, then format to BigQuery DATETIME format
-        LocalDateTime localDateTime = LocalDateTime.ofInstant(instant, ZoneOffset.UTC);
+        // Format to BigQuery DATETIME format
         String bigQueryDatetime = localDateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-
-        System.out.println("BigQuery DATETIME format: " + bigQueryDatetime);
