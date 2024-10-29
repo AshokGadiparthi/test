@@ -1,3 +1,28 @@
-if (spannerTimestamp.endsWith("Z")) {
-            spannerTimestamp = spannerTimestamp.substring(0, spannerTimestamp.length() - 1);
-        }
+public class EmployeeCoder extends AtomicCoder<Employee> {
+    private static final StringUtf8Coder STRING_CODER = StringUtf8Coder.of();
+    private static final FloatCoder FLOAT_CODER = FloatCoder.of();
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE;
+
+    @Override
+    public void encode(Employee value, OutputStream outStream) throws IOException {
+        STRING_CODER.encode(value.getEmpId(), outStream);
+        STRING_CODER.encode(value.getName(), outStream);
+        STRING_CODER.encode(value.getJoiningDate().format(DATE_FORMATTER), outStream);
+        FLOAT_CODER.encode(value.getSalary(), outStream);
+    }
+
+    @Override
+    public Employee decode(InputStream inStream) throws IOException {
+        String empId = STRING_CODER.decode(inStream);
+        String name = STRING_CODER.decode(inStream);
+        LocalDate joiningDate = LocalDate.parse(STRING_CODER.decode(inStream), DATE_FORMATTER);
+        float salary = FLOAT_CODER.decode(inStream);
+
+        Employee employee = new Employee();
+        employee.setEmpId(empId);
+        employee.setName(name);
+        employee.setJoiningDate(joiningDate);
+        employee.setSalary(salary);
+
+        return employee;
+    }
