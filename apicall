@@ -1,8 +1,3 @@
-// Remove the 'Z' and milliseconds, if present
-        String trimmedTimestamp = spannerTimestamp.replace("Z", "").substring(0, 19);
-
-        // Parse the string to LocalDateTime
-        LocalDateTime localDateTime = LocalDateTime.parse(trimmedTimestamp);
-
-        // Format to BigQuery DATETIME format
-        String bigQueryDatetime = localDateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+if (spannerTimestamp.endsWith("Z")) {
+            spannerTimestamp = spannerTimestamp.substring(0, spannerTimestamp.length() - 1);
+        }
