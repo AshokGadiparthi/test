@@ -1,9 +1,16 @@
-Data Type Review: We confirmed that for primary data types like INT, FLOAT, and LONG, we are aligned with best practices as outlined in our project’s example repository. Geoff and I reviewed this together, and no changes are necessary for these types.
+ // Sample org.joda.time.Instant value
+        Instant jodaInstant = Instant.parse("2024-01-01T00:00:00.000Z");
 
-DATE and TIMESTAMP Clarification: The primary area for clarification remains around handling DATE and TIMESTAMP fields. We discussed several aspects, including:
+        // Step 1: Convert org.joda.time.Instant to java.util.Date
+        java.util.Date date = jodaInstant.toDate();
 
-Typecasting and Encoding/Decoding: We identified the need for additional guidance on typecasting techniques, as well as encoding and decoding methods for accurate handling and consistency across the dataset.
-DDL Examples: I shared sample DDL statements with Geoff, showcasing different data type examples to illustrate our current approach.
-Next Steps:
+        // Step 2: Convert java.util.Date to java.time.LocalDateTime
+        LocalDateTime localDateTime = date.toInstant().atOffset(ZoneOffset.UTC).toLocalDateTime();
 
-Geoff will reach out to the relevant team members to verify the recommended practices for DATE and TIMESTAMP handling, especially focusing on edge cases like DELETE and UPDATE operations, to ensure we are following the most efficient and error-free processes.
+        // Define BigQuery DATETIME format
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+        // Format LocalDateTime to BigQuery DATETIME format
+        String bigQueryDatetime = localDateTime.format(formatter);
+
+        System.out.println(bigQueryDatetime);
