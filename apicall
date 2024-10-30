@@ -1,8 +1,5 @@
-List<String> list = toList(jsonArray);
-public static List<String> toList(JsonArray jsonArray) {
-        String[] stringArray = new String[jsonArray.size()];
-        for (int i = 0; i < jsonArray.size(); i++) {
-            stringArray[i] = jsonArray.get(i).getAsString();
-        }
-        return Arrays.asList(stringArray);
+public static List<String> toList(JSONArray jsonArray) {
+        return IntStream.range(0, jsonArray.length())
+                .mapToObj(jsonArray::getString) // Use the getString method directly
+                .collect(Collectors.toList()); // Collect results into a List
     }
