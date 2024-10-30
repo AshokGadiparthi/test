@@ -1,7 +1,8 @@
-Following our recent discussion about handling DATE and TIMESTAMP data types in BigQuery, I wanted to update you on the progress I've made since our call. I've successfully implemented solutions for managing both DATE and DATETIME timestamps from Spanner to BigQuery. I tested various operations, including insert, delete, and update, and I’m pleased to report that everything is functioning as expected.
-
-Here's a brief overview of the approach I've taken, which I believe aligns with our project’s objectives and best practices. I’m happy to share the code snippets if that would be helpful.
-
-Additionally, I would like to request your assistance in continuing to explore the recommended practices for DATE and TIMESTAMP handling. It would be beneficial to collaborate with the Google solutions team on identifying the best approaches for different data types, including any complex data types. If possible, having an example project to illustrate these practices would greatly enhance our understanding and implementation.
-
-As a summary, we are making solid progress without any showstoppers, and we are committed to delivering quality results. I appreciate your guidance and support in this endeavor.
+List<String> list = toList(jsonArray);
+public static List<String> toList(JsonArray jsonArray) {
+        String[] stringArray = new String[jsonArray.size()];
+        for (int i = 0; i < jsonArray.size(); i++) {
+            stringArray[i] = jsonArray.get(i).getAsString();
+        }
+        return Arrays.asList(stringArray);
+    }
