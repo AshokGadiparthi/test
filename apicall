@@ -1,5 +1,48 @@
-Problem Statement / Current Progress
-In the rapidly evolving landscape of customer experience, ensuring a unified and accurate customer profile across all channels is critical. Traditionally, synchronizing data from source-of-record (SOR) systems like Cassandra to downstream systems such as data warehouses has been fraught with complexity, latency, and the risk of data inconsistencies. This challenge becomes even more pronounced when dealing with real-time customer profile changes, where delays or errors can adversely impact customer-facing applications. To address these challenges, the CDP project has deployed Job1, Job2, and Job3 into production. These jobs are currently validating the flow of data from Cassandra to the data warehouse in near-real-time, ensuring the accuracy and consistency of the customer profile information. This implementation marks a significant milestone in achieving seamless data integration and validation for a unified customer experience.
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
-Benefits
-The integration of Cassandra as the golden source of customer profile data with the data warehouse delivers significant benefits. First, this is the first-of-its-kind implementation that directly streams data from Cassandra into the data warehouse in near-real-time, significantly reducing latency and ensuring timely availability of profile updates across all customer-facing channels. Second, by establishing a foundational interface, this approach simplifies data integration for multiple downstream data products, making it easier to bring in relevant information directly from Cassandra with reduced complexity and fewer errors. Additionally, this implementation ensures that real-time profile changes are captured with high accuracy, empowering businesses to respond to customer needs proactively and with confidence. The deployment of Job1, Job2, and Job3 demonstrates the project's maturity in production and reinforces its capability to deliver a reliable and scalable solution for customer data management.
+public class CoalesceExample {
+    public static void main(String[] args) throws Exception {
+        // Example JSON
+        String jsonData = "{ }"; // Adjust JSON here to test various scenarios
+
+        // Parse the JSON data
+        ObjectMapper objectMapper = new ObjectMapper();
+        JsonNode rootNode = objectMapper.readTree(jsonData);
+
+        // Extract values from "after" and "before", handling missing fields
+        String custId = coalesce(
+            getJsonValue(rootNode, "$.after.CUST_ID_NO"),
+            getJsonValue(rootNode, "$.before.CUST_ID_NO")
+        );
+
+        System.out.println("CUST_ID: " + (custId != null ? custId : "null"));
+    }
+
+    // Helper method to get value from JSON based on the path, with null safety
+    private static String getJsonValue(JsonNode rootNode, String jsonPath) {
+        try {
+            switch (jsonPath) {
+                case "$.after.CUST_ID_NO":
+                    return rootNode.path("after").path("CUST_ID_NO").asText(null);
+                case "$.before.CUST_ID_NO":
+                    return rootNode.path("before").path("CUST_ID_NO").asText(null);
+                default:
+                    return null;
+            }
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    // Coalesce method to return the first non-null value
+    @SafeVarargs
+    private static <T> T coalesce(T... values) {
+        for (T value : values) {
+            if (value != null) {
+                return value;
+            }
+        }
+        return null;
+    }
+}
