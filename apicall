@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public class CoalesceExample {
     public static void main(String[] args) throws Exception {
         // Example JSON
-        String jsonData = "{ }"; // Adjust JSON here to test various scenarios
+        String jsonData = "{ \"before\": { \"CUST_ID_NO\": \"54321\" } }";
 
         // Parse the JSON data
         ObjectMapper objectMapper = new ObjectMapper();
@@ -16,6 +16,7 @@ public class CoalesceExample {
             getJsonValue(rootNode, "$.before.CUST_ID_NO")
         );
 
+        // Print the result
         System.out.println("CUST_ID: " + (custId != null ? custId : "null"));
     }
 
@@ -24,9 +25,17 @@ public class CoalesceExample {
         try {
             switch (jsonPath) {
                 case "$.after.CUST_ID_NO":
-                    return rootNode.path("after").path("CUST_ID_NO").asText(null);
+                    // Navigate using `get` and handle null checks
+                    JsonNode afterNode = rootNode.get("after");
+                    return afterNode != null && afterNode.get("CUST_ID_NO") != null
+                            ? afterNode.get("CUST_ID_NO").asText(null)
+                            : null;
                 case "$.before.CUST_ID_NO":
-                    return rootNode.path("before").path("CUST_ID_NO").asText(null);
+                    // Navigate using `get` and handle null checks
+                    JsonNode beforeNode = rootNode.get("before");
+                    return beforeNode != null && beforeNode.get("CUST_ID_NO") != null
+                            ? beforeNode.get("CUST_ID_NO").asText(null)
+                            : null;
                 default:
                     return null;
             }
