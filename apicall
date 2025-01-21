@@ -1,57 +1,18 @@
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+public static void main(String[] args) {
+        // Input datetime string
+        String inputDateTime = "2025-01-21T17:21:51.560570316";
 
-public class CoalesceExample {
-    public static void main(String[] args) throws Exception {
-        // Example JSON
-        String jsonData = "{ \"before\": { \"CUST_ID_NO\": \"54321\" } }";
+        // Parse the input string into LocalDateTime
+        LocalDateTime dateTime = LocalDateTime.parse(inputDateTime);
 
-        // Parse the JSON data
-        ObjectMapper objectMapper = new ObjectMapper();
-        JsonNode rootNode = objectMapper.readTree(jsonData);
+        // Truncate to microseconds (6 digits after the decimal point)
+        int microseconds = dateTime.get(ChronoField.NANO_OF_SECOND) / 1000; // Convert nanoseconds to microseconds
+        LocalDateTime truncatedDateTime = dateTime.withNano(microseconds * 1000); // Convert back to nanoseconds
 
-        // Extract values from "after" and "before", handling missing fields
-        String custId = coalesce(
-            getJsonValue(rootNode, "$.after.CUST_ID_NO"),
-            getJsonValue(rootNode, "$.before.CUST_ID_NO")
-        );
+        // Format the truncated datetime
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSSSS");
+        String formattedDateTime = truncatedDateTime.format(formatter);
 
         // Print the result
-        System.out.println("CUST_ID: " + (custId != null ? custId : "null"));
+        System.out.println("Truncated DateTime: " + formattedDateTime);
     }
-
-    // Helper method to get value from JSON based on the path, with null safety
-    private static String getJsonValue(JsonNode rootNode, String jsonPath) {
-        try {
-            switch (jsonPath) {
-                case "$.after.CUST_ID_NO":
-                    // Navigate using `get` and handle null checks
-                    JsonNode afterNode = rootNode.get("after");
-                    return afterNode != null && afterNode.get("CUST_ID_NO") != null
-                            ? afterNode.get("CUST_ID_NO").asText(null)
-                            : null;
-                case "$.before.CUST_ID_NO":
-                    // Navigate using `get` and handle null checks
-                    JsonNode beforeNode = rootNode.get("before");
-                    return beforeNode != null && beforeNode.get("CUST_ID_NO") != null
-                            ? beforeNode.get("CUST_ID_NO").asText(null)
-                            : null;
-                default:
-                    return null;
-            }
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    // Coalesce method to return the first non-null value
-    @SafeVarargs
-    private static <T> T coalesce(T... values) {
-        for (T value : values) {
-            if (value != null) {
-                return value;
-            }
-        }
-        return null;
-    }
-}
