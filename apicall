@@ -1,18 +1,27 @@
-public static void main(String[] args) {
-        // Input datetime string
-        String inputDateTime = "2025-01-21T17:21:51.560570316";
+public class DateTimeTruncation {
+    public static void main(String[] args) {
+        // Test cases
+        String[] testInputs = {
+            "2025-01-21T17:21:51.560570316", // 9 digits
+            "2025-01-21T17:21:51.560570",    // 6 digits
+            "2025-01-21T17:21:51"            // No fractional seconds
+        };
 
-        // Parse the input string into LocalDateTime
-        LocalDateTime dateTime = LocalDateTime.parse(inputDateTime);
+        for (String inputDateTime : testInputs) {
+            // Find the index of the dot after the seconds
+            int dotIndex = inputDateTime.indexOf('.');
 
-        // Truncate to microseconds (6 digits after the decimal point)
-        int microseconds = dateTime.get(ChronoField.NANO_OF_SECOND) / 1000; // Convert nanoseconds to microseconds
-        LocalDateTime truncatedDateTime = dateTime.withNano(microseconds * 1000); // Convert back to nanoseconds
+            // If a dot exists, truncate to 6 digits after it
+            String truncatedDateTime = inputDateTime;
+            if (dotIndex != -1) {
+                // Ensure there are at least 6 digits after the dot
+                int endIndex = Math.min(dotIndex + 7, inputDateTime.length());
+                truncatedDateTime = inputDateTime.substring(0, endIndex);
+            }
 
-        // Format the truncated datetime
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSSSS");
-        String formattedDateTime = truncatedDateTime.format(formatter);
-
-        // Print the result
-        System.out.println("Truncated DateTime: " + formattedDateTime);
+            // Print the result
+            System.out.println("Original: " + inputDateTime);
+            System.out.println("Truncated: " + truncatedDateTime);
+        }
     }
+}
