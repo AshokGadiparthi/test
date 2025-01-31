@@ -1,18 +1,25 @@
-Timestamp gcpTimestamp = Timestamp.now();
-        
-        // Convert Google Cloud Timestamp to Instant
-        Instant instant = gcpTimestamp.toSqlTimestamp().toInstant();
-        
-        // Convert Instant to ZonedDateTime in EST/EDT
-        ZonedDateTime estTime = instant.atZone(ZoneId.of("America/New_York"));
+DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-        // Convert ZonedDateTime to LocalDateTime
-        LocalDateTime localDateTimeEST = estTime.toLocalDateTime();
+        // Get current LocalDateTime in UTC
+        LocalDateTime currentDateTimeUTC = LocalDateTime.now(ZoneOffset.UTC);
+        
+        // Convert LocalDateTime to String using formatter
+        String formattedDateTime = currentDateTimeUTC.format(formatter);
 
-        // Format LocalDateTime (if needed)
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-        String formattedTime = localDateTimeEST.format(formatter);
+        // Parse the formatted string back to LocalDateTime
+        LocalDateTime parsedDateTime = LocalDateTime.parse(formattedDateTime, formatter);
+
+        // Get current LocalDate (only date part)
+        LocalDate currentDate = LocalDate.now(ZoneOffset.UTC);
+
+        // Convert LocalDate to String and parse it back
+        String formattedDate = currentDate.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+        LocalDate parsedDate = LocalDate.parse(formattedDate, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
 
         // Print results
-        System.out.println("GCP Timestamp (UTC): " + gcpTimestamp);
-        System.out.println("Converted LocalDateTime (EST): " + formattedTime);
+        System.out.println("Current LocalDateTime in UTC: " + currentDateTimeUTC);
+        System.out.println("Formatted Date-Time String: " + formattedDateTime);
+        System.out.println("Parsed LocalDateTime: " + parsedDateTime);
+        System.out.println("Current LocalDate in UTC: " + currentDate);
+        System.out.println("Formatted Date String: " + formattedDate);
+        System.out.println("Parsed LocalDate: " + parsedDate);
