@@ -1,19 +1,20 @@
 /*
  * A production-ready Dataflow pipeline that reads JSON messages from a Pub/Sub topic,
- * aggregates records by composite key (cust_id and mtn) within a 30-second window,
- * and then for each grouped key performs a lookup in Spanner to either update or insert
- * a record with the aggregated payload.
+ * aggregates records by a composite key (derived dynamically based on event_name)
+ * within a 30-second window, and then for each grouped key performs a lookup in Spanner
+ * to either update or insert a record with the aggregated payload.
+ *
+ * For event types:
+ *   - "A" or "B":  use cust_id and acct_no as the key and upsert into table "acct_prfl"
+ *                   (with mtn set to null)
+ *   - "C", "D", "E", or "F": use cust_id and mtn as the key and upsert into table "acct_line_prfl"
  *
  * Required Maven dependencies (versions may vary):
- *
  *   - org.apache.beam:beam-sdks-java-core
  *   - org.apache.beam:beam-runners-google-cloud-dataflow-java
  *   - com.google.cloud:google-cloud-spanner
  *   - com.google.code.gson:gson
- *
- * Adjust the package name, imports, and dependency versions as necessary.
  */
-
 package com.example.dataflow;
 
 import com.google.api.gax.rpc.ApiException;
@@ -30,7 +31,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Collections;
 import java.util.UUID;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.options.Description;
@@ -50,9 +50,7 @@ import org.joda.time.Duration;
 /** Main class for the Pub/Sub to Spanner aggregator pipeline. */
 public class PubSubToSpannerAggregator {
 
-  /**
-   * Pipeline options for the job.
-   */
+  /** Pipeline options for the job. */
   public interface PubSubToSpannerOptions extends PipelineOptions {
     @Description("Input Pub/Sub topic of the form projects/<PROJECT>/topics/<TOPIC>")
     String getInputTopic();
@@ -69,53 +67,91 @@ public class PubSubToSpannerAggregator {
     @Description("Google Cloud Spanner Database ID")
     String getSpannerDatabaseId();
     void setSpannerDatabaseId(String value);
-
-    @Description("Spanner Table Name")
-    String getSpannerTable();
-    void setSpannerTable(String value);
   }
 
   /**
    * POJO for incoming transaction messages.
    *
-   * Expected JSON format:
+   * Expected JSON format examples:
+   *
+   * For events A or B (acct_prfl):
    * <pre>
    * {
+   *   "event_name": "A",
    *   "cust_id": "customer123",
-   *   "mtn": "mtn_value",
+   *   "acct_no": "acct123",
    *   "payload": "{ ... }",
    *   "ops_ts": 1672500000000
    * }
    * </pre>
+   *
+   * For events C, D, E or F (acct_line_prfl):
+   * <pre>
+   * {
+   *   "event_name": "C",
+   *   "cust_id": "customer123",
+   *   "mtn": "mtn_value",
+   *   "acct_no": "acct123",    // optional additional field
+   *   "payload": "{ ... }",
+   *   "ops_ts": 1672500000000
+   * }
+   * </pre>
+   *
+   * The {@code fromJson()} method will also set the extra property {@code table_name}
+   * as follows:
+   *   - If event_name is "A" or "B": table_name = "acct_prfl" (and mtn is set to null)
+   *   - If event_name is "C", "D", "E" or "F": table_name = "acct_line_prfl"
    */
   public static class TransactionMessage {
-    // Field names should match your JSON
+    String event_name;
     String cust_id;
+    String acct_no;
     String mtn;
     String payload;
     long ops_ts; // timestamp in milliseconds
+    // Extra property: indicates which Spanner table to upsert into.
+    String table_name;
 
-    // Getters (and setters if needed)
+    public String getEventName() { return event_name; }
     public String getCustId() { return cust_id; }
+    public String getAcctNo() { return acct_no; }
     public String getMtn() { return mtn; }
     public String getPayload() { return payload; }
     public long getOpsTs() { return ops_ts; }
+    public String getTableName() { return table_name; }
 
     /**
-     * Utility to parse JSON into a TransactionMessage.
+     * Parses a JSON string into a TransactionMessage POJO.
+     * Also sets the table_name and adjusts fields based on event_name.
      */
     public static TransactionMessage fromJson(String json) {
-      return new Gson().fromJson(json, TransactionMessage.class);
+      TransactionMessage message = new Gson().fromJson(json, TransactionMessage.class);
+      // Determine table_name based on event_name.
+      if ("A".equalsIgnoreCase(message.event_name) || "B".equalsIgnoreCase(message.event_name)) {
+        message.table_name = "acct_prfl";
+        // For A/B events, mtn is not applicable.
+        message.mtn = null;
+      } else if ("C".equalsIgnoreCase(message.event_name)
+          || "D".equalsIgnoreCase(message.event_name)
+          || "E".equalsIgnoreCase(message.event_name)
+          || "F".equalsIgnoreCase(message.event_name)) {
+        message.table_name = "acct_line_prfl";
+        // For these events, acct_no might be present but the grouping key is based on cust_id and mtn.
+      } else {
+        // Default or unknown event types may be handled here.
+        message.table_name = "unknown";
+      }
+      return message;
     }
   }
 
   /**
-   * DoFn to aggregate a set of TransactionMessages for the same key.
+   * DoFn to aggregate a set of TransactionMessages for the same composite key.
    *
    * Aggregation logic:
    * - Sort records by their ops_ts.
    * - Concatenate their payloads (separated by a space).
-   * - Use the cust_id and mtn from the first (or any) record.
+   * - For acct_prfl records, use cust_id and acct_no; for acct_line_prfl, use cust_id and mtn.
    */
   public static class AggregateMessagesFn
       extends DoFn<KV<String, Iterable<TransactionMessage>>, KV<String, TransactionMessage>> {
@@ -124,26 +160,34 @@ public class PubSubToSpannerAggregator {
     public void processElement(ProcessContext c) {
       String compositeKey = c.element().getKey();
       Iterable<TransactionMessage> messagesIterable = c.element().getValue();
-
       List<TransactionMessage> messages = new ArrayList<>();
       for (TransactionMessage msg : messagesIterable) {
         messages.add(msg);
       }
-      // Sort the messages by ops_ts in ascending order
+      // Sort messages by ops_ts (ascending)
       Collections.sort(messages, Comparator.comparingLong(TransactionMessage::getOpsTs));
 
-      // Aggregate payloads (simple concatenation; adjust as needed)
+      // Aggregate payloads (concatenation with a space separator)
       StringBuilder aggregatedPayload = new StringBuilder();
       for (TransactionMessage msg : messages) {
         aggregatedPayload.append(msg.getPayload()).append(" ");
       }
 
-      // Use the cust_id and mtn from the first record (they are all the same for this key)
       TransactionMessage aggregatedMessage = new TransactionMessage();
+      // All messages in this group share the same key fields and table_name.
       aggregatedMessage.cust_id = messages.get(0).getCustId();
-      aggregatedMessage.mtn = messages.get(0).getMtn();
+      aggregatedMessage.table_name = messages.get(0).getTableName();
+      // Set keys based on table type.
+      if ("acct_prfl".equals(aggregatedMessage.table_name)) {
+        aggregatedMessage.acct_no = messages.get(0).getAcctNo();
+        aggregatedMessage.mtn = null;
+      } else if ("acct_line_prfl".equals(aggregatedMessage.table_name)) {
+        aggregatedMessage.mtn = messages.get(0).getMtn();
+        // Optionally, preserve acct_no if needed.
+        aggregatedMessage.acct_no = messages.get(0).getAcctNo();
+      }
       aggregatedMessage.payload = aggregatedPayload.toString().trim();
-      // Optionally, use the latest ops_ts
+      // Use the latest timestamp among the messages.
       aggregatedMessage.ops_ts = messages.get(messages.size() - 1).getOpsTs();
 
       c.output(KV.of(compositeKey, aggregatedMessage));
@@ -151,9 +195,9 @@ public class PubSubToSpannerAggregator {
   }
 
   /**
-   * DoFn that performs a lookup in Spanner (using cust_id and mtn) and then upserts the aggregated
-   * record. If the record already exists (i.e. a UUID is found), it uses that UUID; otherwise, a new
-   * UUID is generated.
+   * DoFn that performs a lookup in Spanner (using keys based on table_name) and then upserts
+   * the aggregated record. If a record already exists (i.e. a UUID is found), it reuses that UUID;
+   * otherwise, a new UUID is generated.
    */
   public static class SpannerUpsertFn extends DoFn<KV<String, TransactionMessage>, Void> {
 
@@ -162,18 +206,15 @@ public class PubSubToSpannerAggregator {
     private final String projectId;
     private final String instanceId;
     private final String databaseId;
-    private final String tableName;
 
-    public SpannerUpsertFn(String projectId, String instanceId, String databaseId, String tableName) {
+    public SpannerUpsertFn(String projectId, String instanceId, String databaseId) {
       this.projectId = projectId;
       this.instanceId = instanceId;
       this.databaseId = databaseId;
-      this.tableName = tableName;
     }
 
     @Setup
     public void setup() {
-      // Create the Spanner client.
       SpannerOptions options = SpannerOptions.newBuilder().build();
       spanner = options.getService();
       DatabaseId db = DatabaseId.of(projectId, instanceId, databaseId);
@@ -190,18 +231,27 @@ public class PubSubToSpannerAggregator {
     @ProcessElement
     public void processElement(ProcessContext c) {
       TransactionMessage msg = c.element().getValue();
+      String tableName = msg.getTableName();
+      String query;
+      Statement.Builder stmtBuilder;
 
-      // Build a query to check if the record exists.
-      // It is assumed that the table has columns: cust_id, mtn, UUID, payload, and ops_ts.
-      String query = String.format(
-          "SELECT UUID FROM %s WHERE cust_id = @cust_id AND mtn = @mtn", tableName);
-      Statement statement =
-          Statement.newBuilder(query)
-              .bind("cust_id")
-              .to(msg.getCustId())
-              .bind("mtn")
-              .to(msg.getMtn())
-              .build();
+      if ("acct_prfl".equals(tableName)) {
+        // For acct_prfl, lookup by cust_id and acct_no.
+        query = String.format("SELECT UUID FROM %s WHERE cust_id = @cust_id AND acct_no = @acct_no", tableName);
+        stmtBuilder = Statement.newBuilder(query)
+            .bind("cust_id").to(msg.getCustId())
+            .bind("acct_no").to(msg.getAcctNo());
+      } else if ("acct_line_prfl".equals(tableName)) {
+        // For acct_line_prfl, lookup by cust_id and mtn.
+        query = String.format("SELECT UUID FROM %s WHERE cust_id = @cust_id AND mtn = @mtn", tableName);
+        stmtBuilder = Statement.newBuilder(query)
+            .bind("cust_id").to(msg.getCustId())
+            .bind("mtn").to(msg.getMtn());
+      } else {
+        System.err.println("Unknown table type: " + tableName);
+        return;
+      }
+      Statement statement = stmtBuilder.build();
 
       String existingUUID = null;
       try (ResultSet resultSet = dbClient.singleUse().executeQuery(statement)) {
@@ -209,38 +259,39 @@ public class PubSubToSpannerAggregator {
           existingUUID = resultSet.getString("UUID");
         }
       } catch (ApiException e) {
-        // Log and rethrow or handle appropriately in production.
         System.err.println("Error during Spanner lookup: " + e.getMessage());
         return;
       }
 
-      // Prepare an upsert mutation. If the record exists, reuse its UUID; otherwise, generate one.
-      Mutation.WriteBuilder mutationBuilder =
-          Mutation.newInsertOrUpdateBuilder(tableName)
-              .set("cust_id")
-              .to(msg.getCustId())
-              .set("mtn")
-              .to(msg.getMtn())
-              .set("payload")
-              .to(msg.getPayload())
-              // Convert ops_ts from milliseconds to Spanner Timestamp (which expects microseconds).
-              .set("ops_ts")
-              .to(Timestamp.ofTimeMicroseconds(msg.getOpsTs() * 1000L));
+      // Prepare the upsert mutation.
+      Mutation.WriteBuilder mutationBuilder = Mutation.newInsertOrUpdateBuilder(tableName)
+          .set("cust_id").to(msg.getCustId())
+          .set("payload").to(msg.getPayload())
+          // Convert ops_ts from milliseconds to Spanner Timestamp (microseconds)
+          .set("ops_ts").to(Timestamp.ofTimeMicroseconds(msg.getOpsTs() * 1000L));
+
+      if ("acct_prfl".equals(tableName)) {
+        mutationBuilder.set("acct_no").to(msg.getAcctNo());
+        // For acct_prfl, mtn is not used.
+      } else if ("acct_line_prfl".equals(tableName)) {
+        mutationBuilder.set("mtn").to(msg.getMtn());
+        // Optionally, store acct_no if available.
+        if (msg.getAcctNo() != null) {
+          mutationBuilder.set("acct_no").to(msg.getAcctNo());
+        }
+      }
 
       if (existingUUID != null) {
         mutationBuilder.set("UUID").to(existingUUID);
       } else {
         mutationBuilder.set("UUID").to(UUID.randomUUID().toString());
       }
-
       Mutation mutation = mutationBuilder.build();
 
-      // Write the mutation to Spanner.
       try {
         dbClient.write(Collections.singletonList(mutation));
       } catch (ApiException e) {
         System.err.println("Error during Spanner upsert: " + e.getMessage());
-        // In production, consider using retry logic or dead-letter handling.
       }
     }
   }
@@ -251,7 +302,8 @@ public class PubSubToSpannerAggregator {
         PipelineOptionsFactory.fromArgs(args).withValidation().as(PubSubToSpannerOptions.class);
     Pipeline p = Pipeline.create(options);
 
-    p.apply("ReadFromPubSub", PubsubIO.readStrings().fromTopic(options.getInputTopic()))
+    p.apply("ReadFromPubSub", 
+              org.apache.beam.sdk.io.gcp.pubsub.PubsubIO.readStrings().fromTopic(options.getInputTopic()))
         // Parse each JSON message into a TransactionMessage POJO.
         .apply("ParseMessages", ParDo.of(new DoFn<String, TransactionMessage>() {
           @ProcessElement
@@ -260,29 +312,39 @@ public class PubSubToSpannerAggregator {
               TransactionMessage msg = TransactionMessage.fromJson(c.element());
               c.output(msg);
             } catch (Exception e) {
-              // In production, log the error and optionally output to a dead-letter queue.
+              // In production, log the error and consider sending bad messages to a dead-letter topic.
               System.err.println("Failed to parse message: " + e.getMessage());
             }
           }
         }))
-        // Map each message to a KV pair with a composite key: cust_id + "_" + mtn.
+        // Map each message to a KV pair with a composite key.
+        // For acct_prfl: key = "acct_prfl_custid_acctno"
+        // For acct_line_prfl: key = "acct_line_prfl_custid_mtn"
         .apply("MapToKV",
             MapElements.into(
-                    TypeDescriptors.kvs(TypeDescriptors.strings(), TypeDescriptor.of(TransactionMessage.class)))
-                .via(msg -> KV.of(msg.getCustId() + "_" + msg.getMtn(), msg)))
+                TypeDescriptors.kvs(TypeDescriptors.strings(), TypeDescriptor.of(TransactionMessage.class)))
+                .via(msg -> {
+                  String key;
+                  if ("acct_prfl".equals(msg.getTableName())) {
+                    key = msg.getTableName() + "_" + msg.getCustId() + "_" + msg.getAcctNo();
+                  } else if ("acct_line_prfl".equals(msg.getTableName())) {
+                    key = msg.getTableName() + "_" + msg.getCustId() + "_" + msg.getMtn();
+                  } else {
+                    key = "unknown_" + msg.getCustId();
+                  }
+                  return KV.of(key, msg);
+                }))
         // Apply fixed windowing of 30 seconds.
         .apply("WindowIntoFixed", Window.<KV<String, TransactionMessage>>into(FixedWindows.of(Duration.standardSeconds(30))))
-        // Group messages by their composite key.
+        // Group messages by composite key.
         .apply("GroupByKey", GroupByKey.create())
-        // Aggregate the messages for each key (ordering them by ops_ts and concatenating payloads).
+        // Aggregate messages for each key (ordering by ops_ts and concatenating payloads).
         .apply("AggregateMessages", ParDo.of(new AggregateMessagesFn()))
-        // For each aggregated record, perform a Spanner lookup and then upsert (insert/update) the record.
-        .apply("UpsertToSpanner",
-            ParDo.of(new SpannerUpsertFn(
-                options.getSpannerProjectId(),
-                options.getSpannerInstanceId(),
-                options.getSpannerDatabaseId(),
-                options.getSpannerTable())));
+        // For each aggregated record, perform a Spanner lookup and upsert.
+        .apply("UpsertToSpanner", ParDo.of(new SpannerUpsertFn(
+            options.getSpannerProjectId(),
+            options.getSpannerInstanceId(),
+            options.getSpannerDatabaseId())));
 
     p.run().waitUntilFinish();
   }
