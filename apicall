@@ -12,28 +12,23 @@ dbClient.readWriteTransaction().run(transaction -> {
         String businessKey = "";
         SpannerLookupUtil.LookupResult lookupResult = null;
 
+        // Determine lookup key based on entity type
         switch (msg.getEntityType()) {
             case "bl_account":
                 businessKey = msg.getCustId() + "_" + msg.getAcctNo();
-                lookupResult = lookupCache.computeIfAbsent(businessKey,
-                    key -> lookupUtil.lookupCustAccount(msg.getCustId(), msg.getAcctNo()));
                 break;
 
             case "order_line":
             case "pplan":
                 businessKey = msg.getCustId() + "_" + msg.getMtn();
-                lookupResult = lookupCache.computeIfAbsent(businessKey,
-                    key -> lookupUtil.lookupCustLineAcct(msg.getCustId(), msg.getMtn()));
                 break;
 
             case "cust_acct_mtn":
                 businessKey = msg.getCustId() + "_" + msg.getAcctNo() + "_" + msg.getMtn();
-                lookupResult = lookupCache.computeIfAbsent(businessKey,
-                    key -> lookupUtil.lookupCustAcctMtn(msg.getCustId(), msg.getAcctNo(), msg.getMtn()));
                 break;
 
             case "profile":
-                // Profile requires checking both `cust_account` and `cust_line_acct`
+                // Profile needs both account and line lookup
                 String accountKey = msg.getCustId() + "_" + msg.getAcctNo();
                 String lineKey = msg.getCustId() + "_" + msg.getMtn();
 
@@ -48,15 +43,23 @@ dbClient.readWriteTransaction().run(transaction -> {
                 break;
         }
 
+        // ✅ Perform lookup once per business key and store in cache
+        if (!lookupCache.containsKey(businessKey)) {
+            lookupResult = lookupUtil.lookupCustLineAcct(msg.getCustId(), msg.getMtn());  // 🔹 Lookup happening here
+            lookupCache.put(businessKey, lookupResult);  // 🔹 Store result for later use
+        } else {
+            lookupResult = lookupCache.get(businessKey);  // 🔹 Reuse cached lookup
+        }
+
         // ✅ Store messages in a list per businessKey
         messageCache.computeIfAbsent(businessKey, key -> new ArrayList<>()).add(msg);
     }
 
-    // ✅ Second Loop: Process mutations for all stored messages
+    // ✅ Second Loop: Process mutations using stored lookups
     for (Map.Entry<String, List<TransactionMessage>> entry : messageCache.entrySet()) {
         String businessKey = entry.getKey();
         List<TransactionMessage> messages = entry.getValue();
-        SpannerLookupUtil.LookupResult lookupResult = lookupCache.get(businessKey);
+        SpannerLookupUtil.LookupResult lookupResult = lookupCache.get(businessKey);  // 🔹 Lookup result retrieved here
 
         boolean isNewRecord = (lookupResult == null || lookupResult.uuid == null);
         String finalUUID = isNewRecord ? UUID.randomUUID().toString() : lookupResult.uuid;
