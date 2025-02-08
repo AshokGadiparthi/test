@@ -1,14 +1,17 @@
 dbClient.readWriteTransaction().run(transaction -> {
     SpannerLookupUtil lookupUtil = new SpannerLookupUtil(dbClient);
-    
-    // ✅ Local cache to avoid redundant lookups in the same batch
+
+    // ✅ Local cache for lookups (businessKey → LookupResult)
     Map<String, SpannerLookupUtil.LookupResult> lookupCache = new HashMap<>();
 
-    for (TransactionMessage msg : sortedMessages) {
-        SpannerLookupUtil.LookupResult lookupResult = null;
-        String businessKey = "";
+    // ✅ Store multiple messages per business key
+    Map<String, List<TransactionMessage>> messageCache = new HashMap<>();
 
-        // ✅ Determine the appropriate lookup based on entity type
+    // ✅ First Loop: Perform all lookups and store results
+    for (TransactionMessage msg : sortedMessages) {
+        String businessKey = "";
+        SpannerLookupUtil.LookupResult lookupResult = null;
+
         switch (msg.getEntityType()) {
             case "bl_account":
                 businessKey = msg.getCustId() + "_" + msg.getAcctNo();
@@ -41,35 +44,69 @@ dbClient.readWriteTransaction().run(transaction -> {
                     key -> lookupUtil.lookupCustLineAcct(msg.getCustId(), msg.getMtn()));
 
                 // Choose the UUID from either query
-                if (accountLookup.uuid != null) {
-                    lookupResult = accountLookup;
-                } else {
-                    lookupResult = lineLookup;
-                }
+                lookupResult = (accountLookup.uuid != null) ? accountLookup : lineLookup;
                 break;
         }
 
-        // ✅ If no UUID found, generate a new one
-        boolean isNewRecord = (lookupResult.uuid == null);
+        // ✅ Store messages in a list per businessKey
+        messageCache.computeIfAbsent(businessKey, key -> new ArrayList<>()).add(msg);
+    }
+
+    // ✅ Second Loop: Process mutations for all stored messages
+    for (Map.Entry<String, List<TransactionMessage>> entry : messageCache.entrySet()) {
+        String businessKey = entry.getKey();
+        List<TransactionMessage> messages = entry.getValue();
+        SpannerLookupUtil.LookupResult lookupResult = lookupCache.get(businessKey);
+
+        boolean isNewRecord = (lookupResult == null || lookupResult.uuid == null);
         String finalUUID = isNewRecord ? UUID.randomUUID().toString() : lookupResult.uuid;
         Timestamp insertTs = isNewRecord ? Timestamp.now() : lookupResult.insertTs;
         Timestamp updateTs = Timestamp.now();
 
-        // ✅ Build mutation
-        Mutation.WriteBuilder mutationBuilder = Mutation.newInsertOrUpdateBuilder(msg.getTableName())
-            .set("cust_id").to(msg.getCustId())
-            .set("payload").to(msg.getPayload())
-            .set("UUID").to(finalUUID)
-            .set("ops_ts").to(Timestamp.now());
+        // ✅ Process each message in the group
+        boolean firstRecord = true;
+        for (TransactionMessage msg : messages) {
+            // ✅ Start building mutation (common fields)
+            Mutation.WriteBuilder mutationBuilder = Mutation.newInsertOrUpdateBuilder(msg.getTableName())
+                .set("cust_id").to(msg.getCustId())
+                .set("payload").to(msg.getPayload())
+                .set("UUID").to(finalUUID)
+                .set("ops_ts").to(Timestamp.now());
 
-        if (isNewRecord) {
-            mutationBuilder.set("insert_ts").to(insertTs);
-        } else {
-            mutationBuilder.set("update_ts").to updateTs);
+            // ✅ Apply `insert_ts` only for the first record
+            if (firstRecord) {
+                mutationBuilder.set("insert_ts").to(insertTs);
+                firstRecord = false;
+            } else {
+                mutationBuilder.set("update_ts").to(updateTs);
+            }
+
+            // ✅ Entity-specific field handling
+            switch (msg.getEntityType()) {
+                case "bl_account":
+                    mutationBuilder.set("acct_no").to(msg.getAcctNo());
+                    break;
+
+                case "order_line":
+                case "pplan":
+                    mutationBuilder.set("mtn").to(msg.getMtn());
+                    break;
+
+                case "cust_acct_mtn":
+                    mutationBuilder.set("acct_no").to(msg.getAcctNo());
+                    mutationBuilder.set("mtn").to(msg.getMtn());
+                    break;
+
+                case "profile":
+                    mutationBuilder.set("acct_no").to(msg.getAcctNo());
+                    mutationBuilder.set("mtn").to(msg.getMtn());
+                    break;
+            }
+
+            // ✅ Add the mutation to the transaction buffer
+            transaction.buffer(mutationBuilder.build());
         }
-
-        transaction.buffer(mutationBuilder.build());
     }
 
-    return null; // ✅ Commit transaction
+    return null; // ✅ Commits all changes at once
 });
