@@ -1,58 +1,75 @@
 dbClient.readWriteTransaction().run(transaction -> {
-    Map<String, String> uuidCache = new HashMap<>();  // ✅ Local cache for storing UUIDs per `cust_id, acct_no`
-    Map<String, Timestamp> insertTsCache = new HashMap<>(); // ✅ Cache for insert_ts per `cust_id, acct_no`
+    SpannerLookupUtil lookupUtil = new SpannerLookupUtil(dbClient);
+    
+    // ✅ Local cache to avoid redundant lookups in the same batch
+    Map<String, SpannerLookupUtil.LookupResult> lookupCache = new HashMap<>();
 
     for (TransactionMessage msg : sortedMessages) {
-        String businessKey = msg.getCustId() + "_" + msg.getAcctNo();
+        SpannerLookupUtil.LookupResult lookupResult = null;
+        String businessKey = "";
 
-        String existingUUID = uuidCache.get(businessKey);
-        Timestamp existingInsertTs = insertTsCache.get(businessKey);
+        // ✅ Determine the appropriate lookup based on entity type
+        switch (msg.getEntityType()) {
+            case "bl_account":
+                businessKey = msg.getCustId() + "_" + msg.getAcctNo();
+                lookupResult = lookupCache.computeIfAbsent(businessKey,
+                    key -> lookupUtil.lookupCustAccount(msg.getCustId(), msg.getAcctNo()));
+                break;
 
-        // ✅ Perform lookup if UUID is not cached yet
-        if (existingUUID == null) {
-            Statement statement = Statement.newBuilder(
-                "SELECT UUID, insert_ts FROM YourTable WHERE cust_id = @cust_id AND acct_no = @acct_no")
-                .bind("cust_id").to(msg.getCustId())
-                .bind("acct_no").to(msg.getAcctNo())
-                .build();
+            case "order_line":
+            case "pplan":
+                businessKey = msg.getCustId() + "_" + msg.getMtn();
+                lookupResult = lookupCache.computeIfAbsent(businessKey,
+                    key -> lookupUtil.lookupCustLineAcct(msg.getCustId(), msg.getMtn()));
+                break;
 
-            try (ResultSet resultSet = transaction.executeQuery(statement)) {
-                if (resultSet.next()) {
-                    existingUUID = resultSet.getString("UUID");  // ✅ Reuse existing UUID
-                    existingInsertTs = resultSet.getTimestamp("insert_ts");
+            case "cust_acct_mtn":
+                businessKey = msg.getCustId() + "_" + msg.getAcctNo() + "_" + msg.getMtn();
+                lookupResult = lookupCache.computeIfAbsent(businessKey,
+                    key -> lookupUtil.lookupCustAcctMtn(msg.getCustId(), msg.getAcctNo(), msg.getMtn()));
+                break;
+
+            case "profile":
+                // Profile requires checking both `cust_account` and `cust_line_acct`
+                String accountKey = msg.getCustId() + "_" + msg.getAcctNo();
+                String lineKey = msg.getCustId() + "_" + msg.getMtn();
+
+                SpannerLookupUtil.LookupResult accountLookup = lookupCache.computeIfAbsent(accountKey,
+                    key -> lookupUtil.lookupCustAccount(msg.getCustId(), msg.getAcctNo()));
+
+                SpannerLookupUtil.LookupResult lineLookup = lookupCache.computeIfAbsent(lineKey,
+                    key -> lookupUtil.lookupCustLineAcct(msg.getCustId(), msg.getMtn()));
+
+                // Choose the UUID from either query
+                if (accountLookup.uuid != null) {
+                    lookupResult = accountLookup;
+                } else {
+                    lookupResult = lineLookup;
                 }
-            }
-
-            // ✅ If UUID is still null, generate a new one
-            if (existingUUID == null) {
-                existingUUID = UUID.randomUUID().toString();
-                existingInsertTs = Timestamp.now(); // ✅ Set insert_ts for first insert
-            }
-
-            // ✅ Store in local cache to reuse in the same transaction
-            uuidCache.put(businessKey, existingUUID);
-            insertTsCache.put(businessKey, existingInsertTs);
+                break;
         }
 
-        Timestamp updateTs = Timestamp.now();  // ✅ Always set update_ts for every record
+        // ✅ If no UUID found, generate a new one
+        boolean isNewRecord = (lookupResult.uuid == null);
+        String finalUUID = isNewRecord ? UUID.randomUUID().toString() : lookupResult.uuid;
+        Timestamp insertTs = isNewRecord ? Timestamp.now() : lookupResult.insertTs;
+        Timestamp updateTs = Timestamp.now();
 
-        // ✅ Insert or update record
-        Mutation.WriteBuilder mutationBuilder = Mutation.newInsertOrUpdateBuilder("YourTable")
+        // ✅ Build mutation
+        Mutation.WriteBuilder mutationBuilder = Mutation.newInsertOrUpdateBuilder(msg.getTableName())
             .set("cust_id").to(msg.getCustId())
-            .set("acct_no").to(msg.getAcctNo())
             .set("payload").to(msg.getPayload())
-            .set("ops_ts").to(Timestamp.now())
-            .set("UUID").to(existingUUID);
+            .set("UUID").to(finalUUID)
+            .set("ops_ts").to(Timestamp.now());
 
-        if (!insertTsCache.containsKey(businessKey)) {
-            mutationBuilder.set("insert_ts").to(existingInsertTs);
-            insertTsCache.put(businessKey, existingInsertTs);  // ✅ Ensure insert_ts is only set once
+        if (isNewRecord) {
+            mutationBuilder.set("insert_ts").to(insertTs);
         } else {
-            mutationBuilder.set("update_ts").to(updateTs);
+            mutationBuilder.set("update_ts").to updateTs);
         }
 
-        transaction.buffer(mutationBuilder.build());  // ✅ Buffer the mutation for transaction
+        transaction.buffer(mutationBuilder.build());
     }
 
-    return null;  // ✅ Commits all changes at once
+    return null; // ✅ Commit transaction
 });
