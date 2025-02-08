@@ -1,115 +1,32 @@
-dbClient.readWriteTransaction().run(transaction -> {
-    SpannerLookupUtil lookupUtil = new SpannerLookupUtil(dbClient);
+// ✅ Step 1: Map each TransactionMessage to a KV pair
+PCollection<KV<String, TransactionMessage>> keyedMessages = insert_transaction_message.apply(
+    "MapToKV",
+    MapElements.into(TypeDescriptors.kvs(TypeDescriptors.strings(), TypeDescriptor.of(TransactionMessage.class)))
+        .via(msg -> KV.of(msg.getTableName() + "_" + msg.getCustId(), msg))
+);
 
-    // ✅ Local cache for lookups (businessKey → LookupResult)
-    Map<String, SpannerLookupUtil.LookupResult> lookupCache = new HashMap<>();
+// ✅ Step 2: Group by Key
+PCollection<KV<String, Iterable<TransactionMessage>>> groupedMessages = keyedMessages.apply(
+    "GroupByKey",
+    GroupByKey.create()
+);
 
-    // ✅ Store multiple messages per business key
-    Map<String, List<TransactionMessage>> messageCache = new HashMap<>();
-
-    // ✅ First Loop: Perform all lookups and store results
-    for (TransactionMessage msg : sortedMessages) {
-        String businessKey = "";
-        SpannerLookupUtil.LookupResult lookupResult = null;
-
-        // Determine lookup key based on entity type
-        switch (msg.getEntityType()) {
-            case "bl_account":
-                businessKey = msg.getCustId() + "_" + msg.getAcctNo();
-                break;
-
-            case "order_line":
-            case "pplan":
-                businessKey = msg.getCustId() + "_" + msg.getMtn();
-                break;
-
-            case "cust_acct_mtn":
-                businessKey = msg.getCustId() + "_" + msg.getAcctNo() + "_" + msg.getMtn();
-                break;
-
-            case "profile":
-                // Profile needs both account and line lookup
-                String accountKey = msg.getCustId() + "_" + msg.getAcctNo();
-                String lineKey = msg.getCustId() + "_" + msg.getMtn();
-
-                SpannerLookupUtil.LookupResult accountLookup = lookupCache.computeIfAbsent(accountKey,
-                    key -> lookupUtil.lookupCustAccount(msg.getCustId(), msg.getAcctNo()));
-
-                SpannerLookupUtil.LookupResult lineLookup = lookupCache.computeIfAbsent(lineKey,
-                    key -> lookupUtil.lookupCustLineAcct(msg.getCustId(), msg.getMtn()));
-
-                // Choose the UUID from either query
-                lookupResult = (accountLookup.uuid != null) ? accountLookup : lineLookup;
-                break;
+// ✅ Step 3: Convert Iterable to List (to match expected format)
+PCollection<KV<String, List<TransactionMessage>>> formattedMessages = groupedMessages.apply(
+    "ConvertToList",
+    ParDo.of(new DoFn<KV<String, Iterable<TransactionMessage>>, KV<String, List<TransactionMessage>>>() {
+        @ProcessElement
+        public void processElement(ProcessContext c) {
+            KV<String, Iterable<TransactionMessage>> element = c.element();
+            List<TransactionMessage> messageList = new ArrayList<>();
+            element.getValue().forEach(messageList::add);
+            c.output(KV.of(element.getKey(), messageList));
         }
+    })
+);
 
-        // ✅ Perform lookup once per business key and store in cache
-        if (!lookupCache.containsKey(businessKey)) {
-            lookupResult = lookupUtil.lookupCustLineAcct(msg.getCustId(), msg.getMtn());  // 🔹 Lookup happening here
-            lookupCache.put(businessKey, lookupResult);  // 🔹 Store result for later use
-        } else {
-            lookupResult = lookupCache.get(businessKey);  // 🔹 Reuse cached lookup
-        }
-
-        // ✅ Store messages in a list per businessKey
-        messageCache.computeIfAbsent(businessKey, key -> new ArrayList<>()).add(msg);
-    }
-
-    // ✅ Second Loop: Process mutations using stored lookups
-    for (Map.Entry<String, List<TransactionMessage>> entry : messageCache.entrySet()) {
-        String businessKey = entry.getKey();
-        List<TransactionMessage> messages = entry.getValue();
-        SpannerLookupUtil.LookupResult lookupResult = lookupCache.get(businessKey);  // 🔹 Lookup result retrieved here
-
-        boolean isNewRecord = (lookupResult == null || lookupResult.uuid == null);
-        String finalUUID = isNewRecord ? UUID.randomUUID().toString() : lookupResult.uuid;
-        Timestamp insertTs = isNewRecord ? Timestamp.now() : lookupResult.insertTs;
-        Timestamp updateTs = Timestamp.now();
-
-        // ✅ Process each message in the group
-        boolean firstRecord = true;
-        for (TransactionMessage msg : messages) {
-            // ✅ Start building mutation (common fields)
-            Mutation.WriteBuilder mutationBuilder = Mutation.newInsertOrUpdateBuilder(msg.getTableName())
-                .set("cust_id").to(msg.getCustId())
-                .set("payload").to(msg.getPayload())
-                .set("UUID").to(finalUUID)
-                .set("ops_ts").to(Timestamp.now());
-
-            // ✅ Apply `insert_ts` only for the first record
-            if (firstRecord) {
-                mutationBuilder.set("insert_ts").to(insertTs);
-                firstRecord = false;
-            } else {
-                mutationBuilder.set("update_ts").to(updateTs);
-            }
-
-            // ✅ Entity-specific field handling
-            switch (msg.getEntityType()) {
-                case "bl_account":
-                    mutationBuilder.set("acct_no").to(msg.getAcctNo());
-                    break;
-
-                case "order_line":
-                case "pplan":
-                    mutationBuilder.set("mtn").to(msg.getMtn());
-                    break;
-
-                case "cust_acct_mtn":
-                    mutationBuilder.set("acct_no").to(msg.getAcctNo());
-                    mutationBuilder.set("mtn").to(msg.getMtn());
-                    break;
-
-                case "profile":
-                    mutationBuilder.set("acct_no").to(msg.getAcctNo());
-                    mutationBuilder.set("mtn").to(msg.getMtn());
-                    break;
-            }
-
-            // ✅ Add the mutation to the transaction buffer
-            transaction.buffer(mutationBuilder.build());
-        }
-    }
-
-    return null; // ✅ Commits all changes at once
-});
+// ✅ Step 4: Now pass `formattedMessages` to your ParDo
+formattedMessages.apply(
+    "ProcessMessages",
+    ParDo.of(new YourNextProcessingFn())  // Replace with your actual processing function
+);
