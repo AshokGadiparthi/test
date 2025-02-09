@@ -1,32 +1,111 @@
-// ✅ Step 1: Map each TransactionMessage to a KV pair
-PCollection<KV<String, TransactionMessage>> keyedMessages = insert_transaction_message.apply(
-    "MapToKV",
-    MapElements.into(TypeDescriptors.kvs(TypeDescriptors.strings(), TypeDescriptor.of(TransactionMessage.class)))
-        .via(msg -> KV.of(msg.getTableName() + "_" + msg.getCustId(), msg))
-);
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 
-// ✅ Step 2: Group by Key
-PCollection<KV<String, Iterable<TransactionMessage>>> groupedMessages = keyedMessages.apply(
-    "GroupByKey",
-    GroupByKey.create()
-);
+public class SpannerLookupAndSegregateFn extends DoFn<KV<String, Iterable<TransactionMessage>>, Void> {
+    private transient Spanner spanner;
+    private transient DatabaseClient dbClient;
+    private final TupleTag<Mutation> INSERT_MUTATION;
+    private final TupleTag<Mutation> UPDATE_MUTATION;
 
-// ✅ Step 3: Convert Iterable to List (to match expected format)
-PCollection<KV<String, List<TransactionMessage>>> formattedMessages = groupedMessages.apply(
-    "ConvertToList",
-    ParDo.of(new DoFn<KV<String, Iterable<TransactionMessage>>, KV<String, List<TransactionMessage>>>() {
-        @ProcessElement
-        public void processElement(ProcessContext c) {
-            KV<String, Iterable<TransactionMessage>> element = c.element();
-            List<TransactionMessage> messageList = new ArrayList<>();
-            element.getValue().forEach(messageList::add);
-            c.output(KV.of(element.getKey(), messageList));
+    // ✅ Thread-safe in-memory cache for recent UUIDs
+    private static final Cache<String, String> recentUuidCache = CacheBuilder.newBuilder()
+        .expireAfterWrite(10, TimeUnit.SECONDS) // Cache expires after 10 seconds
+        .maximumSize(10000) // Maximum cache size
+        .build();
+
+    public SpannerLookupAndSegregateFn(TupleTag<Mutation> insertTag, TupleTag<Mutation> updateTag) {
+        this.INSERT_MUTATION = insertTag;
+        this.UPDATE_MUTATION = updateTag;
+    }
+
+    @Setup
+    public void setup() {
+        SpannerOptions options = SpannerOptions.newBuilder().build();
+        spanner = options.getService();
+        dbClient = spanner.getDatabaseClient(DatabaseId.of("PROJECT_ID", "INSTANCE_ID", "DATABASE_ID"));
+    }
+
+    @ProcessElement
+    public void processElement(ProcessContext c) {
+        String compositeKey = c.element().getKey();
+        Iterable<TransactionMessage> messagesIterable = c.element().getValue();
+
+        // ✅ Sort messages by ops_ts
+        List<TransactionMessage> sortedMessages = SortMessagesFn.sortMessages(messagesIterable);
+
+        // ✅ Check in-memory cache before querying Spanner
+        String existingUUID = recentUuidCache.getIfPresent(compositeKey);
+        if (existingUUID == null) {
+            existingUUID = lookupUuidInSpanner(sortedMessages.get(0)); // Query Spanner if not in cache
         }
-    })
-);
 
-// ✅ Step 4: Now pass `formattedMessages` to your ParDo
-formattedMessages.apply(
-    "ProcessMessages",
-    ParDo.of(new YourNextProcessingFn())  // Replace with your actual processing function
-);
+        // ✅ Segregate INSERT and UPDATE Mutations
+        for (int i = 0; i < sortedMessages.size(); i++) {
+            TransactionMessage msg = sortedMessages.get(i);
+            boolean isNewRecord = i == 0 && existingUUID == null; // First record is insert if UUID is null
+
+            Mutation.WriteBuilder mutationBuilder = Mutation.newInsertOrUpdateBuilder(msg.getTableName())
+                .set("cust_id").to(msg.getCustId())
+                .set("payload").to(msg.getPayload());
+
+            if (msg.getTableName().equals("acct_prfl")) {
+                mutationBuilder.set("acct_no").to(msg.getAcctNo());
+            } else if (msg.getTableName().equals("acct_line_prfl")) {
+                mutationBuilder.set("mtn").to(msg.getMtn());
+            }
+
+            mutationBuilder.set("UUID").to(existingUUID != null ? existingUUID : UUID.randomUUID().toString());
+
+            if (isNewRecord) {
+                mutationBuilder.set("insert_ts").to(Timestamp.now());
+                // ✅ Cache the newly inserted UUID for future queries
+                recentUuidCache.put(compositeKey, mutationBuilder.build().getColumn("UUID").toString());
+                c.output(INSERT_MUTATION, mutationBuilder.build());
+            } else {
+                mutationBuilder.set("update_ts").to(Timestamp.now());
+                c.output(UPDATE_MUTATION, mutationBuilder.build());
+            }
+        }
+    }
+
+    private String lookupUuidInSpanner(TransactionMessage msg) {
+        String query;
+        Statement.Builder stmtBuilder;
+
+        if ("acct_prfl".equals(msg.getTableName())) {
+            query = "SELECT UUID FROM acct_prfl WHERE cust_id = @cust_id AND acct_no = @acct_no";
+            stmtBuilder = Statement.newBuilder(query)
+                .bind("cust_id").to(msg.getCustId())
+                .bind("acct_no").to(msg.getAcctNo());
+        } else {
+            query = "SELECT UUID FROM acct_line_prfl WHERE cust_id = @cust_id AND mtn = @mtn";
+            stmtBuilder = Statement.newBuilder(query)
+                .bind("cust_id").to(msg.getCustId())
+                .bind("mtn").to(msg.getMtn());
+        }
+
+        Statement statement = stmtBuilder.build();
+        String existingUUID = null;
+
+        try (ResultSet resultSet = dbClient.singleUse().executeQuery(statement)) {
+            if (resultSet.next()) {
+                existingUUID = resultSet.getString("UUID");
+                // ✅ Store result in cache
+                recentUuidCache.put(msg.getTableName() + "_" + msg.getCustId(), existingUUID);
+            }
+        } catch (ApiException e) {
+            System.err.println("Error during Spanner lookup: " + e.getMessage());
+        }
+
+        return existingUUID;
+    }
+
+    @Teardown
+    public void teardown() {
+        if (spanner != null) {
+            spanner.close();
+        }
+    }
+}
