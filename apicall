@@ -1,19 +1,41 @@
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+
+public class UuidCache {
+    private static final Cache<String, String> uuidCache = CacheBuilder.newBuilder()
+        .expireAfterWrite(10, TimeUnit.SECONDS) // Cache expires after 10 seconds
+        .maximumSize(10000) // Maximum cache size
+        .build();
+
+    // Private constructor to prevent instantiation
+    private UuidCache() {}
+
+    // ✅ Fetch UUID from cache
+    public static String getUuid(String key) {
+        return uuidCache.getIfPresent(key);
+    }
+
+    // ✅ Store UUID in cache
+    public static void putUuid(String key, String uuid) {
+        uuidCache.put(key, uuid);
+    }
+}
+
+
+import com.google.cloud.spanner.*;
+import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.values.KV;
+import org.apache.beam.sdk.values.TupleTag;
+
+import java.util.List;
+import java.util.UUID;
 
 public class SpannerLookupAndSegregateFn extends DoFn<KV<String, Iterable<TransactionMessage>>, Void> {
     private transient Spanner spanner;
     private transient DatabaseClient dbClient;
     private final TupleTag<Mutation> INSERT_MUTATION;
     private final TupleTag<Mutation> UPDATE_MUTATION;
-
-    // ✅ Thread-safe in-memory cache for recent UUIDs
-    private static final Cache<String, String> recentUuidCache = CacheBuilder.newBuilder()
-        .expireAfterWrite(10, TimeUnit.SECONDS) // Cache expires after 10 seconds
-        .maximumSize(10000) // Maximum cache size
-        .build();
 
     public SpannerLookupAndSegregateFn(TupleTag<Mutation> insertTag, TupleTag<Mutation> updateTag) {
         this.INSERT_MUTATION = insertTag;
@@ -35,8 +57,8 @@ public class SpannerLookupAndSegregateFn extends DoFn<KV<String, Iterable<Transa
         // ✅ Sort messages by ops_ts
         List<TransactionMessage> sortedMessages = SortMessagesFn.sortMessages(messagesIterable);
 
-        // ✅ Check in-memory cache before querying Spanner
-        String existingUUID = recentUuidCache.getIfPresent(compositeKey);
+        // ✅ Check global cache before querying Spanner
+        String existingUUID = UuidCache.getUuid(compositeKey);
         if (existingUUID == null) {
             existingUUID = lookupUuidInSpanner(sortedMessages.get(0)); // Query Spanner if not in cache
         }
@@ -60,8 +82,8 @@ public class SpannerLookupAndSegregateFn extends DoFn<KV<String, Iterable<Transa
 
             if (isNewRecord) {
                 mutationBuilder.set("insert_ts").to(Timestamp.now());
-                // ✅ Cache the newly inserted UUID for future queries
-                recentUuidCache.put(compositeKey, mutationBuilder.build().getColumn("UUID").toString());
+                // ✅ Store in global cache
+                UuidCache.putUuid(compositeKey, mutationBuilder.build().getColumn("UUID").toString());
                 c.output(INSERT_MUTATION, mutationBuilder.build());
             } else {
                 mutationBuilder.set("update_ts").to(Timestamp.now());
@@ -92,8 +114,8 @@ public class SpannerLookupAndSegregateFn extends DoFn<KV<String, Iterable<Transa
         try (ResultSet resultSet = dbClient.singleUse().executeQuery(statement)) {
             if (resultSet.next()) {
                 existingUUID = resultSet.getString("UUID");
-                // ✅ Store result in cache
-                recentUuidCache.put(msg.getTableName() + "_" + msg.getCustId(), existingUUID);
+                // ✅ Store result in global cache
+                UuidCache.putUuid(msg.getTableName() + "_" + msg.getCustId(), existingUUID);
             }
         } catch (ApiException e) {
             System.err.println("Error during Spanner lookup: " + e.getMessage());
