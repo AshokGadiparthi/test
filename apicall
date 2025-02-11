@@ -1,5 +1,27 @@
-String keyType = jedis.type(key);
-    if (!"string".equals(keyType) && jedis.exists(key)) {
-        System.out.println("🚨 Deleting Invalid Key [" + key + "] of Type [" + keyType + "]");
-        jedis.del(key); // ❌ Delete incorrect key type
+try (Jedis jedis = jedisPool.getResource()) {
+    String key = "my_key";
+    String keyType = jedis.type(key);
+
+    switch (keyType) {
+        case "string":
+            String value = jedis.get(key);
+            System.out.println("✅ Retrieved String: " + value);
+            break;
+        case "hash":
+            Map<String, String> hashValues = jedis.hgetAll(key);
+            System.out.println("✅ Retrieved Hash: " + hashValues);
+            break;
+        case "list":
+            List<String> listValues = jedis.lrange(key, 0, -1);
+            System.out.println("✅ Retrieved List: " + listValues);
+            break;
+        case "set":
+            Set<String> setValues = jedis.smembers(key);
+            System.out.println("✅ Retrieved Set: " + setValues);
+            break;
+        default:
+            System.out.println("⚠️ Key [" + key + "] is of type [" + keyType + "] and may not be retrievable as a Long.");
     }
+} catch (Exception e) {
+    System.err.println("❌ Redis Error: " + e.getMessage());
+}
