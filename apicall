@@ -1,6 +1,80 @@
-gcloud compute instances create redis-vm \
-    --zone=us-central1-a \
-    --machine-type=e2-medium \
-    --network=default \
-    --image-family=debian-11 \
-    --image-project=debian-cloud
+import org.apache.beam.sdk.Pipeline;
+import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
+import org.apache.beam.sdk.options.PipelineOptions;
+import org.apache.beam.sdk.options.PipelineOptionsFactory;
+import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.transforms.ParDo;
+import org.apache.beam.sdk.values.PCollection;
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.Transaction;
+import com.google.api.services.bigquery.model.TableRow;
+import java.util.HashSet;
+import java.util.Set;
+
+public class SyncBigQueryToRedisSet {
+
+    private static final String REDIS_HOST = "your-redis-host";  // Replace with actual Redis host
+    private static final int REDIS_PORT = 6379;
+    private static final String REDIS_SET_KEY = "sectables_set";  // Redis Set Name
+
+    /**
+     * Step 1: Read all `ref_col` values from BigQuery and replace the Redis Set.
+     */
+    static class ReplaceRedisSetFn extends DoFn<TableRow, Void> {
+        private transient Jedis jedis;
+        private Set<String> newSet = new HashSet<>();  // Store new BigQuery values
+
+        @Setup
+        public void setup() {
+            jedis = new Jedis(REDIS_HOST, REDIS_PORT);
+        }
+
+        @ProcessElement
+        public void processElement(ProcessContext c) {
+            String refColValue = (String) c.element().get("ref_col");
+            if (refColValue != null) {
+                newSet.add(refColValue);  // Collect all BigQuery values
+            }
+        }
+
+        @FinishBundle
+        public void finishBundle() {
+            System.out.println("📌 Replacing Redis Set with " + newSet.size() + " values");
+
+            // Use Redis Transaction (MULTI) to replace the Set atomically
+            Transaction transaction = jedis.multi();
+            transaction.del(REDIS_SET_KEY);  // Remove existing Set
+            if (!newSet.isEmpty()) {
+                transaction.sadd(REDIS_SET_KEY, newSet.toArray(new String[0]));  // Add new values
+            }
+            transaction.exec();  // Execute transaction
+
+            // Log the final count of Redis Set
+            long totalCount = jedis.scard(REDIS_SET_KEY);
+            System.out.println("✅ Redis Set Updated. New count: " + totalCount);
+            
+            // Fetch 5 sample values for debugging
+            Set<String> sampleValues = jedis.srandmember(REDIS_SET_KEY, 5);
+            System.out.println("📌 Sample Records from Redis: " + sampleValues);
+        }
+
+        @Teardown
+        public void teardown() {
+            jedis.close();
+        }
+    }
+
+    public static void main(String[] args) {
+        PipelineOptions options = PipelineOptionsFactory.fromArgs(args).withValidation().create();
+        Pipeline pipeline = Pipeline.create(options);
+
+        // Step 1: Read latest BigQuery `ref_col` values
+        PCollection<TableRow> bigQueryData = pipeline.apply("ReadFromBigQuery",
+                BigQueryIO.readTableRows().from("your_project.your_dataset.employee"));
+
+        // Step 2: Replace Redis Set with new values
+        bigQueryData.apply("ReplaceRedisSet", ParDo.of(new ReplaceRedisSetFn()));
+
+        pipeline.run().waitUntilFinish();
+    }
+}
