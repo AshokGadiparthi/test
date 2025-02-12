@@ -1,20 +1,6 @@
-@FinishBundle
-public void finishBundle() {
-    // Scan Redis for keys matching namespace
-    int namespaceCount = 0;
-    String cursor = "0";
-
-    do {
-        // Scan keys with pattern sectables:*
-        ScanResult<String> scanResult = jedis.scan(cursor, new ScanParams().match(NAMESPACE + "*").count(1000));
-        namespaceCount += scanResult.getResult().size();
-        cursor = scanResult.getCursor();
-    } while (!cursor.equals("0"));
-
-    // Fetch 5 sample records from Redis
-    List<String> sampleValues = jedis.scan("0", new ScanParams().match(NAMESPACE + "*").count(5)).getResult();
-
-    // Log Redis Namespace Statistics
-    System.out.println("📌 Total Records in Namespace (" + NAMESPACE + "): " + namespaceCount);
-    System.out.println("📌 Sample Records from Redis: " + sampleValues);
-}
+gcloud compute instances create redis-vm \
+    --zone=us-central1-a \
+    --machine-type=e2-medium \
+    --network=default \
+    --image-family=debian-11 \
+    --image-project=debian-cloud
