@@ -7,12 +7,14 @@ import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.PCollection;
 import redis.clients.jedis.Jedis;
 import com.google.api.services.bigquery.model.TableRow;
+import java.util.Set;
 
 public class BigQueryToRedis {
 
     // Apache Beam DoFn to Write ref_col values to Redis
     static class WriteToRedisFn extends DoFn<TableRow, Void> {
         private transient Jedis jedis;
+        private static final String REDIS_SET_KEY = "ref_col_set";
 
         @Setup
         public void setup() {
@@ -25,8 +27,19 @@ public class BigQueryToRedis {
             String refColValue = (String) row.get("ref_col");
 
             if (refColValue != null) {
-                jedis.sadd("ref_col_set", refColValue);  // Store in Redis Set
+                jedis.sadd(REDIS_SET_KEY, refColValue);  // Store in Redis Set
             }
+        }
+
+        @FinishBundle
+        public void finishBundle() {
+            // Get total count of records stored
+            long totalCount = jedis.scard(REDIS_SET_KEY);
+            System.out.println("✅ Total records stored in Redis Set: " + totalCount);
+
+            // Fetch 5 random sample values
+            Set<String> sampleValues = jedis.srandmember(REDIS_SET_KEY, 5);
+            System.out.println("📌 Sample records stored in Redis: " + sampleValues);
         }
 
         @Teardown
