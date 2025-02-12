@@ -1,21 +1,25 @@
 import org.apache.beam.sdk.Pipeline;
-import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
+import org.apache.beam.sdk.io.gcp.pubsub.PubsubIO;
 import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.ParDo;
+import org.apache.beam.sdk.transforms.View;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PCollectionView;
-import org.apache.beam.sdk.transforms.View;
 import redis.clients.jedis.Jedis;
+import org.apache.beam.sdk.io.TextIO;
 import java.util.Set;
-import java.util.List;
-import java.util.ArrayList;
-import com.google.api.services.bigquery.model.TableRow;
+import java.util.HashSet;
+import org.apache.beam.sdk.transforms.MapElements;
+import org.apache.beam.sdk.transforms.SimpleFunction;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
-public class ReadRedisDataflow {
+public class FilterPubSubUsingRedis {
 
-    static class ReadFromRedisFn extends DoFn<Void, TableRow> {
+    // Step 1: Load Redis Data into a Side Input
+    static class LoadRedisDataFn extends DoFn<Void, Set<String>> {
         private transient Jedis jedis;
         private static final String REDIS_SET_KEY = "ref_col_set";
 
@@ -26,15 +30,8 @@ public class ReadRedisDataflow {
 
         @ProcessElement
         public void processElement(ProcessContext c) {
-            // Fetch all values from the Redis set
             Set<String> redisValues = jedis.smembers(REDIS_SET_KEY);
-
-            // Convert to TableRow format and output each row
-            for (String value : redisValues) {
-                TableRow row = new TableRow();
-                row.set("ref_col", value);
-                c.output(row);
-            }
+            c.output(new HashSet<>(redisValues));  // Store Redis values in memory
         }
 
         @Teardown
@@ -43,21 +40,50 @@ public class ReadRedisDataflow {
         }
     }
 
+    // Step 2: Filter Incoming Pub/Sub Messages Based on Redis Lookup
+    static class FilterMessagesFn extends DoFn<String, String> {
+        private final PCollectionView<Set<String>> redisDataView;
+
+        public FilterMessagesFn(PCollectionView<Set<String>> redisDataView) {
+            this.redisDataView = redisDataView;
+        }
+
+        @ProcessElement
+        public void processElement(ProcessContext c) {
+            Set<String> redisData = c.sideInput(redisDataView);
+            String messageJson = c.element();
+
+            // Parse JSON payload
+            JsonObject jsonObject = JsonParser.parseString(messageJson).getAsJsonObject();
+            String refColValue = jsonObject.has("ref_col") ? jsonObject.get("ref_col").getAsString() : null;
+
+            // Filter if value exists in Redis
+            if (refColValue != null && redisData.contains(refColValue)) {
+                c.output(messageJson);  // Only output matching records
+            }
+        }
+    }
+
     public static void main(String[] args) {
         PipelineOptions options = PipelineOptionsFactory.fromArgs(args).withValidation().create();
         Pipeline pipeline = Pipeline.create(options);
 
-        // Read all stored values from Redis
-        PCollection<TableRow> redisData = pipeline
-                .apply("ReadFromRedis", ParDo.of(new ReadFromRedisFn()));
+        // Step 1: Load Redis Data as a Side Input
+        PCollectionView<Set<String>> redisDataView = pipeline
+                .apply("Load Redis Data", ParDo.of(new LoadRedisDataFn()))
+                .apply(View.asSingleton());
 
-        // Write the retrieved Redis data to BigQuery
-        redisData.apply("WriteToBigQuery",
-                BigQueryIO.writeTableRows()
-                        .to("your_project.your_dataset.redis_data")
-                        .withWriteDisposition(BigQueryIO.Write.WriteDisposition.WRITE_APPEND)
-                        .withSchema(...) // Define the schema for BigQuery
-        );
+        // Step 2: Read Streaming Data from Pub/Sub
+        PCollection<String> pubsubMessages = pipeline.apply("ReadFromPubSub",
+                PubsubIO.readStrings().fromSubscription("projects/your-project/subscriptions/your-subscription"));
+
+        // Step 3: Filter Pub/Sub Messages Based on Redis Lookup
+        PCollection<String> filteredMessages = pubsubMessages.apply("FilterUsingRedis",
+                ParDo.of(new FilterMessagesFn(redisDataView)).withSideInputs(redisDataView));
+
+        // Step 4: Write Filtered Messages to a File (For Debugging)
+        filteredMessages.apply("WriteToGCS",
+                TextIO.write().to("gs://your-bucket/filtered_messages").withSuffix(".json"));
 
         pipeline.run().waitUntilFinish();
     }
