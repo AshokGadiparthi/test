@@ -15,7 +15,7 @@ public class SyncBigQueryToRedisSet {
 
     private static final String REDIS_HOST = "your-redis-host";  // Replace with actual Redis host
     private static final int REDIS_PORT = 6379;
-    private static final String REDIS_SET_KEY = "sectables_set";  // Redis Set Name
+    private static final String REDIS_SET_KEY = "sectables_set";  // ✅ Declared here!
 
     /**
      * Step 1: Read all `ref_col` values from BigQuery and replace the Redis Set.
