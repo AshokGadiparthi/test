@@ -11,16 +11,17 @@ import com.google.api.services.bigquery.model.TableRow;
 import java.util.HashSet;
 import java.util.Set;
 
-public class SyncBigQueryToRedisSet {
+public class SafeSyncBigQueryToRedisSet {
 
     private static final String REDIS_HOST = "your-redis-host";  // Replace with actual Redis host
     private static final int REDIS_PORT = 6379;
-    private static final String REDIS_SET_KEY = "sectables_set";  // ✅ Declared here!
+    private static final String REDIS_SET_KEY = "sectables_set";        // Active set used by streaming Dataflow
+    private static final String REDIS_TEMP_SET_KEY = "sectables_set_tmp";  // Temporary staging set
 
     /**
-     * Step 1: Read all `ref_col` values from BigQuery and replace the Redis Set.
+     * Step 1: Read all `ref_col` values from BigQuery and safely replace the Redis Set using `RENAME`.
      */
-    static class ReplaceRedisSetFn extends DoFn<TableRow, Void> {
+    static class ReplaceRedisSetSafelyFn extends DoFn<TableRow, Void> {
         private transient Jedis jedis;
         private Set<String> newSet = new HashSet<>();  // Store new BigQuery values
 
@@ -39,19 +40,28 @@ public class SyncBigQueryToRedisSet {
 
         @FinishBundle
         public void finishBundle() {
-            System.out.println("📌 Replacing Redis Set with " + newSet.size() + " values");
+            System.out.println("📌 Replacing Redis Set SAFELY with " + newSet.size() + " values");
 
-            // Use Redis Transaction (MULTI) to replace the Set atomically
+            // Use Redis Transaction (MULTI) to ensure a safe atomic update
             Transaction transaction = jedis.multi();
-            transaction.del(REDIS_SET_KEY);  // Remove existing Set
+            
+            // Step 1: Delete old temp set
+            transaction.del(REDIS_TEMP_SET_KEY);
+
+            // Step 2: Add new values into temp set
             if (!newSet.isEmpty()) {
-                transaction.sadd(REDIS_SET_KEY, newSet.toArray(new String[0]));  // Add new values
+                transaction.sadd(REDIS_TEMP_SET_KEY, newSet.toArray(new String[0]));
             }
-            transaction.exec();  // Execute transaction
+
+            // Step 3: Atomically rename temp set to active set
+            transaction.rename(REDIS_TEMP_SET_KEY, REDIS_SET_KEY);
+
+            // Step 4: Execute transaction
+            transaction.exec();
 
             // Log the final count of Redis Set
             long totalCount = jedis.scard(REDIS_SET_KEY);
-            System.out.println("✅ Redis Set Updated. New count: " + totalCount);
+            System.out.println("✅ Redis Set Updated SAFELY. New count: " + totalCount);
             
             // Fetch 5 sample values for debugging
             Set<String> sampleValues = jedis.srandmember(REDIS_SET_KEY, 5);
@@ -72,8 +82,8 @@ public class SyncBigQueryToRedisSet {
         PCollection<TableRow> bigQueryData = pipeline.apply("ReadFromBigQuery",
                 BigQueryIO.readTableRows().from("your_project.your_dataset.employee"));
 
-        // Step 2: Replace Redis Set with new values
-        bigQueryData.apply("ReplaceRedisSet", ParDo.of(new ReplaceRedisSetFn()));
+        // Step 2: Safely Replace Redis Set with new values
+        bigQueryData.apply("ReplaceRedisSetSafely", ParDo.of(new ReplaceRedisSetSafelyFn()));
 
         pipeline.run().waitUntilFinish();
     }
