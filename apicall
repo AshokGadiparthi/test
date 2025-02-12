@@ -7,17 +7,21 @@ import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.PCollection;
 import redis.clients.jedis.Jedis;
 import com.google.api.services.bigquery.model.TableRow;
+import java.util.Set;
+import java.util.List;
 
-public class OptimizedSyncBigQueryToRedis {
+public class DebugBigQueryToRedis {
 
-    private static final String REDIS_HOST = "your-redis-host"; // Replace with actual Redis host
+    private static final String REDIS_HOST = "your-redis-host";
     private static final int REDIS_PORT = 6379;
+    private static final String NAMESPACE = "sectables:";
 
     /**
-     * Step 1: Update Redis - Set `ref_col` as Key with "Y" as Value
+     * Step 1: Update Redis - Store `ref_col` as Key with "Y" as Value
      */
     static class UpdateRedisFn extends DoFn<TableRow, Void> {
         private transient Jedis jedis;
+        private int recordCount = 0;  // Counter for added records
 
         @Setup
         public void setup() {
@@ -29,9 +33,19 @@ public class OptimizedSyncBigQueryToRedis {
             String refColValue = (String) c.element().get("ref_col");
 
             if (refColValue != null) {
-                jedis.set(refColValue, "Y");  // Store in Redis as Key-Value (ref_col -> "Y")
-                System.out.println("✅ Updated Redis: " + refColValue);
+                jedis.set(NAMESPACE + refColValue, "Y");  // Store in Redis with Namespace Prefix
+                System.out.println("✅ Added to Redis: " + NAMESPACE + refColValue);
+                recordCount++;
             }
+        }
+
+        @FinishBundle
+        public void finishBundle() {
+            long totalCount = jedis.dbSize();  // Total keys in Redis
+            List<String> sampleValues = jedis.keys(NAMESPACE + "*").stream().limit(5).toList();  // Get first 5 records
+
+            System.out.println("📌 Total Records in Redis: " + totalCount);
+            System.out.println("📌 Sample Records from Redis: " + sampleValues);
         }
 
         @Teardown
@@ -41,10 +55,11 @@ public class OptimizedSyncBigQueryToRedis {
     }
 
     /**
-     * Step 2: Remove Outdated Entries from Redis (Keys Not in BigQuery)
+     * Step 2: Remove Outdated Keys from Redis (Keys Not in BigQuery)
      */
     static class RemoveOutdatedRedisFn extends DoFn<TableRow, Void> {
         private transient Jedis jedis;
+        private int removedCount = 0;
 
         @Setup
         public void setup() {
@@ -55,11 +70,16 @@ public class OptimizedSyncBigQueryToRedis {
         public void processElement(ProcessContext c) {
             String refColValue = (String) c.element().get("ref_col");
 
-            // If Redis Key exists but NOT in BigQuery, remove it
-            if (refColValue != null && jedis.exists(refColValue)) {
-                jedis.del(refColValue);
-                System.out.println("❌ Removed from Redis: " + refColValue);
+            if (refColValue != null && jedis.exists(NAMESPACE + refColValue)) {
+                jedis.del(NAMESPACE + refColValue);
+                System.out.println("❌ Removed from Redis: " + NAMESPACE + refColValue);
+                removedCount++;
             }
+        }
+
+        @FinishBundle
+        public void finishBundle() {
+            System.out.println("✅ Total Records Removed from Redis: " + removedCount);
         }
 
         @Teardown
@@ -76,10 +96,10 @@ public class OptimizedSyncBigQueryToRedis {
         PCollection<TableRow> bigQueryData = pipeline.apply("ReadFromBigQuery",
                 BigQueryIO.readTableRows().from("your_project.your_dataset.employee"));
 
-        // Step 2: Update Redis with new/updated values
+        // Step 2: Update Redis with new/updated values (with namespace)
         bigQueryData.apply("UpdateRedis", ParDo.of(new UpdateRedisFn()));
 
-        // Step 3: Remove outdated entries from Redis
+        // Step 3: Remove outdated entries from Redis (with namespace)
         bigQueryData.apply("RemoveOldFromRedis", ParDo.of(new RemoveOutdatedRedisFn()));
 
         pipeline.run().waitUntilFinish();
