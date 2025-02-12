@@ -5,41 +5,36 @@ import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.PCollection;
+import org.apache.beam.sdk.values.PCollectionView;
+import org.apache.beam.sdk.transforms.View;
 import redis.clients.jedis.Jedis;
-import com.google.api.services.bigquery.model.TableRow;
 import java.util.Set;
+import java.util.List;
+import java.util.ArrayList;
+import com.google.api.services.bigquery.model.TableRow;
 
-public class BigQueryToRedis {
+public class ReadRedisDataflow {
 
-    // Apache Beam DoFn to Write ref_col values to Redis
-    static class WriteToRedisFn extends DoFn<TableRow, Void> {
+    static class ReadFromRedisFn extends DoFn<Void, TableRow> {
         private transient Jedis jedis;
         private static final String REDIS_SET_KEY = "ref_col_set";
 
         @Setup
         public void setup() {
-            jedis = new Jedis("your-redis-host", 6379);  // Replace with your Redis host
+            jedis = new Jedis("your-redis-host", 6379);  // Replace with actual Redis host
         }
 
         @ProcessElement
         public void processElement(ProcessContext c) {
-            TableRow row = c.element();
-            String refColValue = (String) row.get("ref_col");
+            // Fetch all values from the Redis set
+            Set<String> redisValues = jedis.smembers(REDIS_SET_KEY);
 
-            if (refColValue != null) {
-                jedis.sadd(REDIS_SET_KEY, refColValue);  // Store in Redis Set
+            // Convert to TableRow format and output each row
+            for (String value : redisValues) {
+                TableRow row = new TableRow();
+                row.set("ref_col", value);
+                c.output(row);
             }
-        }
-
-        @FinishBundle
-        public void finishBundle() {
-            // Get total count of records stored
-            long totalCount = jedis.scard(REDIS_SET_KEY);
-            System.out.println("✅ Total records stored in Redis Set: " + totalCount);
-
-            // Fetch 5 random sample values
-            Set<String> sampleValues = jedis.srandmember(REDIS_SET_KEY, 5);
-            System.out.println("📌 Sample records stored in Redis: " + sampleValues);
         }
 
         @Teardown
@@ -52,13 +47,17 @@ public class BigQueryToRedis {
         PipelineOptions options = PipelineOptionsFactory.fromArgs(args).withValidation().create();
         Pipeline pipeline = Pipeline.create(options);
 
-        // Read all rows from BigQuery table (without SQL query)
-        PCollection<TableRow> rows = pipeline.apply("ReadFromBigQuery",
-                BigQueryIO.readTableRows()
-                        .from("your_project.your_dataset.employee"));  // Replace with your table details
+        // Read all stored values from Redis
+        PCollection<TableRow> redisData = pipeline
+                .apply("ReadFromRedis", ParDo.of(new ReadFromRedisFn()));
 
-        // Store the ref_col values in Redis
-        rows.apply("WriteToRedis", ParDo.of(new WriteToRedisFn()));
+        // Write the retrieved Redis data to BigQuery
+        redisData.apply("WriteToBigQuery",
+                BigQueryIO.writeTableRows()
+                        .to("your_project.your_dataset.redis_data")
+                        .withWriteDisposition(BigQueryIO.Write.WriteDisposition.WRITE_APPEND)
+                        .withSchema(...) // Define the schema for BigQuery
+        );
 
         pipeline.run().waitUntilFinish();
     }
