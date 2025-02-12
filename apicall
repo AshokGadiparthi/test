@@ -1,37 +1,37 @@
 import org.apache.beam.sdk.Pipeline;
-import org.apache.beam.sdk.io.gcp.pubsub.PubsubIO;
+import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
 import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.ParDo;
-import org.apache.beam.sdk.transforms.View;
 import org.apache.beam.sdk.values.PCollection;
-import org.apache.beam.sdk.values.PCollectionView;
 import redis.clients.jedis.Jedis;
-import org.apache.beam.sdk.io.TextIO;
-import java.util.Set;
-import java.util.HashSet;
-import org.apache.beam.sdk.transforms.MapElements;
-import org.apache.beam.sdk.transforms.SimpleFunction;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import com.google.api.services.bigquery.model.TableRow;
 
-public class FilterPubSubUsingRedis {
+public class OptimizedSyncBigQueryToRedis {
 
-    // Step 1: Load Redis Data into a Side Input
-    static class LoadRedisDataFn extends DoFn<Void, Set<String>> {
+    private static final String REDIS_HOST = "your-redis-host"; // Replace with actual Redis host
+    private static final int REDIS_PORT = 6379;
+
+    /**
+     * Step 1: Update Redis - Set `ref_col` as Key with "Y" as Value
+     */
+    static class UpdateRedisFn extends DoFn<TableRow, Void> {
         private transient Jedis jedis;
-        private static final String REDIS_SET_KEY = "ref_col_set";
 
         @Setup
         public void setup() {
-            jedis = new Jedis("your-redis-host", 6379);  // Replace with actual Redis host
+            jedis = new Jedis(REDIS_HOST, REDIS_PORT);
         }
 
         @ProcessElement
         public void processElement(ProcessContext c) {
-            Set<String> redisValues = jedis.smembers(REDIS_SET_KEY);
-            c.output(new HashSet<>(redisValues));  // Store Redis values in memory
+            String refColValue = (String) c.element().get("ref_col");
+
+            if (refColValue != null) {
+                jedis.set(refColValue, "Y");  // Store in Redis as Key-Value (ref_col -> "Y")
+                System.out.println("✅ Updated Redis: " + refColValue);
+            }
         }
 
         @Teardown
@@ -40,27 +40,31 @@ public class FilterPubSubUsingRedis {
         }
     }
 
-    // Step 2: Filter Incoming Pub/Sub Messages Based on Redis Lookup
-    static class FilterMessagesFn extends DoFn<String, String> {
-        private final PCollectionView<Set<String>> redisDataView;
+    /**
+     * Step 2: Remove Outdated Entries from Redis (Keys Not in BigQuery)
+     */
+    static class RemoveOutdatedRedisFn extends DoFn<TableRow, Void> {
+        private transient Jedis jedis;
 
-        public FilterMessagesFn(PCollectionView<Set<String>> redisDataView) {
-            this.redisDataView = redisDataView;
+        @Setup
+        public void setup() {
+            jedis = new Jedis(REDIS_HOST, REDIS_PORT);
         }
 
         @ProcessElement
         public void processElement(ProcessContext c) {
-            Set<String> redisData = c.sideInput(redisDataView);
-            String messageJson = c.element();
+            String refColValue = (String) c.element().get("ref_col");
 
-            // Parse JSON payload
-            JsonObject jsonObject = JsonParser.parseString(messageJson).getAsJsonObject();
-            String refColValue = jsonObject.has("ref_col") ? jsonObject.get("ref_col").getAsString() : null;
-
-            // Filter if value exists in Redis
-            if (refColValue != null && redisData.contains(refColValue)) {
-                c.output(messageJson);  // Only output matching records
+            // If Redis Key exists but NOT in BigQuery, remove it
+            if (refColValue != null && jedis.exists(refColValue)) {
+                jedis.del(refColValue);
+                System.out.println("❌ Removed from Redis: " + refColValue);
             }
+        }
+
+        @Teardown
+        public void teardown() {
+            jedis.close();
         }
     }
 
@@ -68,22 +72,15 @@ public class FilterPubSubUsingRedis {
         PipelineOptions options = PipelineOptionsFactory.fromArgs(args).withValidation().create();
         Pipeline pipeline = Pipeline.create(options);
 
-        // Step 1: Load Redis Data as a Side Input
-        PCollectionView<Set<String>> redisDataView = pipeline
-                .apply("Load Redis Data", ParDo.of(new LoadRedisDataFn()))
-                .apply(View.asSingleton());
+        // Step 1: Read latest BigQuery `ref_col` values
+        PCollection<TableRow> bigQueryData = pipeline.apply("ReadFromBigQuery",
+                BigQueryIO.readTableRows().from("your_project.your_dataset.employee"));
 
-        // Step 2: Read Streaming Data from Pub/Sub
-        PCollection<String> pubsubMessages = pipeline.apply("ReadFromPubSub",
-                PubsubIO.readStrings().fromSubscription("projects/your-project/subscriptions/your-subscription"));
+        // Step 2: Update Redis with new/updated values
+        bigQueryData.apply("UpdateRedis", ParDo.of(new UpdateRedisFn()));
 
-        // Step 3: Filter Pub/Sub Messages Based on Redis Lookup
-        PCollection<String> filteredMessages = pubsubMessages.apply("FilterUsingRedis",
-                ParDo.of(new FilterMessagesFn(redisDataView)).withSideInputs(redisDataView));
-
-        // Step 4: Write Filtered Messages to a File (For Debugging)
-        filteredMessages.apply("WriteToGCS",
-                TextIO.write().to("gs://your-bucket/filtered_messages").withSuffix(".json"));
+        // Step 3: Remove outdated entries from Redis
+        bigQueryData.apply("RemoveOldFromRedis", ParDo.of(new RemoveOutdatedRedisFn()));
 
         pipeline.run().waitUntilFinish();
     }
