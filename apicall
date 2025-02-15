@@ -1,90 +1,132 @@
-import org.apache.beam.sdk.Pipeline;
-import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
-import org.apache.beam.sdk.options.PipelineOptions;
-import org.apache.beam.sdk.options.PipelineOptionsFactory;
-import org.apache.beam.sdk.transforms.DoFn;
-import org.apache.beam.sdk.transforms.ParDo;
-import org.apache.beam.sdk.values.PCollection;
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.Transaction;
-import com.google.api.services.bigquery.model.TableRow;
-import java.util.HashSet;
-import java.util.Set;
+Slide 1 - Title Slide
 
-public class SafeSyncBigQueryToRedisSet {
+"Good morning, good afternoon, and good evening to everyone joining from across the world. I am truly honored to be here at the 7th International Conference on Communication and Computational Technologies (ICCCT 2025).
+I would like to extend my sincere thanks to the organizers for this opportunity to share insights on a topic that is shaping modern cloud architectures—seamless data integration on Google Cloud."
 
-    private static final String REDIS_HOST = "your-redis-host";  // Replace with actual Redis host
-    private static final int REDIS_PORT = 6379;
-    private static final String REDIS_SET_KEY = "sectables_set";        // Active set used by streaming Dataflow
-    private static final String REDIS_TEMP_SET_KEY = "sectables_set_tmp";  // Temporary staging set
+My name is Ashok Gadi Parthi, and I work as a Senior Data Architect, specializing in real-time and batch data integration across cloud platforms. Over the years, I have helped leading telecom, banking, aerospace, and e-commerce organizations design scalable, high-performance data architectures.
 
-    /**
-     * Step 1: Read all `ref_col` values from BigQuery and safely replace the Redis Set using `RENAME`.
-     */
-    static class ReplaceRedisSetSafelyFn extends DoFn<TableRow, Void> {
-        private transient Jedis jedis;
-        private Set<String> newSet = new HashSet<>();  // Store new BigQuery values
+Today, I will walk you through how to architect robust, scalable, and cost-efficient data workflows on Google Cloud using BigQuery, Pub/Sub, Dataflow, Spanner, and Redis.
+Let’s explore how we can process data in real-time and batch, ensuring seamless integration across different systems."*
+-------------------------------------------------
+Slide 2 - The Data Explosion Challenge
 
-        @Setup
-        public void setup() {
-            jedis = new Jedis(REDIS_HOST, REDIS_PORT);
-        }
+We live in a data-driven world. Right now, as we speak, we are generating 2.5 quintillion bytes of data every day.
 
-        @ProcessElement
-        public void processElement(ProcessContext c) {
-            String refColValue = (String) c.element().get("ref_col");
-            if (refColValue != null) {
-                newSet.add(refColValue);  // Collect all BigQuery values
-            }
-        }
+Here’s something even more mind-blowing—90% of the world’s data has been created in just the last two years.
 
-        @FinishBundle
-        public void finishBundle() {
-            System.out.println("📌 Replacing Redis Set SAFELY with " + newSet.size() + " values");
+The challenge isn’t just collecting data—it’s about integrating and making sense of it in real-time. Businesses struggle to bring together batch and streaming data from disconnected systems and get actionable insights quickly.
 
-            // Use Redis Transaction (MULTI) to ensure a safe atomic update
-            Transaction transaction = jedis.multi();
-            
-            // Step 1: Delete old temp set
-            transaction.del(REDIS_TEMP_SET_KEY);
+-----------------------------------------
+Slide 3 - The Key Challenges
 
-            // Step 2: Add new values into temp set
-            if (!newSet.isEmpty()) {
-                transaction.sadd(REDIS_TEMP_SET_KEY, newSet.toArray(new String[0]));
-            }
+Before we jump into solutions, let’s talk about the key problems organizations face with data integration:"
 
-            // Step 3: Atomically rename temp set to active set
-            transaction.rename(REDIS_TEMP_SET_KEY, REDIS_SET_KEY);
+✅ Data Silos → Data is scattered across multiple platforms, making integration complex.
+✅ Scalability Issues → Handling massive datasets with real-time requirements.
+✅ Latency vs. Cost → Companies want insights fast but also need to optimize costs.
+✅ Data Governance → Ensuring security, consistency, and compliance across systems.
 
-            // Step 4: Execute transaction
-            transaction.exec();
+"Solving these challenges requires a scalable, real-time, and cost-efficient data integration strategy—which brings us to Google Cloud."
 
-            // Log the final count of Redis Set
-            long totalCount = jedis.scard(REDIS_SET_KEY);
-            System.out.println("✅ Redis Set Updated SAFELY. New count: " + totalCount);
-            
-            // Fetch 5 sample values for debugging
-            Set<String> sampleValues = jedis.srandmember(REDIS_SET_KEY, 5);
-            System.out.println("📌 Sample Records from Redis: " + sampleValues);
-        }
+-------------------------------------
 
-        @Teardown
-        public void teardown() {
-            jedis.close();
-        }
-    }
+Slide 4 - Google Cloud as the Solution
+*"Google Cloud provides a seamless data integration framework with services that handle batch and real-time data at scale.
 
-    public static void main(String[] args) {
-        PipelineOptions options = PipelineOptionsFactory.fromArgs(args).withValidation().create();
-        Pipeline pipeline = Pipeline.create(options);
+Key services include:"*
+✔ Cloud Storage (GCS) → Centralized ingestion of batch data.
+✔ BigQuery → Serverless data warehouse for analytics.
+✔ Pub/Sub → Real-time event-driven messaging.
+✔ Dataflow → Scalable data processing with Apache Beam.
+✔ Spanner → Globally distributed transactional database.
+✔ Redis → Low-latency caching for real-time lookups.
 
-        // Step 1: Read latest BigQuery `ref_col` values
-        PCollection<TableRow> bigQueryData = pipeline.apply("ReadFromBigQuery",
-                BigQueryIO.readTableRows().from("your_project.your_dataset.employee"));
+"With these building blocks, we can design efficient, real-time and batch data pipelines."
 
-        // Step 2: Safely Replace Redis Set with new values
-        bigQueryData.apply("ReplaceRedisSetSafely", ParDo.of(new ReplaceRedisSetSafelyFn()));
+---------------------------
 
-        pipeline.run().waitUntilFinish();
-    }
-}
+Slide 5 - The Core Building Blocks of Data Integration
+"Data processing falls into two major categories:
+✅ Batch Processing → Periodic ETL with Cloud Storage & BigQuery.
+✅ Streaming Processing → Continuous data ingestion via Pub/Sub & Dataflow."
+
+------------------------
+
+Slide 6 - Batch Processing Pipeline Architecture
+*"Let’s take a practical example—daily transaction processing.
+
+How does this work?"*
+
+1. Step 1: Data lands in Cloud Storage as raw files.
+2. Step 2: Dataflow transforms and cleanses the data.
+3. Step 3: Data is loaded into BigQuery for reporting & analytics.
+
+✅ Optimization Techniques:
+✔ Use partitioning & clustering in BigQuery for faster queries.
+✔ Use columnar storage compression to reduce costs.
+-------------------------------------------------
+
+Slide 7 - Real-Time Streaming Pipeline Architecture
+"Now, let’s compare this with a real-time streaming use case. Imagine processing user events from a mobile app in real-time."
+
+1️. Step 1: Events are ingested via Pub/Sub.
+2. Step 2: Dataflow (Apache Beam) processes data streams.
+3. Step 3: Data is stored in BigQuery for real-time dashboards.
+
+✅ Optimization Techniques:
+✔ Use windowing & watermarks in Dataflow to handle late-arriving data.
+✔ Use DLP API for real-time data security & PII masking.
+
+-----------------------------------
+
+Slide 8 - Case Study: Change Data Capture (CDC)
+*"Let’s look at a real-world use case: Syncing operational and analytical databases in real-time.
+
+The challenge? Keeping Google Spanner (OLTP system) and BigQuery (analytics warehouse) in sync."*
+
+✅ Solution: Implement Change Data Capture (CDC)
+
+📌 Flow:
+1. Spanner Change Streams detect data changes.
+2. Pub/Sub sends updates.
+3. Dataflow processes & transforms data.
+4. BigQuery stores the final analytics dataset.
+
+-----------------
+
+Slide 9 - Best Practices for CDC on GCP
+✅ Use exactly-once processing in Dataflow.
+✅ Optimize for cost by batching BigQuery Streaming Inserts.
+✅ Use Cloud Logging & Metrics Explorer for monitoring.
+
+"With these best practices, we ensure real-time, fault-tolerant, and cost-effective CDC pipelines."
+
+------------------
+
+Slide 10 - Best Practices for Scalable Data Integration
+✔ Design for Failures → Implement retries & idempotency.
+✔ Use Schema Evolution → Adapt to changing datasets.
+✔ Balance Batch & Streaming → Optimize processing costs.
+✔ Use Dataplex for Governance → Metadata & security management.
+
+--------------------
+
+Slide 11 - The Future of Data Integration
+🚀 AI-Powered Data Integration → ML-driven ETL optimizations.
+🌍 Multi-Cloud Data Architectures → BigQuery Omni for federated queries.
+🔒 Enhanced Security & Compliance → IAM, VPC-SC, encryption.
+
+"The future is about intelligent, automated, and seamless integration!"
+
+-----------------
+
+Slide 12 - Conclusion
+✅ Data integration is the foundation of modern cloud architectures.
+✅ Google Cloud provides the best tools for seamless, real-time data processing.
+✅ With BigQuery, Pub/Sub, Dataflow, and Spanner, we can build highly scalable data pipelines.
+
+🎤 Final Thought:
+"The future of data integration is seamless, intelligent, and scalable. Let’s build the next generation of real-time analytics together!"
+
+🎤 Closing:
+"Thank you! I’m happy to take any questions."
