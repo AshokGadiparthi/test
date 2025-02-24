@@ -1,132 +1,95 @@
-Slide 1 - Title Slide
+import com.google.cloud.spanner.*;
+import com.google.cloud.bigquery.*;
+import org.apache.beam.sdk.Pipeline;
+import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
+import org.apache.beam.sdk.io.gcp.spanner.SpannerIO;
+import org.apache.beam.sdk.options.PipelineOptions;
+import org.apache.beam.sdk.options.PipelineOptionsFactory;
+import org.apache.beam.sdk.options.Description;
+import org.apache.beam.sdk.options.Default;
+import org.apache.beam.sdk.transforms.*;
+import org.apache.beam.sdk.values.PCollection;
+import org.apache.beam.sdk.values.PDone;
+import org.apache.beam.sdk.values.Row;
 
-"Good morning, good afternoon, and good evening to everyone joining from across the world. I am truly honored to be here at the 7th International Conference on Communication and Computational Technologies (ICCCT 2025).
-I would like to extend my sincere thanks to the organizers for this opportunity to share insights on a topic that is shaping modern cloud architectures—seamless data integration on Google Cloud."
+import java.util.HashMap;
+import java.util.Map;
 
-My name is Ashok Gadi Parthi, and I work as a Senior Data Architect, specializing in real-time and batch data integration across cloud platforms. Over the years, I have helped leading telecom, banking, aerospace, and e-commerce organizations design scalable, high-performance data architectures.
+public class SpannerToBigQuery {
+    public interface SpannerToBigQueryOptions extends PipelineOptions {
+        @Description("Google Cloud project ID")
+        @Default.String("your-gcp-project")
+        String getProject();
+        void setProject(String value);
 
-Today, I will walk you through how to architect robust, scalable, and cost-efficient data workflows on Google Cloud using BigQuery, Pub/Sub, Dataflow, Spanner, and Redis.
-Let’s explore how we can process data in real-time and batch, ensuring seamless integration across different systems."*
--------------------------------------------------
-Slide 2 - The Data Explosion Challenge
+        @Description("Spanner instance ID")
+        @Default.String("your-spanner-instance")
+        String getSpannerInstance();
+        void setSpannerInstance(String value);
 
-We live in a data-driven world. Right now, as we speak, we are generating 2.5 quintillion bytes of data every day.
+        @Description("Spanner database ID")
+        @Default.String("your-spanner-database")
+        String getSpannerDatabase();
+        void setSpannerDatabase(String value);
 
-Here’s something even more mind-blowing—90% of the world’s data has been created in just the last two years.
+        @Description("BigQuery dataset name")
+        @Default.String("your_bq_dataset")
+        String getBigQueryDataset();
+        void setBigQueryDataset(String value);
 
-The challenge isn’t just collecting data—it’s about integrating and making sense of it in real-time. Businesses struggle to bring together batch and streaming data from disconnected systems and get actionable insights quickly.
+        @Description("BigQuery table name")
+        @Default.String("your_bq_table")
+        String getBigQueryTable();
+        void setBigQueryTable(String value);
+    }
 
------------------------------------------
-Slide 3 - The Key Challenges
+    public static void main(String[] args) {
+        SpannerToBigQueryOptions options = PipelineOptionsFactory.fromArgs(args)
+                .withValidation()
+                .as(SpannerToBigQueryOptions.class);
 
-Before we jump into solutions, let’s talk about the key problems organizations face with data integration:"
+        Pipeline pipeline = Pipeline.create(options);
 
-✅ Data Silos → Data is scattered across multiple platforms, making integration complex.
-✅ Scalability Issues → Handling massive datasets with real-time requirements.
-✅ Latency vs. Cost → Companies want insights fast but also need to optimize costs.
-✅ Data Governance → Ensuring security, consistency, and compliance across systems.
+        // Read data from Spanner
+        PCollection<Row> spannerData = pipeline.apply("Read from Spanner",
+                SpannerIO.read()
+                        .withProjectId(options.getProject())
+                        .withInstanceId(options.getSpannerInstance())
+                        .withDatabaseId(options.getSpannerDatabase())
+                        .withQuery("SELECT UUID, cust_id, acct_num, mtn FROM cust_line_acct")
+        );
 
-"Solving these challenges requires a scalable, real-time, and cost-efficient data integration strategy—which brings us to Google Cloud."
+        // Transform Spanner data into BigQuery TableRow format
+        PCollection<TableRow> bigQueryData = spannerData.apply("Transform Data", ParDo.of(new DoFn<Row, TableRow>() {
+            @ProcessElement
+            public void processElement(ProcessContext c) {
+                Row row = c.element();
+                TableRow tableRow = new TableRow()
+                        .set("UUID", row.getString("UUID"))
+                        .set("cust_id", row.getString("cust_id"))
+                        .set("acct_num", row.getString("acct_num"))
+                        .set("mtn", row.getString("mtn"));
+                c.output(tableRow);
+            }
+        }));
 
--------------------------------------
+        // Write data to BigQuery
+        bigQueryData.apply("Write to BigQuery",
+                BigQueryIO.writeTableRows()
+                        .to(options.getProject() + ":" + options.getBigQueryDataset() + "." + options.getBigQueryTable())
+                        .withSchema(new TableSchema().setFields(
+                                java.util.Arrays.asList(
+                                        new TableFieldSchema().setName("UUID").setType("STRING"),
+                                        new TableFieldSchema().setName("cust_id").setType("STRING"),
+                                        new TableFieldSchema().setName("acct_num").setType("STRING"),
+                                        new TableFieldSchema().setName("mtn").setType("STRING")
+                                )
+                        ))
+                        .withWriteDisposition(BigQueryIO.Write.WriteDisposition.WRITE_APPEND)
+                        .withCreateDisposition(BigQueryIO.Write.CreateDisposition.CREATE_IF_NEEDED)
+        );
 
-Slide 4 - Google Cloud as the Solution
-*"Google Cloud provides a seamless data integration framework with services that handle batch and real-time data at scale.
-
-Key services include:"*
-✔ Cloud Storage (GCS) → Centralized ingestion of batch data.
-✔ BigQuery → Serverless data warehouse for analytics.
-✔ Pub/Sub → Real-time event-driven messaging.
-✔ Dataflow → Scalable data processing with Apache Beam.
-✔ Spanner → Globally distributed transactional database.
-✔ Redis → Low-latency caching for real-time lookups.
-
-"With these building blocks, we can design efficient, real-time and batch data pipelines."
-
----------------------------
-
-Slide 5 - The Core Building Blocks of Data Integration
-"Data processing falls into two major categories:
-✅ Batch Processing → Periodic ETL with Cloud Storage & BigQuery.
-✅ Streaming Processing → Continuous data ingestion via Pub/Sub & Dataflow."
-
-------------------------
-
-Slide 6 - Batch Processing Pipeline Architecture
-*"Let’s take a practical example—daily transaction processing.
-
-How does this work?"*
-
-1. Step 1: Data lands in Cloud Storage as raw files.
-2. Step 2: Dataflow transforms and cleanses the data.
-3. Step 3: Data is loaded into BigQuery for reporting & analytics.
-
-✅ Optimization Techniques:
-✔ Use partitioning & clustering in BigQuery for faster queries.
-✔ Use columnar storage compression to reduce costs.
--------------------------------------------------
-
-Slide 7 - Real-Time Streaming Pipeline Architecture
-"Now, let’s compare this with a real-time streaming use case. Imagine processing user events from a mobile app in real-time."
-
-1️. Step 1: Events are ingested via Pub/Sub.
-2. Step 2: Dataflow (Apache Beam) processes data streams.
-3. Step 3: Data is stored in BigQuery for real-time dashboards.
-
-✅ Optimization Techniques:
-✔ Use windowing & watermarks in Dataflow to handle late-arriving data.
-✔ Use DLP API for real-time data security & PII masking.
-
------------------------------------
-
-Slide 8 - Case Study: Change Data Capture (CDC)
-*"Let’s look at a real-world use case: Syncing operational and analytical databases in real-time.
-
-The challenge? Keeping Google Spanner (OLTP system) and BigQuery (analytics warehouse) in sync."*
-
-✅ Solution: Implement Change Data Capture (CDC)
-
-📌 Flow:
-1. Spanner Change Streams detect data changes.
-2. Pub/Sub sends updates.
-3. Dataflow processes & transforms data.
-4. BigQuery stores the final analytics dataset.
-
------------------
-
-Slide 9 - Best Practices for CDC on GCP
-✅ Use exactly-once processing in Dataflow.
-✅ Optimize for cost by batching BigQuery Streaming Inserts.
-✅ Use Cloud Logging & Metrics Explorer for monitoring.
-
-"With these best practices, we ensure real-time, fault-tolerant, and cost-effective CDC pipelines."
-
-------------------
-
-Slide 10 - Best Practices for Scalable Data Integration
-✔ Design for Failures → Implement retries & idempotency.
-✔ Use Schema Evolution → Adapt to changing datasets.
-✔ Balance Batch & Streaming → Optimize processing costs.
-✔ Use Dataplex for Governance → Metadata & security management.
-
---------------------
-
-Slide 11 - The Future of Data Integration
-🚀 AI-Powered Data Integration → ML-driven ETL optimizations.
-🌍 Multi-Cloud Data Architectures → BigQuery Omni for federated queries.
-🔒 Enhanced Security & Compliance → IAM, VPC-SC, encryption.
-
-"The future is about intelligent, automated, and seamless integration!"
-
------------------
-
-Slide 12 - Conclusion
-✅ Data integration is the foundation of modern cloud architectures.
-✅ Google Cloud provides the best tools for seamless, real-time data processing.
-✅ With BigQuery, Pub/Sub, Dataflow, and Spanner, we can build highly scalable data pipelines.
-
-🎤 Final Thought:
-"The future of data integration is seamless, intelligent, and scalable. Let’s build the next generation of real-time analytics together!"
-
-🎤 Closing:
-"Thank you! I’m happy to take any questions."
+        // Run the pipeline
+        pipeline.run().waitUntilFinish();
+    }
+}
