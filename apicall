@@ -79,4 +79,23 @@ public class SpannerToBigQuery {
         }));
 
         // Define BigQuery Schema
-        TableSchema schema = new Table
+        TableSchema schema = new TableSchema().setFields(Arrays.asList(
+                new TableFieldSchema().setName("UUID").setType("STRING"),
+                new TableFieldSchema().setName("cust_id").setType("STRING"),
+                new TableFieldSchema().setName("acct_num").setType("STRING"),
+                new TableFieldSchema().setName("mtn").setType("STRING")
+        ));
+
+        // Write to BigQuery
+        bigQueryData.apply("Write to BigQuery",
+                BigQueryIO.writeTableRows()
+                        .to(options.getProject() + ":" + options.getBigQueryDataset() + "." + options.getBigQueryTable())
+                        .withSchema(schema)
+                        .withWriteDisposition(BigQueryIO.Write.WriteDisposition.WRITE_APPEND)
+                        .withCreateDisposition(BigQueryIO.Write.CreateDisposition.CREATE_IF_NEEDED)
+        );
+
+        // Run the pipeline
+        pipeline.run().waitUntilFinish();
+    }
+}
