@@ -9,14 +9,13 @@ import org.apache.beam.sdk.options.Description;
 import org.apache.beam.sdk.options.Default;
 import org.apache.beam.sdk.transforms.*;
 import org.apache.beam.sdk.values.PCollection;
-import org.apache.beam.sdk.values.Row;
 import org.apache.beam.sdk.io.gcp.spanner.SpannerConfig;
 
 import java.util.Arrays;
 
-public class SpannerToBigQuery {
+public class UpdateBigQueryUUID {
     
-    // Pipeline Options Interface
+    // Define Pipeline Options
     public interface SpannerToBigQueryOptions extends PipelineOptions {
         @Description("Google Cloud Project ID")
         @Default.String("your-gcp-project")
@@ -42,6 +41,11 @@ public class SpannerToBigQuery {
         @Default.String("your_bq_table")
         String getBigQueryTable();
         void setBigQueryTable(String value);
+
+        @Description("BigQuery Temp Table Name")
+        @Default.String("your_temp_table")
+        String getTempTable();
+        void setTempTable(String value);
     }
 
     public static void main(String[] args) {
@@ -57,15 +61,15 @@ public class SpannerToBigQuery {
                 .withInstanceId(options.getSpannerInstance())
                 .withDatabaseId(options.getSpannerDatabase());
 
-        // Read data from Spanner (Returns Struct)
+        // Read data from Spanner
         PCollection<Struct> spannerData = pipeline.apply("Read from Spanner",
                 SpannerIO.read()
                         .withSpannerConfig(spannerConfig)
                         .withQuery("SELECT UUID, cust_id, acct_num, mtn FROM cust_line_acct")
         );
 
-        // Convert Struct to BigQuery TableRow
-        PCollection<TableRow> bigQueryData = spannerData.apply("Convert Struct to TableRow", ParDo.of(new DoFn<Struct, TableRow>() {
+        // Convert Spanner Struct to BigQuery TableRow
+        PCollection<TableRow> tempBigQueryData = spannerData.apply("Convert Struct to TableRow", ParDo.of(new DoFn<Struct, TableRow>() {
             @ProcessElement
             public void processElement(ProcessContext c) {
                 Struct struct = c.element();
@@ -78,7 +82,7 @@ public class SpannerToBigQuery {
             }
         }));
 
-        // Define BigQuery Schema
+        // Define BigQuery Schema for Temp Table
         TableSchema schema = new TableSchema().setFields(Arrays.asList(
                 new TableFieldSchema().setName("UUID").setType("STRING"),
                 new TableFieldSchema().setName("cust_id").setType("STRING"),
@@ -86,16 +90,50 @@ public class SpannerToBigQuery {
                 new TableFieldSchema().setName("mtn").setType("STRING")
         ));
 
-        // Write to BigQuery
-        bigQueryData.apply("Write to BigQuery",
+        // Write to Temporary BigQuery Table
+        tempBigQueryData.apply("Write to Temporary BigQuery Table",
                 BigQueryIO.writeTableRows()
-                        .to(options.getProject() + ":" + options.getBigQueryDataset() + "." + options.getBigQueryTable())
+                        .to(options.getProject() + ":" + options.getBigQueryDataset() + "." + options.getTempTable())
                         .withSchema(schema)
-                        .withWriteDisposition(BigQueryIO.Write.WriteDisposition.WRITE_APPEND)
+                        .withWriteDisposition(BigQueryIO.Write.WriteDisposition.WRITE_TRUNCATE)
                         .withCreateDisposition(BigQueryIO.Write.CreateDisposition.CREATE_IF_NEEDED)
         );
 
         // Run the pipeline
         pipeline.run().waitUntilFinish();
+
+        // Perform BigQuery MERGE Operation after Dataflow completes
+        mergeUUIDsInBigQuery(options);
+    }
+
+    /**
+     * Performs a MERGE query to update UUID in the main BigQuery table based on cust_id, acct_num, and mtn.
+     */
+    private static void mergeUUIDsInBigQuery(SpannerToBigQueryOptions options) {
+        BigQuery bigQuery = BigQueryOptions.getDefaultInstance().getService();
+        String mergeQuery = String.format(
+                "MERGE `%s.%s` AS target " +
+                "USING `%s.%s` AS source " +
+                "ON target.cust_id = source.cust_id " +
+                "AND target.acct_num = source.acct_num " +
+                "AND target.mtn = source.mtn " +
+                "WHEN MATCHED THEN UPDATE SET target.UUID = source.UUID",
+                options.getBigQueryDataset(), options.getBigQueryTable(),
+                options.getBigQueryDataset(), options.getTempTable()
+        );
+
+        QueryJobConfiguration queryConfig = QueryJobConfiguration.newBuilder(mergeQuery).build();
+        Job job = bigQuery.create(JobInfo.newBuilder(queryConfig).build());
+
+        try {
+            job = job.waitFor();
+            if (job.isDone()) {
+                System.out.println("UUIDs updated successfully!");
+            } else {
+                System.out.println("UUID update failed: " + job.getStatus().getError());
+            }
+        } catch (InterruptedException e) {
+            System.err.println("BigQuery merge operation interrupted: " + e.getMessage());
+        }
     }
 }
