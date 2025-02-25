@@ -1,4 +1,4 @@
-import com.google.cloud.spanner.*;
+import com.google.cloud.spanner.Struct;
 import com.google.cloud.bigquery.*;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
@@ -9,35 +9,36 @@ import org.apache.beam.sdk.options.Description;
 import org.apache.beam.sdk.options.Default;
 import org.apache.beam.sdk.transforms.*;
 import org.apache.beam.sdk.values.PCollection;
-import org.apache.beam.sdk.values.PDone;
 import org.apache.beam.sdk.values.Row;
+import org.apache.beam.sdk.io.gcp.spanner.SpannerConfig;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.Arrays;
 
 public class SpannerToBigQuery {
+    
+    // Pipeline Options Interface
     public interface SpannerToBigQueryOptions extends PipelineOptions {
-        @Description("Google Cloud project ID")
+        @Description("Google Cloud Project ID")
         @Default.String("your-gcp-project")
         String getProject();
         void setProject(String value);
 
-        @Description("Spanner instance ID")
+        @Description("Spanner Instance ID")
         @Default.String("your-spanner-instance")
         String getSpannerInstance();
         void setSpannerInstance(String value);
 
-        @Description("Spanner database ID")
+        @Description("Spanner Database ID")
         @Default.String("your-spanner-database")
         String getSpannerDatabase();
         void setSpannerDatabase(String value);
 
-        @Description("BigQuery dataset name")
+        @Description("BigQuery Dataset Name")
         @Default.String("your_bq_dataset")
         String getBigQueryDataset();
         void setBigQueryDataset(String value);
 
-        @Description("BigQuery table name")
+        @Description("BigQuery Table Name")
         @Default.String("your_bq_table")
         String getBigQueryTable();
         void setBigQueryTable(String value);
@@ -50,46 +51,32 @@ public class SpannerToBigQuery {
 
         Pipeline pipeline = Pipeline.create(options);
 
-        // Read data from Spanner
-        PCollection<Row> spannerData = pipeline.apply("Read from Spanner",
+        // Configure Spanner Connection
+        SpannerConfig spannerConfig = SpannerConfig.create()
+                .withProjectId(options.getProject())
+                .withInstanceId(options.getSpannerInstance())
+                .withDatabaseId(options.getSpannerDatabase());
+
+        // Read data from Spanner (Returns Struct)
+        PCollection<Struct> spannerData = pipeline.apply("Read from Spanner",
                 SpannerIO.read()
-                        .withProjectId(options.getProject())
-                        .withInstanceId(options.getSpannerInstance())
-                        .withDatabaseId(options.getSpannerDatabase())
+                        .withSpannerConfig(spannerConfig)
                         .withQuery("SELECT UUID, cust_id, acct_num, mtn FROM cust_line_acct")
         );
 
-        // Transform Spanner data into BigQuery TableRow format
-        PCollection<TableRow> bigQueryData = spannerData.apply("Transform Data", ParDo.of(new DoFn<Row, TableRow>() {
+        // Convert Struct to BigQuery TableRow
+        PCollection<TableRow> bigQueryData = spannerData.apply("Convert Struct to TableRow", ParDo.of(new DoFn<Struct, TableRow>() {
             @ProcessElement
             public void processElement(ProcessContext c) {
-                Row row = c.element();
+                Struct struct = c.element();
                 TableRow tableRow = new TableRow()
-                        .set("UUID", row.getString("UUID"))
-                        .set("cust_id", row.getString("cust_id"))
-                        .set("acct_num", row.getString("acct_num"))
-                        .set("mtn", row.getString("mtn"));
+                        .set("UUID", struct.getString("UUID"))
+                        .set("cust_id", struct.getString("cust_id"))
+                        .set("acct_num", struct.getString("acct_num"))
+                        .set("mtn", struct.getString("mtn"));
                 c.output(tableRow);
             }
         }));
 
-        // Write data to BigQuery
-        bigQueryData.apply("Write to BigQuery",
-                BigQueryIO.writeTableRows()
-                        .to(options.getProject() + ":" + options.getBigQueryDataset() + "." + options.getBigQueryTable())
-                        .withSchema(new TableSchema().setFields(
-                                java.util.Arrays.asList(
-                                        new TableFieldSchema().setName("UUID").setType("STRING"),
-                                        new TableFieldSchema().setName("cust_id").setType("STRING"),
-                                        new TableFieldSchema().setName("acct_num").setType("STRING"),
-                                        new TableFieldSchema().setName("mtn").setType("STRING")
-                                )
-                        ))
-                        .withWriteDisposition(BigQueryIO.Write.WriteDisposition.WRITE_APPEND)
-                        .withCreateDisposition(BigQueryIO.Write.CreateDisposition.CREATE_IF_NEEDED)
-        );
-
-        // Run the pipeline
-        pipeline.run().waitUntilFinish();
-    }
-}
+        // Define BigQuery Schema
+        TableSchema schema = new Table
