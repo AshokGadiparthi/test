@@ -1,5 +1,274 @@
-Today we successfully gave a demo to LP and team showcasing the queries and results related to key fields such as email, name, EUP, and plan. The team is aligned and heading in the right direction with data validation.
+{
+  "version": "2.3",
+  "env": { /* … */ },
+  "sources": [ /* … */ ],
+  "sinks":   [ /* … */ ],
 
-This session helped the team gain a better understanding of how to write effective queries, where to check for data validation, and how to approach different use cases. We’ve also set up a shared document to consistently track prepared queries and maintain daily results for comparison across dates.
+  "dataQuality": {
+    "version": "1.0",
+    "description": "Join table1⇄table2 on col1, col2, col3 and run an equality check on these 10 columns",
+    "joinKeys": ["col1", "col2", "col3"],
+    "comparison": {
+      "ruleType": "equality",
+      "fields": [
+        { "column": "col1",  "dataType": "INTEGER"   },
+        { "column": "col2",  "dataType": "STRING"    },
+        { "column": "col3",  "dataType": "STRING"    },
+        { "column": "col4",  "dataType": "DOUBLE"    },
+        { "column": "col5",  "dataType": "BOOLEAN"   },
+        { "column": "col6",  "dataType": "STRING"    },
+        { "column": "col7",  "dataType": "STRING"    },
+        { "column": "col8",  "dataType": "STRING"    },
+        { "column": "col9",  "dataType": "DATE"      },
+        { "column": "col10", "dataType": "TIMESTAMP" }
+      ]
+    }
+  }
+}
 
-For some upstream use cases, data is currently not flowing due to Cassandra GoldenGate maintenance activities. Once the data is available, we’ll continue validation for the remaining use cases like EUP, Add-a-line, and New Customer flows.
+
+package com.trustiq.config;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.List;
+
+// Top-level config
+public class AppConfig {
+  private String version;
+  private EnvConfig env;
+  private List<SourceConfig> sources;
+  private List<SinkConfig> sinks;
+  private DataQualityConfig dataQuality;
+  // getters + setters
+}
+
+// Environment settings
+public class EnvConfig {
+  private String env;
+  // e.g. "dev", "prod"
+  // getters + setters
+}
+
+// Data source definitions
+public class SourceConfig {
+  private String table;      // e.g. "project:dataset.table1"
+  // add other source-specific fields if you have them
+  // getters + setters
+}
+
+// Sink definitions
+public class SinkConfig {
+  private String table;       // e.g. "project:dataset.compare_audit"
+  // getters + setters
+}
+
+// New Data Quality block
+public class DataQualityConfig {
+  private String    version;      // e.g. "1.0"
+  private String    description;  // human-readable
+  private List<String> joinKeys;  // ["col1","col2","col3"]
+  private ComparisonBlock comparison;
+  // getters + setters
+}
+
+// The comparison definition
+public class ComparisonBlock {
+  private String       ruleType;  // e.g. "equality"
+  private List<FieldDef> fields;  // your 10 columns + types
+  // getters + setters
+}
+
+// One field to compare
+public class FieldDef {
+  private String    column;       // e.g. "col4"
+  private FieldType dataType;     // STRING, INTEGER, DOUBLE, BOOLEAN, DATE, TIMESTAMP
+  // getters + setters
+}
+
+// Enum for supported data types
+public enum FieldType {
+  STRING, INTEGER, DOUBLE, BOOLEAN, DATE, TIMESTAMP
+}
+
+
+package com.trustiq.config;
+
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.cloud.storage.*;
+
+import java.io.InputStreamReader;
+import java.io.Reader;
+
+public class ConfigLoader {
+  private static final ObjectMapper MAPPER = 
+    new ObjectMapper()
+      .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+
+  public static AppConfig load(String gcsUri) throws Exception {
+    Storage storage = StorageOptions.getDefaultInstance().getService();
+    Blob blob = storage.get( BlobId.fromGsUtilUri(gcsUri) );
+    try (Reader reader = new InputStreamReader(blob.getContent())) {
+      return MAPPER.readValue(reader, AppConfig.class);
+    }
+  }
+}
+
+
+package com.trustiq.pipeline;
+
+import com.google.api.services.bigquery.model.*;
+import com.google.cloud.storage.BlobId;
+import com.trustiq.config.*;
+import org.apache.beam.runners.dataflow.DataflowRunner;
+import org.apache.beam.sdk.Pipeline;
+import org.apache.beam.sdk.io.gcp.bigquery.*;
+import org.apache.beam.sdk.options.*;
+import org.apache.beam.sdk.transforms.*;
+import org.apache.beam.sdk.transforms.join.*;
+import org.apache.beam.sdk.values.*;
+import java.util.*;
+import java.time.*;
+import java.time.format.DateTimeParseException;
+
+public class DataQualityJoinComparePipeline {
+
+  public interface Options extends PipelineOptions {
+    @Description("GCS path to full config JSON")
+    @Validation.Required String getConfigGcsPath();
+    void setConfigGcsPath(String v);
+  }
+
+  public static void main(String[] args) throws Exception {
+    Options opts = PipelineOptionsFactory.fromArgs(args)
+                            .withValidation()
+                            .as(Options.class);
+    opts.setRunner(DataflowRunner.class);
+    Pipeline p = Pipeline.create(opts);
+
+    // 1) load your entire config
+    AppConfig cfg = ConfigLoader.load(opts.getConfigGcsPath());
+    DataQualityConfig dq = cfg.getDataQuality();
+
+    // extract pieces
+    String table1 = cfg.getSources().get(0).getTable();
+    String table2 = cfg.getSources().get(1).getTable();
+    String output = cfg.getSinks().get(0).getTable();
+
+    List<String> joinKeys = dq.getJoinKeys();
+    List<FieldDef> fields = dq.getComparison().getFields();
+    String ruleType = dq.getComparison().getRuleType();
+
+    // helper: build a composite key from a row
+    SerializableFunction<TableRow,String> keyFn = row -> {
+      List<String> parts = new ArrayList<>();
+      for (String k : joinKeys) {
+        Object v = row.get(k);
+        parts.add(v==null ? "" : v.toString());
+      }
+      return String.join("|", parts);
+    };
+
+    // 2) read & key table1
+    PCollection<KV<String,TableRow>> t1 = p
+      .apply("Read1", BigQueryIO.readTableRows()
+        .from(table1)
+        .withMethod(BigQueryIO.TypedRead.Method.DIRECT_READ))
+      .apply("Key1", MapElements.into(
+        TypeDescriptors.kvs(TypeDescriptors.strings(), TypeDescriptor.of(TableRow.class))
+      ).via(r -> KV.of(keyFn.apply(r), r)));
+
+    // 3) read & key table2
+    PCollection<KV<String,TableRow>> t2 = p
+      .apply("Read2", BigQueryIO.readTableRows()
+        .from(table2)
+        .withMethod(BigQueryIO.TypedRead.Method.DIRECT_READ))
+      .apply("Key2", MapElements.into(
+        TypeDescriptors.kvs(TypeDescriptors.strings(), TypeDescriptor.of(TableRow.class))
+      ).via(r -> KV.of(keyFn.apply(r), r)));
+
+    // 4) join
+    final TupleTag<TableRow> tag1 = new TupleTag<>();
+    final TupleTag<TableRow> tag2 = new TupleTag<>();
+    PCollection<KV<String, CoGbkResult>> joined = KeyedPCollectionTuple
+      .of(tag1, t1).and(tag2, t2)
+      .apply(CoGroupByKey.create());
+
+    // 5) compare per-field
+    PCollection<KV<String,long[]>> comps = joined
+      .apply("Compare", ParDo.of(new DoFn<KV<String,CoGbkResult>, KV<String,long[]>>() {
+        @ProcessElement public void proc(ProcessContext c) {
+          CoGbkResult r = c.element().getValue();
+          for (TableRow a : r.getAll(tag1))
+            for (TableRow b : r.getAll(tag2))
+              for (FieldDef f : fields) {
+                boolean eq = typedEquals(a.get(f.getColumn()), b.get(f.getColumn()), f.getDataType());
+                String rule = f.getColumn() + "_" + ruleType;
+                c.output(KV.of(rule, new long[]{ eq?1:0, eq?0:1 }));
+              }
+        }
+      }));
+
+    // 6) sum per rule
+    PCollection<KV<String,long[]>> summed = comps
+      .apply("Sum", Combine.perKey(new Combine.CombineFn<long[],long[],long[]>() {
+        public long[] createAccumulator() { return new long[]{0,0}; }
+        public long[] addInput(long[] a,long[] b) { return new long[]{a[0]+b[0], a[1]+b[1]}; }
+        public long[] mergeAccumulators(Iterable<long[]> it) {
+          long e=0,n=0; for(long[] x:it){ e+=x[0]; n+=x[1]; } return new long[]{e,n};
+        }
+        public long[] extractOutput(long[] acc) { return acc; }
+      }));
+
+    // 7) to TableRow & write
+    summed
+     .apply("ToRow", MapElements.into(TypeDescriptor.of(TableRow.class))
+       .via(kv -> {
+         long[] ct = kv.getValue();
+         return new TableRow()
+           .set("rule",             kv.getKey())
+           .set("equals_count",     ct[0])
+           .set("not_equals_count", ct[1])
+           .set("run_date",         java.time.Instant.now().toString());
+       }))
+     .apply("Write", BigQueryIO.writeTableRows()
+       .to(output)
+       .withSchema(new TableSchema().setFields(Arrays.asList(
+         new TableFieldSchema().setName("rule").setType("STRING"),
+         new TableFieldSchema().setName("equals_count").setType("INTEGER"),
+         new TableFieldSchema().setName("not_equals_count").setType("INTEGER"),
+         new TableFieldSchema().setName("run_date").setType("TIMESTAMP")
+       )))
+       .withCreateDisposition(BigQueryIO.Write.CreateDisposition.CREATE_IF_NEEDED)
+       .withWriteDisposition(BigQueryIO.Write.WriteDisposition.WRITE_TRUNCATE)
+     );
+
+    p.run().waitUntilFinish();
+  }
+
+  /**  
+   * Compare two raw values based on declared dataType.
+   */
+  private static boolean typedEquals(Object o1, Object o2, String dataType) {
+    if (o1==null && o2==null) return true;
+    if (o1==null || o2==null) return false;
+    try {
+      switch(FieldType.valueOf(dataType)) {
+        case STRING:    return o1.toString().equals(o2.toString());
+        case INTEGER:   return ((Number)o1).longValue()==((Number)o2).longValue();
+        case DOUBLE:    return Double.compare(
+                             ((Number)o1).doubleValue(),
+                             ((Number)o2).doubleValue())==0;
+        case BOOLEAN:   return Boolean.parseBoolean(o1.toString())
+                           == Boolean.parseBoolean(o2.toString());
+        case DATE:      return java.time.LocalDate.parse(o1.toString())
+                           .equals(java.time.LocalDate.parse(o2.toString()));
+        case TIMESTAMP: return java.time.Instant.parse(o1.toString())
+                           .equals(java.time.Instant.parse(o2.toString()));
+      }
+    } catch(Exception e) {
+      return false;
+    }
+    return false;
+  }
+}
