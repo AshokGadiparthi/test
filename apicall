@@ -1,30 +1,36 @@
-{
-  "version": "2.3",
-  "env": { /* … */ },
-  "sources": [ /* … */ ],
-  "sinks":   [ /* … */ ],
+dataQuality:
+  version: "1.0"
+  description: >-
+    Join table1⇄table2 on col1, col2, col3 and run an equality check 
+    on these 10 columns
+  joinKeys:
+    - col1
+    - col2
+    - col3
+  comparison:
+    ruleType: equality
+    fields:
+      - column: col1
+        dataType: INTEGER
+      - column: col2
+        dataType: STRING
+      - column: col3
+        dataType: STRING
+      - column: col4
+        dataType: DOUBLE
+      - column: col5
+        dataType: BOOLEAN
+      - column: col6
+        dataType: STRING
+      - column: col7
+        dataType: STRING
+      - column: col8
+        dataType: STRING
+      - column: col9
+        dataType: DATE
+      - column: col10
+        dataType: TIMESTAMP
 
-  "dataQuality": {
-    "version": "1.0",
-    "description": "Join table1⇄table2 on col1, col2, col3 and run an equality check on these 10 columns",
-    "joinKeys": ["col1", "col2", "col3"],
-    "comparison": {
-      "ruleType": "equality",
-      "fields": [
-        { "column": "col1",  "dataType": "INTEGER"   },
-        { "column": "col2",  "dataType": "STRING"    },
-        { "column": "col3",  "dataType": "STRING"    },
-        { "column": "col4",  "dataType": "DOUBLE"    },
-        { "column": "col5",  "dataType": "BOOLEAN"   },
-        { "column": "col6",  "dataType": "STRING"    },
-        { "column": "col7",  "dataType": "STRING"    },
-        { "column": "col8",  "dataType": "STRING"    },
-        { "column": "col9",  "dataType": "DATE"      },
-        { "column": "col10", "dataType": "TIMESTAMP" }
-      ]
-    }
-  }
-}
 
 
 package com.trustiq.config;
