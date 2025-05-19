@@ -260,3 +260,45 @@ public class DataQualityPipeline {
   }
 }
 
+
+-- 1) Create (or replace) the audit table
+CREATE OR REPLACE TABLE `your_project.your_dataset.compare_audit` (
+  rule             STRING,
+  equals_count     INT64,
+  not_equals_count INT64,
+  run_date         TIMESTAMP
+)
+PARTITION BY DATE(run_date)       -- keep one partition per day
+CLUSTER BY rule;                  -- cluster on rule for fast filtering
+
+-- 2) Example: top mismatches in the most recent run
+SELECT
+  rule,
+  equals_count,
+  not_equals_count,
+  run_date
+FROM
+  `your_project.your_dataset.compare_audit`
+WHERE
+  run_date = (
+    SELECT MAX(run_date)
+    FROM `your_project.your_dataset.compare_audit`
+  )
+ORDER BY
+  not_equals_count DESC
+LIMIT 20;
+
+-- 3) Example: trend of mismatch rates over time for one column
+SELECT
+  DATE(run_date)          AS run_date,
+  equals_count,
+  not_equals_count,
+  SAFE_DIVIDE(not_equals_count, equals_count + not_equals_count) AS mismatch_rate
+FROM
+  `your_project.your_dataset.compare_audit`
+WHERE
+  rule = 'col4_equality'  -- or any other rule name
+ORDER BY
+  run_date;
+
+
