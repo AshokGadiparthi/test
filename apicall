@@ -75,14 +75,18 @@ package com.trustiq.pipeline;
 
 import com.google.api.services.bigquery.model.TableRow;
 import com.google.cloud.bigquery.*;
-import com.google.cloud.storage.BlobId;
-import com.trustiq.config.*;
+import com.trustiq.config.AppConfig;
+import com.trustiq.config.ConfigLoader;
+import com.trustiq.config.DataQualityConfig;
+import com.trustiq.config.ComparisonConfig;
 import org.apache.beam.runners.dataflow.DataflowRunner;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.gcp.bigquery.*;
 import org.apache.beam.sdk.options.*;
 import org.apache.beam.sdk.transforms.*;
-import org.apache.beam.sdk.transforms.join.*;
+import org.apache.beam.sdk.transforms.join.CoGbkResult;
+import org.apache.beam.sdk.transforms.join.KeyedPCollectionTuple;
+import org.apache.beam.sdk.transforms.join.TupleTag;
 import org.apache.beam.sdk.values.*;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -91,8 +95,8 @@ import java.util.stream.Collectors;
 
 public class DataQualityPipeline {
 
-  public interface Options extends PipelineOptions {
-    @Description("GCS URI to app-config.yaml")
+  public interface Options extends PipelineOptions, DataflowPipelineOptions {
+    @Description("GCS URI to your app-config.yaml")
     @Validation.Required String getConfigGcsPath();
     void setConfigGcsPath(String v);
   }
@@ -103,105 +107,111 @@ public class DataQualityPipeline {
                           .as(Options.class);
     opts.setRunner(DataflowRunner.class);
 
-    // load config
-    AppConfig app = ConfigLoader.load(opts.getConfigGcsPath());
-    DataQualityConfig dq = app.getDataQuality();
-    List<String> joinKeys = dq.getJoinKeys();
-    List<String> columns  = dq.getComparison().getColumns();
-    String ruleType       = dq.getComparison().getRuleType();
+    // 1) Load your YAML config
+    AppConfig appCfg = ConfigLoader.load(opts.getConfigGcsPath());
+    DataQualityConfig dq = appCfg.getDataQuality();
+    List<String> joinKeys  = dq.getJoinKeys();
+    ComparisonConfig comp   = dq.getComparison();
+    List<String> columns    = comp.getColumns();
+    String ruleType         = comp.getRuleType();
 
-    // tables (could also come from your config)
+    // 2) Define your input/output tables (or pull from AppConfig.sources/sinks)
     String table1 = "PROJECT:DS.table1";
     String table2 = "PROJECT:DS.table2";
     String output = "PROJECT:DS.compare_audit";
 
-    // fetch schema from table1
+    // 3) Fetch BigQuery schema for table1
     BigQuery bq = BigQueryOptions.getDefaultInstance().getService();
-    TableId tid = TableId.of("PROJECT","DS","table1");
+    TableId tid = parseTableId(table1);
     Schema schema = bq.getTable(tid).getDefinition().getSchema();
-    Map<String, LegacySQLTypeName> typeMap = schema.getFields()
-      .stream().collect(Collectors.toMap(Field::getName, Field::getType));
 
-    // set up Beam
+    // 4) Convert schema → List<KV<colName,type>>
+    List<KV<String, LegacySQLTypeName>> typeKVs = schema.getFields().stream()
+      .map(f -> KV.of(f.getName(), f.getType()))
+      .collect(Collectors.toList());
+
+    // 5) Build Beam pipeline
     Pipeline p = Pipeline.create(opts);
-    PCollectionView<Map<String,LegacySQLTypeName>> typeView =
-      p.apply("TypeMap", Create.of(typeMap)).apply(View.asSingleton());
 
-    // keying function
+    // Side‐input: Map<String,LegacySQLTypeName>
+    PCollectionView<Map<String,LegacySQLTypeName>> typeView =
+      p.apply("SchemaKV", Create.of(typeKVs))
+       .apply("SchemaMap", View.<String,LegacySQLTypeName>asMap());
+
+    // Keying function
     SerializableFunction<TableRow,String> keyFn = row ->
       joinKeys.stream()
         .map(k -> Objects.toString(row.get(k),""))
         .collect(Collectors.joining("|"));
 
-    // read & key table1
+    // Read & key table1
     PCollection<KV<String,TableRow>> left = p
-      .apply("Read1", BigQueryIO.readTableRows()
+      .apply("ReadTable1", BigQueryIO.readTableRows()
         .from(table1)
         .withMethod(BigQueryIO.TypedRead.Method.DIRECT_READ))
-      .apply("Key1", ParDo.of(new DoFn<TableRow,KV<String,TableRow>>() {
-        @ProcessElement public void proc(ProcessContext c) {
-          c.output(KV.of(keyFn.apply(c.element()), c.element()));
-        }
-      }));
+      .apply("KeyTable1", MapElements.into(
+        TypeDescriptors.kvs(TypeDescriptors.strings(), TypeDescriptor.of(TableRow.class))
+      ).via(r -> KV.of(keyFn.apply(r), r)));
 
-    // read & key table2
+    // Read & key table2
     PCollection<KV<String,TableRow>> right = p
-      .apply("Read2", BigQueryIO.readTableRows()
+      .apply("ReadTable2", BigQueryIO.readTableRows()
         .from(table2)
         .withMethod(BigQueryIO.TypedRead.Method.DIRECT_READ))
-      .apply("Key2", ParDo.of(new DoFn<TableRow,KV<String,TableRow>>() {
-        @ProcessElement public void proc(ProcessContext c) {
-          c.output(KV.of(keyFn.apply(c.element()), c.element()));
-        }
-      }));
+      .apply("KeyTable2", MapElements.into(
+        TypeDescriptors.kvs(TypeDescriptors.strings(), TypeDescriptor.of(TableRow.class))
+      ).via(r -> KV.of(keyFn.apply(r), r)));
 
-    // join
-    final TupleTag<TableRow> L = new TupleTag<>();
-    final TupleTag<TableRow> R = new TupleTag<>();
+    // Join
+    final TupleTag<TableRow> tag1 = new TupleTag<>();
+    final TupleTag<TableRow> tag2 = new TupleTag<>();
     PCollection<KV<String,CoGbkResult>> joined = KeyedPCollectionTuple
-      .of(L,left).and(R,right)
-      .apply(CoGroupByKey.create());
+      .of(tag1, left)
+      .and(tag2, right)
+      .apply("JoinTables", CoGroupByKey.create());
 
-    // compare
-    PCollection<KV<String,long[]>> comps = joined
-      .apply("Compare", ParDo.of(new DoFn<KV<String,CoGbkResult>,KV<String,long[]>>() {
-        @ProcessElement public void proc(ProcessContext c) {
+    // Compare & emit [equals,notEquals]
+    PCollection<KV<String,long[]>> comparisons = joined
+      .apply("CompareFields", ParDo.of(new DoFn<KV<String,CoGbkResult>,KV<String,long[]>>() {
+        @ProcessElement public void process(ProcessContext c) {
           Map<String,LegacySQLTypeName> types = c.sideInput(typeView);
-          CoGbkResult gbk = c.element().getValue();
-          for (TableRow a : gbk.getAll(L))
-            for (TableRow b : gbk.getAll(R))
+          CoGbkResult res = c.element().getValue();
+          for (TableRow r1 : res.getAll(tag1)) {
+            for (TableRow r2 : res.getAll(tag2)) {
               for (String col : columns) {
-                Object v1 = a.get(col), v2 = b.get(col);
+                Object v1 = r1.get(col), v2 = r2.get(col);
                 boolean eq = equalsTyped(v1, v2, types.get(col));
                 String rule = col + "_" + ruleType;
                 c.output(KV.of(rule, new long[]{ eq?1L:0L, eq?0L:1L }));
               }
+            }
+          }
         }
       }).withSideInputs(typeView));
 
-    // aggregate
-    PCollection<KV<String,long[]>> summed = comps
-      .apply(Combine.perKey(new Combine.CombineFn<long[],long[],long[]>() {
-        public long[] createAccumulator()          { return new long[]{0,0}; }
-        public long[] addInput(long[] a,long[] b)   { return new long[]{a[0]+b[0],a[1]+b[1]}; }
-        public long[] mergeAccumulators(Iterable<long[]> it) {
-          long e=0,n=0; for(long[] x:it){ e+=x[0]; n+=x[1]; } return new long[]{e,n};
+    // Sum per rule
+    PCollection<KV<String,long[]>> summed = comparisons
+      .apply("SumCounts", Combine.perKey(new Combine.CombineFn<long[],long[],long[]>() {
+        @Override public long[] createAccumulator()             { return new long[]{0,0}; }
+        @Override public long[] addInput(long[] acc,long[] in)   { return new long[]{acc[0]+in[0], acc[1]+in[1]}; }
+        @Override public long[] mergeAccumulators(Iterable<long[]> it) {
+          long e=0,n=0; for(long[] a:it){ e+=a[0]; n+=a[1]; } return new long[]{e,n};
         }
-        public long[] extractOutput(long[] acc)     { return acc; }
+        @Override public long[] extractOutput(long[] acc)        { return acc; }
       }));
 
-    // to TableRow + write
+    // To TableRow & write to BigQuery
     summed
-      .apply("ToBQ", MapElements.into(TypeDescriptor.of(TableRow.class))
+      .apply("ToTableRow", MapElements.into(TypeDescriptor.of(TableRow.class))
         .via(kv -> {
           long[] ct = kv.getValue();
           return new TableRow()
-            .set("rule",             kv.getKey())
-            .set("equals_count",     ct[0])
+            .set("rule",           kv.getKey())
+            .set("equals_count",   ct[0])
             .set("not_equals_count", ct[1])
-            .set("run_date",         Instant.now().toString());
+            .set("run_date",       Instant.now().toString());
         }))
-      .apply("Write", BigQueryIO.writeTableRows()
+      .apply("WriteAudit", BigQueryIO.writeTableRows()
         .to(output)
         .withSchema(new TableSchema().setFields(Arrays.asList(
           new TableFieldSchema().setName("rule").setType("STRING"),
@@ -216,17 +226,26 @@ public class DataQualityPipeline {
     p.run().waitUntilFinish();
   }
 
+  private static TableId parseTableId(String ref) {
+    String[] parts = ref.split(":");
+    String proj = parts[0];
+    String[] dsTbl = parts[1].split("\\.");
+    return TableId.of(proj, dsTbl[0], dsTbl[1]);
+  }
+
   private static boolean equalsTyped(Object o1, Object o2, LegacySQLTypeName type) {
-    if (o1==null && o2==null) return true;
-    if (o1==null || o2==null) return false;
+    if (o1 == null && o2 == null) return true;
+    if (o1 == null || o2 == null) return false;
     try {
       switch(type) {
         case STRING:    return o1.toString().equals(o2.toString());
-        case INTEGER:   return ((Number)o1).longValue()==((Number)o2).longValue();
-        case FLOAT:     return Float.compare(((Number)o1).floatValue(),
-                                             ((Number)o2).floatValue())==0;
-        case DOUBLE:    return Double.compare(((Number)o1).doubleValue(),
-                                              ((Number)o2).doubleValue())==0;
+        case INTEGER:   return ((Number)o1).longValue() == ((Number)o2).longValue();
+        case FLOAT:     return Float.compare(
+                             ((Number)o1).floatValue(),
+                             ((Number)o2).floatValue()) == 0;
+        case DOUBLE:    return Double.compare(
+                             ((Number)o1).doubleValue(),
+                             ((Number)o2).doubleValue()) == 0;
         case BOOLEAN:   return Boolean.parseBoolean(o1.toString())
                               == Boolean.parseBoolean(o2.toString());
         case DATE:      return LocalDate.parse(o1.toString())
@@ -240,3 +259,4 @@ public class DataQualityPipeline {
     }
   }
 }
+
