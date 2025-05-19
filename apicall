@@ -1,4 +1,55 @@
- String[] parts = ref.split("\\.", 3);
+
+// after loading AppConfig and DataQualityConfig…
+List<String> joinKeys = dq.getJoinKeys();                // e.g. ["col1","col2","col3"]
+List<String> cols     = dq.getComparison().getColumns();  // your 5 (or N) comparison columns
+
+// build the distinct list of all fields you actually need
+List<String> allFields = Stream.concat(joinKeys.stream(), cols.stream())
+    .distinct()
+    .collect(Collectors.toList());
+
+// format them into a SQL SELECT clause: "`col1`, `col2`, ...`"
+String fieldList = allFields.stream()
+    .map(f -> "`" + f + "`")
+    .collect(Collectors.joining(", "));
+
+// now build your query against the view:
+String query1 = String.format(
+    "SELECT %s FROM `%s`",
+    fieldList,
+    table1  // e.g. "my_project.my_ds.my_view1"
+);
+
+// and same for view2
+String query2 = String.format(
+    "SELECT %s FROM `%s`",
+    fieldList,
+    table2
+);
+
+// then in your Beam pipeline:
+// Read & key view1
+PCollection<KV<String,TableRow>> left = p
+  .apply("ReadView1",
+    BigQueryIO.readTableRows()
+      .fromQuery(query1)
+      .usingStandardSql()
+      .withMethod(BigQueryIO.TypedRead.Method.DIRECT_READ)
+  )
+  .apply("KeyView1", /* key-by joinKeys as before */ );
+
+// Read & key view2
+PCollection<KV<String,TableRow>> right = p
+  .apply("ReadView2",
+    BigQueryIO.readTableRows()
+      .fromQuery(query2)
+      .usingStandardSql()
+      .withMethod(BigQueryIO.TypedRead.Method.DIRECT_READ)
+  )
+  .apply("KeyView2", /* key-by joinKeys as before */ );
+
+
+String[] parts = ref.split("\\.", 3);
     if (parts.length != 3) {
       throw new IllegalArgumentException(
         "Table reference must be project:dataset.table or project.dataset.table, got: " + ref);
