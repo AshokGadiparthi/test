@@ -1,4 +1,75 @@
 
+// 1) Do your join exactly as before:
+final TupleTag<TableRow> tag1 = new TupleTag<>();
+final TupleTag<TableRow> tag2 = new TupleTag<>();
+PCollection<KV<String,CoGbkResult>> joined = KeyedPCollectionTuple
+    .of(tag1, left)
+    .and(tag2, right)
+    .apply("JoinTables", CoGroupByKey.create());
+
+// 2) Now filter out any key where none of the (r1,r2) pairs pass your filter
+String filterCond = dq.getFilterCondition();
+String t1alias   = dq.getTable1Alias();   // e.g. "cass"
+String t2alias   = dq.getTable2Alias();   // e.g. "cjcm"
+
+// Turn "cass.col6 = 'Y'" into code, for example:
+PCollection<KV<String,CoGbkResult>> filtered = joined
+  .apply("FilterJoined", ParDo.of(new DoFn<KV<String,CoGbkResult>, KV<String,CoGbkResult>>() {
+    @ProcessElement public void process(ProcessContext c) {
+      KV<String,CoGbkResult> kv = c.element();
+      CoGbkResult res = kv.getValue();
+      for (TableRow r1 : res.getAll(tag1)) {
+        for (TableRow r2 : res.getAll(tag2)) {
+          // your actual condition: upper(cass.line_consumer_ind='Y' OR ... ) OR ...
+          String lc = Optional.ofNullable(r1.get("line_consumer_ind"))
+                              .map(Object::toString).map(String::toUpperCase)
+                              .orElse("");
+          String vt = Optional.ofNullable(r1.get("vsn_cust_type_cd"))
+                              .map(Object::toString).map(String::toUpperCase)
+                              .orElse("");
+          String uni = Optional.ofNullable(r1.get("line_UNIVERSE_IND"))
+                               .map(Object::toString).map(String::toUpperCase)
+                               .orElse("#");
+
+          boolean group1 = (lc.equals("Y") || vt.equals("ME"))
+                            && List.of("A","W","F").contains(uni);
+          boolean group2 = uni.equals("N");
+
+          if (group1 || group2) {
+            // this pair passes → keep the entire KV
+            c.output(kv);
+            return;      // break out as soon as one (r1,r2) matches
+          }
+        }
+      }
+      // if we get here, no (r1,r2) passed → drop it
+    }
+  })).setCoder(joined.getCoder());  // preserve the same KV coder
+
+// 3) Now run your compare on the filtered PCollection:
+PCollection<KV<String,long[]>> comparisons = filtered
+  .apply("CompareFields", ParDo.of(new DoFn<KV<String,CoGbkResult>,KV<String,long[]>>() {
+    @ProcessElement public void process(ProcessContext c) {
+      Map<String,LegacySQLTypeName> types = c.sideInput(typeView);
+      CoGbkResult res = c.element().getValue();
+      for (TableRow r1 : res.getAll(tag1)) {
+        for (TableRow r2 : res.getAll(tag2)) {
+          for (String col : columns) {
+            Object v1 = r1.get(col), v2 = r2.get(col);
+            boolean eq = equalsTyped(v1, v2, types.get(col));
+            String rule = col + "_" + ruleType;
+            c.output(KV.of(rule, new long[]{ eq?1L:0L, eq?0L:1L }));
+          }
+        }
+      }
+    }
+  }).withSideInputs(typeView));
+
+// 4) …and then Sum, ToTableRow, Write as before.
+
+==================
+
+
 // after loading AppConfig and DataQualityConfig…
 List<String> joinKeys = dq.getJoinKeys();                // e.g. ["col1","col2","col3"]
 List<String> cols     = dq.getComparison().getColumns();  // your 5 (or N) comparison columns
