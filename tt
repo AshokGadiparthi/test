@@ -1,665 +1,302 @@
-import com.google.cloud.pubsub.v1.Publisher;
-import com.google.protobuf.ByteString;
-import com.google.pubsub.v1.PubsubMessage;
-import com.google.pubsub.v1.TopicName;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
-import java.util.concurrent.ExecutionException;
+# GCS://…/config.yaml
 
-public class PubSubMessagePublisher {
+dataQuality:
+  joinKeys:
+    - cust_id
+    - acct_num
+  comparison:
+    columns:
+      - name: cust_id
+        type: STRING
+      - name: acct_num
+        type: STRING
+      - name: mtn
+        type: STRING
+    ruleType: "equals"
 
-    public static void main(String[] args) throws IOException, ExecutionException, InterruptedException {
-        // Define Pub/Sub topic details
-        String projectId = "your-project-id";  // Update with your project ID
-        String topicId = "your-topic-id";  // Update with your topic ID
+# Define each stage and its JSON payload root
+# You can swap type: PUBSUB for streaming, or BIGQUERY for BQ tables
 
-        // Create Pub/Sub publisher
-        TopicName topicName = TopicName.of(projectId, topicId);
-        Publisher publisher = null;
+stages:
+  - name: cjcm
+    type: BIGQUERY
+    table: "PROJECT:DS.payloads_table"
+    jsonRoot: "$"
+  - name: cassandra
+    type: BIGQUERY
+    table: "PROJECT:DS.gg_replica"
+    jsonRoot: "$.after"
+  - name: transformed
+    type: BIGQUERY
+    table: "PROJECT:DS.payloads_table"
+    jsonRoot: "$"
 
+# Output tables
+outputs:
+  rootCauseTable: "PROJECT:DS.data_quality_root_cause"
+  parseErrorTable: "PROJECT:DS.data_quality_parse_errors"
+  
+  
+package com.trustiq.pipeline;
+
+import com.google.api.services.bigquery.model.*;
+import com.trustiq.config.*;
+import com.trustiq.util.JsonUtil;
+import com.trustiq.util.ComparisonUtil;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.beam.runners.dataflow.DataflowRunner;
+import org.apache.beam.sdk.Pipeline;
+import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
+import org.apache.beam.sdk.options.*;
+import org.apache.beam.sdk.transforms.*;
+import org.apache.beam.sdk.transforms.join.*;
+import org.apache.beam.sdk.values.*;
+
+import java.time.Instant;
+import java.util.*;
+import java.util.stream.Collectors;
+
+public class DataQualityRootCausePipeline {
+
+  public interface Options extends PipelineOptions, DataflowPipelineOptions {
+    @Description("GCS URI to config.yaml")
+    @Validation.Required
+    String getConfigGcsPath();
+    void setConfigGcsPath(String v);
+  }
+
+  public static void main(String[] args) {
+    Options opts = PipelineOptionsFactory.fromArgs(args)
+        .withValidation()
+        .as(Options.class);
+    opts.setRunner(DataflowRunner.class);
+
+    // 1) Load YAML config
+    AppConfig appCfg = ConfigLoader.load(opts.getConfigGcsPath());
+    DataQualityConfig dq = appCfg.getDataQuality();
+    List<String> joinKeys    = dq.getJoinKeys();
+    List<ColumnConfig> cols  = dq.getComparison().getColumns();
+    List<StageConfig> stages = appCfg.getStages();
+
+    Pipeline p = Pipeline.create(opts);
+    ObjectMapper mapper = new ObjectMapper();
+
+    // Side-output tag for parse errors
+    final TupleTag<TableRow> parseErrorTag = new TupleTag<TableRow>("parseErrors"){};
+
+    // 2) Generic Extract + Key DoFn
+    class ExtractAndKeyFn extends DoFn<TableRow, KV<String, Payload>> {
+      private final StageConfig stage;
+      ExtractAndKeyFn(StageConfig stage) { this.stage = stage; }
+
+      @ProcessElement
+      public void process(ProcessContext c) {
+        TableRow row = c.element();
         try {
-            publisher = Publisher.newBuilder(topicName).build();
-
-            // Generate and publish 1 million messages
-            String tableName = "SpannerToPubSubCDC";
-            String[] columns = {"cust_id", "acct_num", "selected_MTN", "mtn", "order_num"};
-
-            // Generate SQL statements
-            List<String> inserts = generateInsertStatements(tableName, columns, 1000000);
-            List<String> updates = generateUpdateStatements(tableName, columns, inserts, 800000);
-            List<String> deletes = generateDeleteStatements(tableName, inserts, 500000);
-
-            // Publish the SQL statements as Pub/Sub messages
-            publishMessages(publisher, inserts);
-            publishMessages(publisher, updates);
-            publishMessages(publisher, deletes);
-
-        } finally {
-            if (publisher != null) {
-                publisher.shutdown();
-            }
+          JsonNode root = mapper.readTree((String) row.get("DATA"));
+          JsonNode data = JsonUtil.navigate(root, stage.getJsonRoot());
+          Map<String,String> vals = JsonUtil.pick(data, joinKeys, cols);
+          String key = joinKeys.stream()
+            .map(vals::get)
+            .collect(Collectors.joining("|"));
+          c.output(KV.of(key, new Payload(key, vals)));
+        } catch (Exception e) {
+          c.output(parseErrorTag, new TableRow()
+            .set("stage", stage.getName())
+            .set("raw_data", row.get("DATA"))
+            .set("error", e.getMessage())
+            .set("ts", Instant.now().toString()));
         }
+      }
     }
 
-    private static void publishMessages(Publisher publisher, List<String> messages) throws ExecutionException, InterruptedException {
-        for (String message : messages) {
-            ByteString data = ByteString.copyFromUtf8(message);
-            PubsubMessage pubsubMessage = PubsubMessage.newBuilder().setData(data).build();
-            publisher.publish(pubsubMessage).get();
-        }
+    // 3) Read & extract each stage
+    Map<String, PCollection<KV<String,Payload>>> keyed = new LinkedHashMap<>();
+    PCollectionList<TableRow> allParseErrors = PCollectionList.empty(p);
+    for (StageConfig st : stages) {
+      PCollectionTuple split = p
+        .apply("Read" + st.getName(), BigQueryIO.readTableRows().from(st.getTable()))
+        .apply("Extract" + st.getName(), ParDo.of(new ExtractAndKeyFn(st))
+          .withOutputTags(new TupleTag<KV<String,Payload>>() {}, TupleTagList.of(parseErrorTag)));
+
+      keyed.put(st.getName(), split.get(new TupleTag<KV<String,Payload>>() {}));
+      allParseErrors = allParseErrors.and(split.get(parseErrorTag));
     }
 
-    private static List<String> generateInsertStatements(String tableName, String[] columns, int count) {
-        Random random = new Random();
-        List<String> insertStatements = new ArrayList<>();
+    // 4) Merge & write parse errors
+    allParseErrors
+      .apply("FlattenErrors", Flatten.pCollections())
+      .apply("WriteParseErrors", BigQueryIO.writeTableRows()
+        .to(appCfg.getOutputs().getParseErrorTable())
+        .withSchema(new TableSchema().setFields(Arrays.asList(
+          new TableFieldSchema().setName("stage").setType("STRING"),
+          new TableFieldSchema().setName("raw_data").setType("STRING"),
+          new TableFieldSchema().setName("error").setType("STRING"),
+          new TableFieldSchema().setName("ts").setType("TIMESTAMP")
+        )))
+        .withCreateDisposition(CreateDisposition.CREATE_IF_NEEDED)
+        .withWriteDisposition(WriteDisposition.WRITE_APPEND));
 
-        for (int i = 1; i <= count; i++) {
-            String cust_id = String.valueOf(i);
-            String acct_num = String.valueOf(100000 + random.nextInt(900000));
-            String selected_MTN = String.valueOf(5000000000L + random.nextInt(999999999));
-            String mtn = String.valueOf(5000000000L + random.nextInt(999999999));
-            String order_num = String.valueOf(200000 + random.nextInt(900000));
+    // 5) Build TupleTags map
+    Map<String, TupleTag<Payload>> tags = stages.stream()
+      .collect(Collectors.toMap(
+        StageConfig::getName,
+        st -> new TupleTag<Payload>(st.getName()){}));
 
-            String sql = String.format("INSERT INTO %s (%s) VALUES ('%s', '%s', '%s', '%s', '%s');",
-                    tableName, String.join(", ", columns), cust_id, acct_num, selected_MTN, mtn, order_num);
-            insertStatements.add(sql);
-        }
-        return insertStatements;
+    // 6) CoGroupByKey
+    KeyedPCollectionTuple<String> joinTuple =
+      KeyedPCollectionTuple.of(tags.get(stages.get(0).getName()), keyed.get(stages.get(0).getName()));
+    for (int i = 1; i < stages.size(); i++) {
+      String nm = stages.get(i).getName();
+      joinTuple = joinTuple.and(tags.get(nm), keyed.get(nm));
     }
+    PCollection<KV<String,CoGbkResult>> joined =
+      joinTuple.apply("JoinAll", CoGroupByKey.create());
 
-    private static List<String> generateUpdateStatements(String tableName, String[] columns, List<String> inserts, int count) {
-        Random random = new Random();
-        List<String> updateStatements = new ArrayList<>();
-        List<String> randomInserts = new ArrayList<>(inserts.subList(0, count));
+    // 7) Apply RootCauseAndAuditFn
+    PCollectionTuple results = joined.apply("AuditAndRoot", ParDo.of(
+      new RootCauseAndAuditFn(stages, cols, tags))
+      .withOutputTags(RootCauseAndAuditFn.AUDIT_TAG,
+                      TupleTagList.of(RootCauseAndAuditFn.ROOT_CAUSE_TAG)));
 
-        for (String insert : randomInserts) {
-            String cust_id = extractCustIdFromInsert(insert);
-            String new_selected_MTN = String.valueOf(5000000000L + random.nextInt(999999999));
-            String new_mtn = String.valueOf(5000000000L + random.nextInt(999999999));
+    // 8a) Write audit summary
+    results.get(RootCauseAndAuditFn.AUDIT_TAG)
+      .apply("WriteAudit", BigQueryIO.writeTableRows()
+        .to(appCfg.getOutputs().getRootCauseTable() + "_audit")
+        .withSchema(RootCauseAndAuditFn.getAuditSchema())
+        .withCreateDisposition(CreateDisposition.CREATE_IF_NEEDED)
+        .withWriteDisposition(WriteDisposition.WRITE_TRUNCATE));
 
-            String sql = String.format("UPDATE %s SET selected_MTN = '%s', mtn = '%s' WHERE cust_id = '%s';",
-                    tableName, new_selected_MTN, new_mtn, cust_id);
-            updateStatements.add(sql);
-        }
-        return updateStatements;
-    }
+    // 8b) Write detailed root causes
+    results.get(RootCauseAndAuditFn.ROOT_CAUSE_TAG)
+      .apply("WriteRootCauses", BigQueryIO.writeTableRows()
+        .to(appCfg.getOutputs().getRootCauseTable())
+        .withSchema(RootCauseAndAuditFn.getRootCauseSchema())
+        .withCreateDisposition(CreateDisposition.CREATE_IF_NEEDED)
+        .withWriteDisposition(WriteDisposition.WRITE_APPEND));
 
-    private static List<String> generateDeleteStatements(String tableName, List<String> inserts, int count) {
-        Random random = new Random();
-        List<String> deleteStatements = new ArrayList<>();
-        List<String> randomInserts = new ArrayList<>(inserts.subList(0, count));
-
-        for (String insert : randomInserts) {
-            String cust_id = extractCustIdFromInsert(insert);
-            String sql = String.format("DELETE FROM %s WHERE cust_id = '%s';", tableName, cust_id);
-            deleteStatements.add(sql);
-        }
-        return deleteStatements;
-    }
-
-    private static String extractCustIdFromInsert(String insertStatement) {
-        return insertStatement.split("'")[1];
-    }
+    p.run().waitUntilFinish();
+  }
 }
 
+package com.trustiq.pipeline;
 
-import com.google.cloud.spanner.DatabaseClient;
-import com.google.cloud.spanner.Mutation;
-import com.google.cloud.spanner.Spanner;
-import com.google.cloud.spanner.SpannerOptions;
-import org.apache.beam.sdk.Pipeline;
-import org.apache.beam.sdk.io.gcp.pubsub.PubsubIO;
+import java.io.Serializable;
+import java.util.Map;
+
+public class Payload implements Serializable {
+  private final String key;
+  private final Map<String,String> values;
+
+  public Payload(String key, Map<String,String> values) {
+    this.key = key;
+    this.values = values;
+  }
+  public String getKey() { return key; }
+  public Map<String,String> getValues() { return values; }
+}
+
+package com.trustiq.pipeline;
+
+import com.google.api.services.bigquery.model.*;
+import com.trustiq.config.*;
 import org.apache.beam.sdk.transforms.DoFn;
-import org.apache.beam.sdk.transforms.ParDo;
-import org.apache.beam.sdk.values.PCollection;
+import org.apache.beam.sdk.transforms.DoFn.ProcessContext;
+import org.apache.beam.sdk.transforms.DoFn.ProcessElement;
+import org.apache.beam.sdk.values.KV;
+import org.apache.beam.sdk.values.TupleTag;
+import org.apache.beam.sdk.transforms.join.CoGbkResult;
 
-public class PubSubToSpanner {
+import java.time.Instant;
+import java.util.*;
 
-    public static void main(String[] args) {
-        Pipeline pipeline = Pipeline.create();
+public class RootCauseAndAuditFn extends DoFn<KV<String,CoGbkResult>,TableRow> {
+  public static final TupleTag<TableRow> AUDIT_TAG = new TupleTag<TableRow>("audit"){};
+  public static final TupleTag<TableRow> ROOT_CAUSE_TAG = new TupleTag<TableRow>("rootcause"){};
 
-        // Read messages from Pub/Sub subscription
-        String subscription = "projects/your-project-id/subscriptions/your-subscription-id";
-        PCollection<String> pubSubMessages = pipeline.apply("ReadFromPubSub",
-                PubsubIO.readStrings().fromSubscription(subscription));
+  private final List<StageConfig> stages;
+  private final List<ColumnConfig> columns;
+  private final Map<String,TupleTag<Payload>> tags;
 
-        // Process and write to Spanner
-        pubSubMessages.apply("ProcessMessages", ParDo.of(new ProcessPubSubMessageFn()));
+  public RootCauseAndAuditFn(List<StageConfig> stages,
+                              List<ColumnConfig> columns,
+                              Map<String,TupleTag<Payload>> tags) {
+    this.stages = stages;
+    this.columns = columns;
+    this.tags = tags;
+  }
 
-        pipeline.run().waitUntilFinish();
+  @ProcessElement
+  public void process(ProcessContext c) {
+    String key = c.element().getKey();
+    CoGbkResult res = c.element().getValue();
+
+    for (ColumnConfig col : columns) {
+      boolean[] present = new boolean[stages.size()];
+      Object[] vals = new Object[stages.size()];
+
+      for (int i = 0; i < stages.size(); i++) {
+        Iterator<Payload> it = res.getAll(tags.get(stages.get(i).getName())).iterator();
+        if (it.hasNext()) {
+          present[i] = true;
+          vals[i] = it.next().getValues().get(col.getName());
+        }
+      }
+      long eq=0, ne=0;
+      for (int i = 0; i < stages.size()-1; i++) {
+        boolean m = ComparisonUtil.equals(vals[i], vals[i+1], col.getType(), col.getTolerance());
+        if (m) eq++; else ne++;
+      }
+      c.output(AUDIT_TAG, new TableRow()
+        .set("rule", col.getName())
+        .set("equals_count", eq)
+        .set("not_equals_count", ne)
+        .set("ts", Instant.now().toString()));
+
+      if (ne > 0) {
+        String cause = determineRootCause(present, vals, col);
+        c.output(ROOT_CAUSE_TAG, new TableRow()
+          .set("key", key)
+          .set("column", col.getName())
+          .set("stages_present", Arrays.toString(present))
+          .set("values", Arrays.toString(vals))
+          .set("root_cause", cause)
+          .set("ts", Instant.now().toString()));
+      }
     }
+  }
 
-    static class ProcessPubSubMessageFn extends DoFn<String, Void> {
-        private transient Spanner spanner;
-        private transient DatabaseClient dbClient;
-
-        @Setup
-        public void setup() {
-            // Initialize Spanner connection
-            SpannerOptions options = SpannerOptions.newBuilder().build();
-            spanner = options.getService();
-            dbClient = spanner.getDatabaseClient(
-                    SpannerOptions.getDefaultProjectId(),
-                    "your-instance-id",
-                    "your-database-id"
-            );
-        }
-
-        @ProcessElement
-        public void processElement(ProcessContext context) {
-            String sqlStatement = context.element();
-            // Handle INSERT/UPDATE/DELETE based on the SQL message
-            Mutation mutation = Mutation.newInsertOrUpdateBuilder("YourTableName")
-                    .set("your_column_name").to("some_value")  // parse sqlStatement to build the Mutation
-                    .build();
-
-            // Submit the mutation to Spanner
-            dbClient.write(List.of(mutation));
-        }
-
-        @Teardown
-        public void teardown() {
-            // Close Spanner connection
-            if (spanner != null) {
-                spanner.close();
-            }
-        }
+  private String determineRootCause(boolean[] p, Object[] v, ColumnConfig c) {
+    if (!p[0]) return "missing_in_" + stages.get(0).getName();
+    for (int i = 1; i < p.length; i++) {
+      if (!p[i]) return "lost_between_" + stages.get(i-1).getName() +
+                              "_and_" + stages.get(i).getName();
+      if (!ComparisonUtil.equals(v[i-1], v[i], c.getType(), c.getTolerance()))
+        return "value_mismatch_between_" + stages.get(i-1).getName() +
+               "_and_" + stages.get(i).getName();
     }
+    return "unknown";
+  }
+
+  public static TableSchema getAuditSchema() {
+    return new TableSchema().setFields(Arrays.asList(
+      new TableFieldSchema().setName("rule").setType("STRING"),
+      new TableFieldSchema().setName("equals_count").setType("INTEGER"),
+      new TableFieldSchema().setName("not_equals_count").setType("INTEGER"),
+      new TableFieldSchema().setName("ts").setType("TIMESTAMP")
+    ));
+  }
+
+  public static TableSchema getRootCauseSchema() {
+    return new TableSchema().setFields(Arrays.asList(
+      new TableFieldSchema().setName("key").setType("STRING"),
+      new TableFieldSchema().setName("column").setType("STRING"),
+      new TableFieldSchema().setName("stages_present").setType("STRING"),
+      new TableFieldSchema().setName("values").setType("STRING"),
+      new TableFieldSchema().setName("root_cause").setType("STRING"),
+      new TableFieldSchema().setName("ts").setType("TIMESTAMP")
+    ));
+  }
 }
-
-
-
-
-import com.google.cloud.spanner.DatabaseClient;
-import com.google.cloud.spanner.DatabaseId;
-import com.google.cloud.spanner.Spanner;
-import com.google.cloud.spanner.SpannerOptions;
-
-public class SpannerExample {
-    public static void main(String[] args) {
-        // Initialize Spanner
-        SpannerOptions options = SpannerOptions.newBuilder().build();
-        Spanner spanner = options.getService();
-
-        // Define the project ID, instance ID, and database ID
-        String projectId = options.getProjectId();
-        String instanceId = "your-instance-id";
-        String databaseId = "your-database-id";
-
-        // Create a DatabaseId object
-        DatabaseId db = DatabaseId.of(projectId, instanceId, databaseId);
-
-        // Get the database client using the DatabaseId object
-        DatabaseClient dbClient = spanner.getDatabaseClient(db);
-
-        // Now dbClient is ready to interact with Spanner
-        System.out.println("Connected to Spanner database: " + db);
-    }
-}
-
-
-
-
-
-import com.google.cloud.spanner.DatabaseClient;
-import com.google.cloud.spanner.Spanner;
-import com.google.cloud.spanner.SpannerOptions;
-import com.google.cloud.spanner.TransactionContext;
-import com.google.cloud.spanner.TransactionRunner.TransactionCallable;
-import org.apache.beam.sdk.Pipeline;
-import org.apache.beam.sdk.io.gcp.pubsub.PubsubIO;
-import org.apache.beam.sdk.transforms.DoFn;
-import org.apache.beam.sdk.transforms.ParDo;
-import org.apache.beam.sdk.values.PCollection;
-
-public class PubSubToSpanner {
-
-    public static void main(String[] args) {
-        Pipeline pipeline = Pipeline.create();
-
-        // Read messages from Pub/Sub subscription
-        String subscription = "projects/your-project-id/subscriptions/your-subscription-id";
-        PCollection<String> pubSubMessages = pipeline.apply("ReadFromPubSub",
-                PubsubIO.readStrings().fromSubscription(subscription));
-
-        // Process and write to Spanner
-        pubSubMessages.apply("ProcessMessages", ParDo.of(new ProcessPubSubMessageFn()));
-
-        pipeline.run().waitUntilFinish();
-    }
-
-    static class ProcessPubSubMessageFn extends DoFn<String, Void> {
-        private transient Spanner spanner;
-        private transient DatabaseClient dbClient;
-
-        @Setup
-        public void setup() {
-            // Initialize Spanner connection
-            SpannerOptions options = SpannerOptions.newBuilder().build();
-            spanner = options.getService();
-
-            // Set up Spanner Database Client
-            String instanceId = "your-instance-id";
-            String databaseId = "your-database-id";
-            dbClient = spanner.getDatabaseClient(
-                SpannerOptions.getDefaultProjectId(),
-                instanceId,
-                databaseId
-            );
-        }
-
-        @ProcessElement
-        public void processElement(ProcessContext context) {
-            String sqlStatement = context.element();
-
-            // Submit SQL statement directly to Spanner within a transaction
-            dbClient.runTransaction((TransactionCallable<Void>) transaction -> {
-                try {
-                    transaction.executeUpdate(com.google.cloud.spanner.Statement.of(sqlStatement));
-                } catch (Exception e) {
-                    System.err.println("Failed to execute SQL: " + sqlStatement);
-                    e.printStackTrace();
-                }
-                return null;  // Return null because no value is needed
-            });
-        }
-
-        @Teardown
-        public void teardown() {
-            // Close Spanner connection
-            if (spanner != null) {
-                spanner.close();
-            }
-        }
-    }
-}
-
-
-
-
-
-import com.google.cloud.spanner.DatabaseClient;
-import com.google.cloud.spanner.DatabaseId;
-import com.google.cloud.spanner.Spanner;
-import com.google.cloud.spanner.SpannerOptions;
-import com.google.cloud.spanner.Statement;
-import com.google.cloud.spanner.TransactionRunner.TransactionCallable;
-import org.apache.beam.sdk.Pipeline;
-import org.apache.beam.sdk.io.gcp.pubsub.PubsubIO;
-import org.apache.beam.sdk.transforms.DoFn;
-import org.apache.beam.sdk.transforms.ParDo;
-import org.apache.beam.sdk.values.PCollection;
-
-public class PubSubToSpanner {
-
-    public static void main(String[] args) {
-        Pipeline pipeline = Pipeline.create();
-
-        // Read messages from Pub/Sub subscription
-        String subscription = "projects/your-project-id/subscriptions/your-subscription-id";
-        PCollection<String> pubSubMessages = pipeline.apply("ReadFromPubSub",
-                PubsubIO.readStrings().fromSubscription(subscription));
-
-        // Process and write to Spanner
-        pubSubMessages.apply("ProcessMessages", ParDo.of(new ProcessPubSubMessageFn()));
-
-        pipeline.run().waitUntilFinish();
-    }
-
-    static class ProcessPubSubMessageFn extends DoFn<String, Void> {
-        private transient Spanner spanner;
-        private transient DatabaseClient dbClient;
-
-        @Setup
-        public void setup() {
-            // Initialize Spanner connection
-            SpannerOptions options = SpannerOptions.newBuilder().build();
-            spanner = options.getService();
-
-            // Get DatabaseId for your project, instance, and database
-            String projectId = options.getProjectId();  // or provide your project ID directly
-            String instanceId = "your-instance-id";
-            String databaseId = "your-database-id";
-
-            DatabaseId db = DatabaseId.of(projectId, instanceId, databaseId);
-            dbClient = spanner.getDatabaseClient(db);  // Use DatabaseId object to get the DatabaseClient
-        }
-
-        @ProcessElement
-        public void processElement(ProcessContext context) {
-            String sqlStatement = context.element();
-
-            // Submit SQL statement directly to Spanner within a transaction
-            dbClient.runTransaction((TransactionCallable<Void>) transaction -> {
-                try {
-                    transaction.executeUpdate(Statement.of(sqlStatement));
-                } catch (Exception e) {
-                    System.err.println("Failed to execute SQL: " + sqlStatement);
-                    e.printStackTrace();
-                }
-                return null;  // Return null because no value is needed
-            });
-        }
-
-        @Teardown
-        public void teardown() {
-            // Close Spanner connection
-            if (spanner != null) {
-                spanner.close();
-            }
-        }
-    }
-}
-
-
-
-
-import com.google.cloud.spanner.DatabaseClient;
-import com.google.cloud.spanner.DatabaseId;
-import com.google.cloud.spanner.Spanner;
-import com.google.cloud.spanner.SpannerOptions;
-import com.google.cloud.spanner.Statement;
-import org.apache.beam.sdk.Pipeline;
-import org.apache.beam.sdk.io.gcp.pubsub.PubsubIO;
-import org.apache.beam.sdk.transforms.DoFn;
-import org.apache.beam.sdk.transforms.ParDo;
-import org.apache.beam.sdk.values.PCollection;
-
-public class PubSubToSpanner {
-
-    public static void main(String[] args) {
-        Pipeline pipeline = Pipeline.create();
-
-        // Read messages from Pub/Sub subscription
-        String subscription = "projects/your-project-id/subscriptions/your-subscription-id";
-        PCollection<String> pubSubMessages = pipeline.apply("ReadFromPubSub",
-                PubsubIO.readStrings().fromSubscription(subscription));
-
-        // Process and write to Spanner
-        pubSubMessages.apply("ProcessMessages", ParDo.of(new ProcessPubSubMessageFn()));
-
-        pipeline.run().waitUntilFinish();
-    }
-
-    static class ProcessPubSubMessageFn extends DoFn<String, Void> {
-        private transient Spanner spanner;
-        private transient DatabaseClient dbClient;
-
-        @Setup
-        public void setup() {
-            // Initialize Spanner connection
-            SpannerOptions options = SpannerOptions.newBuilder().build();
-            spanner = options.getService();
-
-            // Get DatabaseId for your project, instance, and database
-            String projectId = options.getProjectId();
-            String instanceId = "your-instance-id";
-            String databaseId = "your-database-id";
-
-            DatabaseId db = DatabaseId.of(projectId, instanceId, databaseId);
-            dbClient = spanner.getDatabaseClient(db);
-        }
-
-        @ProcessElement
-        public void processElement(ProcessContext context) {
-            String sqlStatement = context.element();
-
-            // Execute SQL statement directly in Spanner
-            try {
-                dbClient.writeAtLeastOnce(List.of(Statement.of(sqlStatement)));
-            } catch (Exception e) {
-                System.err.println("Failed to execute SQL: " + sqlStatement);
-                e.printStackTrace();
-            }
-        }
-
-        @Teardown
-        public void teardown() {
-            // Close Spanner connection
-            if (spanner != null) {
-                spanner.close();
-            }
-        }
-    }
-}
-
-
-
-import com.google.cloud.spanner.DatabaseClient;
-import com.google.cloud.spanner.DatabaseId;
-import com.google.cloud.spanner.Mutation;
-import com.google.cloud.spanner.Spanner;
-import com.google.cloud.spanner.SpannerOptions;
-import org.apache.beam.sdk.Pipeline;
-import org.apache.beam.sdk.io.gcp.pubsub.PubsubIO;
-import org.apache.beam.sdk.transforms.DoFn;
-import org.apache.beam.sdk.transforms.ParDo;
-import org.apache.beam.sdk.values.PCollection;
-
-import java.util.ArrayList;
-import java.util.List;
-
-public class PubSubToSpanner {
-
-    public static void main(String[] args) {
-        Pipeline pipeline = Pipeline.create();
-
-        // Read messages from Pub/Sub subscription
-        String subscription = "projects/your-project-id/subscriptions/your-subscription-id";
-        PCollection<String> pubSubMessages = pipeline.apply("ReadFromPubSub",
-                PubsubIO.readStrings().fromSubscription(subscription));
-
-        // Process and write to Spanner
-        pubSubMessages.apply("ProcessMessages", ParDo.of(new ProcessPubSubMessageFn()));
-
-        pipeline.run().waitUntilFinish();
-    }
-
-    static class ProcessPubSubMessageFn extends DoFn<String, Void> {
-        private transient Spanner spanner;
-        private transient DatabaseClient dbClient;
-
-        @Setup
-        public void setup() {
-            // Initialize Spanner connection
-            SpannerOptions options = SpannerOptions.newBuilder().build();
-            spanner = options.getService();
-
-            // Get DatabaseId for your project, instance, and database
-            String projectId = options.getProjectId();
-            String instanceId = "your-instance-id";
-            String databaseId = "your-database-id";
-
-            DatabaseId db = DatabaseId.of(projectId, instanceId, databaseId);
-            dbClient = spanner.getDatabaseClient(db);
-        }
-
-        @ProcessElement
-        public void processElement(ProcessContext context) {
-            String sqlStatement = context.element();
-            List<Mutation> mutations = new ArrayList<>();
-
-            // Convert SQL statement to Mutation (this is a simplified example)
-            if (sqlStatement.startsWith("INSERT")) {
-                // Parse the insert statement (simplified)
-                String[] parts = sqlStatement.split("VALUES")[1].trim().replace(";", "").split(",");
-                String custId = parts[0].replace("'", "").trim();
-                String acctNum = parts[1].replace("'", "").trim();
-                
-                // Create the Mutation
-                mutations.add(Mutation.newInsertBuilder("YourTableName")
-                        .set("cust_id").to(custId)
-                        .set("acct_num").to(acctNum)
-                        .build());
-            } else if (sqlStatement.startsWith("UPDATE")) {
-                // Parse the update statement (simplified)
-                String custId = sqlStatement.split("WHERE")[1].trim().split("=")[1].replace("'", "").trim();
-                String newAcctNum = "some_new_value"; // replace with actual new value extraction
-                
-                // Create the Mutation
-                mutations.add(Mutation.newUpdateBuilder("YourTableName")
-                        .set("cust_id").to(custId)
-                        .set("acct_num").to(newAcctNum)
-                        .build());
-            } else if (sqlStatement.startsWith("DELETE")) {
-                // Parse the delete statement (simplified)
-                String custId = sqlStatement.split("WHERE")[1].trim().split("=")[1].replace("'", "").trim();
-                
-                // Create the Mutation
-                mutations.add(Mutation.delete("YourTableName", Key.of(custId)));
-            }
-
-            // Submit mutations to Spanner
-            if (!mutations.isEmpty()) {
-                try {
-                    dbClient.write(mutations);
-                } catch (Exception e) {
-                    System.err.println("Failed to execute SQL: " + sqlStatement);
-                    e.printStackTrace();
-                }
-            }
-        }
-
-        @Teardown
-        public void teardown() {
-            // Close Spanner connection
-            if (spanner != null) {
-                spanner.close();
-            }
-        }
-    }
-}
-
-
-
-ppppppppp
-import com.google.cloud.spanner.Key;
-import com.google.cloud.spanner.Mutation;
-import java.util.ArrayList;
-import java.util.List;
-
-public class SpannerMutationHandler {
-
-    public List<Mutation> handleSqlStatement(String sqlStatement) {
-        List<Mutation> mutations = new ArrayList<>();
-
-        if (sqlStatement.startsWith("INSERT")) {
-            // Parse the INSERT statement (assumes VALUES keyword is present)
-            String[] values = sqlStatement.split("VALUES")[1].trim().replace(";", "").replace("(", "").replace(")", "").split(",");
-            String custId = values[0].replace("'", "").trim();
-            String acctNum = values[1].replace("'", "").trim();
-            String selectedMTN = values[2].replace("'", "").trim();
-            String mtn = values[3].replace("'", "").trim();
-            String orderNum = values[4].replace("'", "").trim();
-
-            // Create the INSERT Mutation
-            mutations.add(Mutation.newInsertBuilder("SpannerToPubsubCDC")
-                    .set("cust_id").to(custId)
-                    .set("acct_num").to(acctNum)
-                    .set("selected_MTN").to(selectedMTN)
-                    .set("mtn").to(mtn)
-                    .set("order_num").to(orderNum)
-                    .build());
-
-        } else if (sqlStatement.startsWith("UPDATE")) {
-            // Parse the UPDATE statement (assumes SET and WHERE keywords are present)
-            String setClause = sqlStatement.split("SET")[1].split("WHERE")[0].trim();
-            String[] setParts = setClause.split(",");
-
-            String selectedMTN = setParts[0].split("=")[1].replace("'", "").trim();
-            String mtn = setParts[1].split("=")[1].replace("'", "").trim();
-            String custId = sqlStatement.split("WHERE")[1].trim().split("=")[1].replace("'", "").trim();
-
-            // Create the UPDATE Mutation
-            mutations.add(Mutation.newUpdateBuilder("SpannerToPubsubCDC")
-                    .set("cust_id").to(custId)
-                    .set("selected_MTN").to(selectedMTN)
-                    .set("mtn").to(mtn)
-                    .build());
-
-        } else if (sqlStatement.startsWith("DELETE")) {
-            // Parse the DELETE statement (assumes WHERE keyword is present)
-            String custId = sqlStatement.split("WHERE")[1].trim().split("=")[1].replace("'", "").trim();
-
-            // Create the DELETE Mutation
-            mutations.add(Mutation.delete("SpannerToPubsubCDC", Key.of(custId)));
-        }
-
-        return mutations;
-    }
-}
-lllllllllllll
-
-import com.google.cloud.pubsub.v1.Publisher;
-import com.google.pubsub.v1.PubsubMessage;
-import com.google.pubsub.v1.TopicName;
-import com.google.api.core.ApiFuture;
-import com.google.api.core.ApiFutures;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.TimeUnit;
-import java.util.List;
-import java.util.ArrayList;
-
-public class PubSubMessagePublisher {
-    private static final String PROJECT_ID = "your-project-id";
-    private static final String TOPIC_ID = "your-topic-id";
-    private static final int NUM_THREADS = 10; // Number of threads
-    private static final int TOTAL_MESSAGES = 1000000; // 1 million messages
-    private static final int TIME_LIMIT_MINUTES = 30;
-
-    public static void main(String[] args) throws Exception {
-        TopicName topicName = TopicName.of(PROJECT_ID, TOPIC_ID);
-        Publisher publisher = Publisher.newBuilder(topicName).build();
-
-        ExecutorService executor = Executors.newFixedThreadPool(NUM_THREADS);
-        AtomicLong sequenceNumber = new AtomicLong(1); // Atomic counter for unique sequence numbers
-
-        // Define the total number of messages per thread
-        int messagesPerThread = TOTAL_MESSAGES / NUM_THREADS;
-        
-        // Submit tasks to send messages in parallel
-        for (int i = 0; i < NUM_THREADS; i++) {
-            executor.submit(() -> {
-                List<ApiFuture<String>> futures = new ArrayList<>();
-                for (int j = 0; j < messagesPerThread; j++) {
-                    long seqNum = sequenceNumber.getAndIncrement(); // Get unique sequence number
-                    String messageContent = "Message-" + seqNum;
-
-                    // Create the Pub/Sub message
-                    PubsubMessage message = PubsubMessage.newBuilder()
-                            .setData(ByteString.copyFromUtf8(messageContent))
-                            .build();
-
-                    // Publish the message asynchronously
-                    ApiFuture<String> messageIdFuture = publisher.publish(message);
-                    futures.add(messageIdFuture);
-                }
-                
-                // Wait for all messages in this thread to be sent
-                ApiFutures.allAsList(futures).get();
-            });
-        }
-
-        // Shutdown the executor after the tasks are submitted
-        executor.shutdown();
-        
-        // Wait for all tasks to complete within the time limit
-        if (!executor.awaitTermination(TIME_LIMIT_MINUTES, TimeUnit.MINUTES)) {
-            System.out.println("Not all tasks completed within time limit.");
-            executor.shutdownNow();
-        }
-
-        // Shut down the Pub/Sub publisher
-        publisher.shutdown();
-        publisher.awaitTermination(1, TimeUnit.MINUTES);
-        
-        System.out.println("Successfully sent 1 million messages to Pub/Sub.");
-    }
-}
-
-
 
