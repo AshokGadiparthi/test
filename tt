@@ -300,3 +300,326 @@ public class RootCauseAndAuditFn extends DoFn<KV<String,CoGbkResult>,TableRow> {
   }
 }
 
+============================
+
+
+package com.trustiq.pipeline;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.api.services.bigquery.model.*;
+import com.google.cloud.bigquery.LegacySQLTypeName;
+import com.trustiq.config.AppConfig;
+import com.trustiq.config.ConfigLoader;
+import com.trustiq.config.DataQualityConfig;
+import com.trustiq.config.ComparisonConfig;
+import org.apache.beam.runners.dataflow.DataflowRunner;
+import org.apache.beam.sdk.Pipeline;
+import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
+import org.apache.beam.sdk.options.*;
+import org.apache.beam.sdk.transforms.*;
+import org.apache.beam.sdk.transforms.join.CoGbkResult;
+import org.apache.beam.sdk.transforms.join.KeyedPCollectionTuple;
+import org.apache.beam.sdk.transforms.join.TupleTag;
+import org.apache.beam.sdk.values.*;
+
+import java.io.IOException;
+import java.time.Instant;
+import java.util.*;
+import java.util.stream.Collectors;
+
+/**
+ * Dataflow pipeline for data-quality auditing and root-cause analysis
+ * across legacy CJCM table and new Cassandra pipeline, using intermediate
+ * gg_replica and payloads_table JSON sources.
+ */
+public class DataQualityPipeline {
+
+  public interface Options extends PipelineOptions, DataflowPipelineOptions {
+    @Description("GCS URI to your app-config.yaml containing joinKeys and comparison columns")
+    @Validation.Required String getConfigGcsPath();
+    void setConfigGcsPath(String v);
+
+    @Description("BigQuery table for legacy CJCM source (non-JSON)")
+    @Validation.Required String getTable1();
+    void setTable1(String v);
+
+    @Description("BigQuery table for final Cassandra-backed table2 (non-JSON)")
+    @Validation.Required String getTable2();
+    void setTable2(String v);
+
+    @Description("BigQuery table for gg_replica intermediate (JSON in DATA column)")
+    @Validation.Required String getGgTable();
+    void setGgTable(String v);
+
+    @Description("BigQuery table for payloads_table intermediate (JSON in DATA column)")
+    @Validation.Required String getPayloadTable();
+    void setPayloadTable(String v);
+
+    @Description("Output BigQuery table for audit counts")
+    @Validation.Required String getAuditOutput();
+    void setAuditOutput(String v);
+
+    @Description("Output BigQuery table for detailed root-cause rows")
+    @Validation.Required String getRootCauseOutput();
+    void setRootCauseOutput(String v);
+
+    @Description("Output BigQuery table for JSON parse errors")
+    @Validation.Required String getErrorOutput();
+    void setErrorOutput(String v);
+  }
+
+  public static void main(String[] args) {
+    Options opts = PipelineOptionsFactory.fromArgs(args).withValidation().as(Options.class);
+    opts.setRunner(DataflowRunner.class);
+
+    // Load YAML config
+    AppConfig appCfg = ConfigLoader.load(opts.getConfigGcsPath());
+    DataQualityConfig dq = appCfg.getDataQuality();
+    List<String> joinKeys = dq.getJoinKeys();
+    ComparisonConfig comp = dq.getComparison();
+    List<String> columns = comp.getColumns();
+    String ruleType = comp.getRuleType();
+    List<String> stages = Arrays.asList("orig","gg","payload","new");
+
+    // BigQuery clients for schema
+    com.google.cloud.bigquery.BigQuery bq = com.google.cloud.bigquery.BigQueryOptions.getDefaultInstance().getService();
+    com.google.cloud.bigquery.TableId tid = parseTableId(opts.getTable1());
+    com.google.cloud.bigquery.Schema schema = bq.getTable(tid).getDefinition().getSchema();
+
+    // Map column types
+    List<KV<String,LegacySQLTypeName>> typeList = new ArrayList<>();
+    for (com.google.cloud.bigquery.Field f : schema.getFields()) {
+      typeList.add(KV.of(f.getName(), f.getType()));
+    }
+
+    Pipeline p = Pipeline.create(opts);
+
+    // Side-input for types
+    PCollectionView<Map<String,LegacySQLTypeName>> typeView = p
+      .apply("MakeTypeList", Create.of(typeList))
+      .apply("ToTypeMap", View.asMap());
+
+    // JSON mapper
+    final ObjectMapper mapper = new ObjectMapper();
+
+    // Side-output for parse errors
+    final TupleTag<TableRow> errorTag = new TupleTag<TableRow>("parseErrors"){};
+
+    // Generic JSON extractor for a stage
+    class ExtractJSONFn extends DoFn<TableRow, KV<String,TableRow>> {
+      private final String stageName;
+      private final String jsonRoot;
+      ExtractJSONFn(String stageName, String jsonRoot) {
+        this.stageName = stageName;
+        this.jsonRoot = jsonRoot;
+      }
+      @ProcessElement public void process(ProcessContext c) {
+        TableRow row = c.element();
+        try {
+          JsonNode root = mapper.readTree((String)row.get("DATA"));
+          JsonNode data = jsonRoot.isEmpty() ? root : root.at(jsonRoot);
+          // build new TableRow with joinKeys + all comparison columns
+          TableRow out = new TableRow();
+          for (String key : joinKeys) {
+            out.set(key, data.path(key).asText(null));
+          }
+          for (String col : columns) {
+            out.set(col, data.path(col).asText(null));
+          }
+          // preserve original for other uses
+          out.set("__orig", row.get("DATA"));
+          // generate key
+          String k = joinKeys.stream()
+            .map(kk -> Objects.toString(out.get(kk),""))
+            .collect(Collectors.joining("|"));
+          c.output(KV.of(k, out));
+        } catch (IOException e) {
+          c.output(errorTag, new TableRow()
+            .set("stage", stageName)
+            .set("raw_data", row.get("DATA"))
+            .set("error", e.getMessage())
+            .set("ts", Instant.now().toString()));
+        }
+      }
+    }
+
+    // Read raw table1 (non-JSON)
+    PCollection<KV<String,TableRow>> orig = p
+      .apply("ReadOrig", BigQueryIO.readTableRows().from(opts.getTable1()))
+      .apply("KeyOrig", MapElements.into(
+        TypeDescriptors.kvs(TypeDescriptors.strings(), TypeDescriptor.of(TableRow.class)))
+        .via(r -> KV.of(joinKeys.stream()
+                          .map(k -> Objects.toString(r.get(k),""))
+                          .collect(Collectors.joining("|")), r)));
+
+    // Read table2 (non-JSON)
+    PCollection<KV<String,TableRow>> fin = p
+      .apply("ReadNew", BigQueryIO.readTableRows().from(opts.getTable2()))
+      .apply("KeyNew", MapElements.into(
+        TypeDescriptors.kvs(TypeDescriptors.strings(), TypeDescriptor.of(TableRow.class)))
+        .via(r -> KV.of(joinKeys.stream()
+                          .map(k -> Objects.toString(r.get(k),""))
+                          .collect(Collectors.joining("|")), r)));
+
+    // Read gg_replica JSON
+    PCollectionTuple ggSplit = p
+      .apply("ReadGG", BigQueryIO.readTableRows().from(opts.getGgTable()))
+      .apply("ExtractGG", ParDo.of(new ExtractJSONFn("gg_replica","/after"))
+        .withOutputTags(new TupleTag<KV<String,TableRow>>() {}, TupleTagList.of(errorTag)));
+    PCollection<KV<String,TableRow>> gg = ggSplit.get(new TupleTag<KV<String,TableRow>>(){});
+
+    // Read payloads_table JSON
+    PCollectionTuple plSplit = p
+      .apply("ReadPayload", BigQueryIO.readTableRows().from(opts.getPayloadTable()))
+      .apply("ExtractPayload", ParDo.of(new ExtractJSONFn("payloads_table",""))
+        .withOutputTags(new TupleTag<KV<String,TableRow>>() {}, TupleTagList.of(errorTag)));
+    PCollection<KV<String,TableRow>> payload = plSplit.get(new TupleTag<KV<String,TableRow>>(){});
+
+    // Merge and write parse errors
+    PCollection<TableRow> errors = PCollectionList.of(ggSplit.get(errorTag))
+      .and(plSplit.get(errorTag))
+      .apply(Flatten.pCollections());
+    errors.apply("WriteErrors", BigQueryIO.writeTableRows()
+      .to(opts.getErrorOutput())
+      .withSchema(new TableSchema().setFields(Arrays.asList(
+        new TableFieldSchema().setName("stage").setType("STRING"),
+        new TableFieldSchema().setName("raw_data").setType("STRING"),
+        new TableFieldSchema().setName("error").setType("STRING"),
+        new TableFieldSchema().setName("ts").setType("TIMESTAMP")
+      )))
+      .withCreateDisposition(BigQueryIO.Write.CreateDisposition.CREATE_IF_NEEDED)
+      .withWriteDisposition(BigQueryIO.Write.WriteDisposition.WRITE_APPEND));
+
+    // CoGroupByKey all four
+    TupleTag<TableRow> tOrig = new TupleTag<>("orig");
+    TupleTag<TableRow> tGG = new TupleTag<>("gg");
+    TupleTag<TableRow> tPL = new TupleTag<>("payload");
+    TupleTag<TableRow> tNew = new TupleTag<>("new");
+
+    PCollection<KV<String,CoGbkResult>> joined = KeyedPCollectionTuple
+      .of(tOrig, orig)
+      .and(tGG,    gg)
+      .and(tPL,    payload)
+      .and(tNew,   fin)
+      .apply("JoinAll", CoGroupByKey.create());
+
+    // Compare + root-cause
+    final TupleTag<KV<String,long[]>> countsTag = new TupleTag<>("counts");
+    final TupleTag<TableRow> rootTag = new TupleTag<>("rootCause");
+    PCollectionTuple out = joined.apply("CompareAndRootCause",
+      ParDo.of(new DoFn<KV<String,CoGbkResult>, KV<String,long[]>>() {
+        @ProcessElement public void process(ProcessContext c) {
+          String key = c.element().getKey();
+          CoGbkResult r = c.element().getValue();
+          Map<String,LegacySQLTypeName> types = c.sideInput(typeView);
+
+          boolean pOrig = r.getAll(tOrig).iterator().hasNext();
+          boolean pGG   = r.getAll(tGG).iterator().hasNext();
+          boolean pPL   = r.getAll(tPL).iterator().hasNext();
+          boolean pNew  = r.getAll(tNew).iterator().hasNext();
+
+          for (String col : columns) {
+            long eq=0, ne=0;
+            for (TableRow o : r.getAll(tOrig)) {
+              for (TableRow n : r.getAll(tNew)) {
+                boolean m = equalsTyped(o.get(col), n.get(col), types.get(col));
+                if (m) eq++; else ne++;
+              }
+            }
+            c.output(countsTag, KV.of(col+"_"+ruleType, new long[]{eq,ne}));
+            if (ne>0) {
+              String cause;
+              if (!pOrig)    cause = "missing_in_table1";
+              else if (!pGG) cause = "missing_in_gg_replica";
+              else if (!pPL) cause = "missing_in_payloads_table";
+              else if (!pNew) cause = "failed_spanner_insert";
+              else cause = "value_mismatch";
+
+              String[] parts = key.split("\\|", -1);
+              TableRow rc = new TableRow();
+              for (int i=0; i<joinKeys.size(); i++) rc.set(joinKeys.get(i), parts[i]);
+              rc.set("column", col)
+                .set("root_cause", cause)
+                .set("ts", Instant.now().toString());
+              c.output(rootTag, rc);
+            }
+          }
+        }
+      }).withSideInputs(typeView)
+        .withOutputTags(countsTag, TupleTagList.of(rootTag)));
+
+    // Sum counts & write audit table
+    out.get(countsTag)
+      .apply("SumCounts", Combine.perKey(new Combine.CombineFn<long[],long[],long[]>() {
+        public long[] createAccumulator() { return new long[]{0,0}; }
+        public long[] addInput(long[] acc, long[] in) { return new long[]{acc[0]+in[0],acc[1]+in[1]}; }
+        public long[] mergeAccumulators(Iterable<long[]> it) { long e=0,n=0; for(long[] a:it){ e+=a[0]; n+=a[1]; } return new long[]{e,n}; }
+        public long[] extractOutput(long[] acc){ return acc; }
+      }))
+      .apply("AuditToRow", MapElements.into(TypeDescriptor.of(TableRow.class))
+        .via(kv -> {
+          long[] ct = kv.getValue();
+          return new TableRow()
+            .set("rule", kv.getKey())
+            .set("equals_count", ct[0])
+            .set("not_equals_count", ct[1])
+            .set("run_date", Instant.now().toString());
+        }))
+      .apply("WriteAudit", BigQueryIO.writeTableRows()
+        .to(opts.getAuditOutput())
+        .withSchema(new TableSchema().setFields(Arrays.asList(
+          new TableFieldSchema().setName("rule").setType("STRING"),
+          new TableFieldSchema().setName("equals_count").setType("INTEGER"),
+          new TableFieldSchema().setName("not_equals_count").setType("INTEGER"),
+          new TableFieldSchema().setName("run_date").setType("TIMESTAMP")
+        )))
+        .withCreateDisposition(BigQueryIO.Write.CreateDisposition.CREATE_IF_NEEDED)
+        .withWriteDisposition(BigQueryIO.Write.WriteDisposition.WRITE_TRUNCATE));
+
+    // Write root causes
+    out.get(rootTag)
+      .apply("WriteRoots", BigQueryIO.writeTableRows()
+        .to(opts.getRootCauseOutput())
+        .withSchema(new TableSchema().setFields(buildRootSchema(joinKeys)))
+        .withCreateDisposition(BigQueryIO.Write.CreateDisposition.CREATE_IF_NEEDED)
+        .withWriteDisposition(BigQueryIO.Write.WriteDisposition.WRITE_APPEND));
+
+    p.run().waitUntilFinish();
+  }
+
+  private static List<TableFieldSchema> buildRootSchema(List<String> joinKeys) {
+    List<TableFieldSchema> fs = new ArrayList<>();
+    for (String k : joinKeys) fs.add(new TableFieldSchema().setName(k).setType("STRING"));
+    fs.add(new TableFieldSchema().setName("column").setType("STRING"));
+    fs.add(new TableFieldSchema().setName("root_cause").setType("STRING"));
+    fs.add(new TableFieldSchema().setName("ts").setType("TIMESTAMP"));
+    return fs;
+  }
+
+  private static com.google.cloud.bigquery.TableId parseTableId(String ref) {
+    String[] parts = ref.split(":");
+    String proj = parts[0];
+    String[] dsTbl = parts[1].split("\\.");
+    return com.google.cloud.bigquery.TableId.of(proj, dsTbl[0], dsTbl[1]);
+  }
+
+  private static boolean equalsTyped(Object o1, Object o2, LegacySQLTypeName type) {
+    if (o1==null && o2==null) return true;
+    if (o1==null || o2==null) return false;
+    try {
+      switch(type) {
+        case STRING: return o1.toString().equals(o2.toString());
+        case INTEGER: return ((Number)o1).longValue()==((Number)o2).longValue();
+        case FLOAT: return Float.compare(((Number)o1).floatValue(),((Number)o2).floatValue())==0;
+        case DOUBLE: return Double.compare(((Number)o1).doubleValue(),((Number)o2).doubleValue())==0;
+        case BOOLEAN: return Boolean.parseBoolean(o1.toString())==Boolean.parseBoolean(o2.toString());
+        case DATE: return java.time.LocalDate.parse(o1.toString()).equals(java.time.LocalDate.parse(o2.toString()));
+        case TIMESTAMP: return Instant.parse(o1.toString()).equals(Instant.parse(o2.toString()));
+        default: return o1.toString().equals(o2.toString());
+      }
+    } catch(Exception e) {
+      return false;
+    }
+  }
+}
