@@ -1,318 +1,156 @@
-# GCS://…/config.yaml
-
+---
+# config.yaml (host on GCS, passed via --configGcsPath)
 dataQuality:
+  # Fields to join on
   joinKeys:
     - cust_id
     - acct_num
+    - mtn
   comparison:
     columns:
-      - name: cust_id
-        type: STRING
-      - name: acct_num
-        type: STRING
-      - name: mtn
+      - name: status
         type: STRING
     ruleType: "equals"
-
-# Define each stage and its JSON payload root
-# You can swap type: PUBSUB for streaming, or BIGQUERY for BQ tables
-
 stages:
-  - name: cjcm
+  - name: orig
     type: BIGQUERY
-    table: "PROJECT:DS.payloads_table"
-    jsonRoot: "$"
-  - name: cassandra
+    table: "PROJECT:DS.table1"
+    jsonRoot: ""       # non‑JSON, fields at top level
+  - name: gg_replica
     type: BIGQUERY
     table: "PROJECT:DS.gg_replica"
-    jsonRoot: "$.after"
-  - name: transformed
+    jsonRoot: "/after" # JSON under "after"
+  - name: payloads
     type: BIGQUERY
     table: "PROJECT:DS.payloads_table"
-    jsonRoot: "$"
-
-# Output tables
+    jsonRoot: ""       # JSON fields at root
+  - name: new
+    type: BIGQUERY
+    table: "PROJECT:DS.table2"
+    jsonRoot: ""       # non‑JSON
 outputs:
-  rootCauseTable: "PROJECT:DS.data_quality_root_cause"
-  parseErrorTable: "PROJECT:DS.data_quality_parse_errors"
-  
-  
-package com.trustiq.pipeline;
+  audit:       "PROJECT:DS.compare_audit"
+  rootCause:   "PROJECT:DS.compare_root_cause"
+  parseErrors: "PROJECT:DS.data_quality_parse_errors"
+---
 
-import com.google.api.services.bigquery.model.*;
-import com.trustiq.config.*;
-import com.trustiq.util.JsonUtil;
-import com.trustiq.util.ComparisonUtil;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.beam.runners.dataflow.DataflowRunner;
-import org.apache.beam.sdk.Pipeline;
-import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
-import org.apache.beam.sdk.options.*;
-import org.apache.beam.sdk.transforms.*;
-import org.apache.beam.sdk.transforms.join.*;
-import org.apache.beam.sdk.values.*;
+// AppConfig.java
+package com.trustiq.config;
 
-import java.time.Instant;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.List;
 
-public class DataQualityRootCausePipeline {
+public class AppConfig {
+    private DataQualityConfig dataQuality;
+    private List<StageConfig> stages;
+    private Outputs outputs;
 
-  public interface Options extends PipelineOptions, DataflowPipelineOptions {
-    @Description("GCS URI to config.yaml")
-    @Validation.Required
-    String getConfigGcsPath();
-    void setConfigGcsPath(String v);
-  }
+    public DataQualityConfig getDataQuality() { return dataQuality; }
+    public void setDataQuality(DataQualityConfig dq) { this.dataQuality = dq; }
 
-  public static void main(String[] args) {
-    Options opts = PipelineOptionsFactory.fromArgs(args)
-        .withValidation()
-        .as(Options.class);
-    opts.setRunner(DataflowRunner.class);
+    public List<StageConfig> getStages() { return stages; }
+    public void setStages(List<StageConfig> stages) { this.stages = stages; }
 
-    // 1) Load YAML config
-    AppConfig appCfg = ConfigLoader.load(opts.getConfigGcsPath());
-    DataQualityConfig dq = appCfg.getDataQuality();
-    List<String> joinKeys    = dq.getJoinKeys();
-    List<ColumnConfig> cols  = dq.getComparison().getColumns();
-    List<StageConfig> stages = appCfg.getStages();
+    public Outputs getOutputs() { return outputs; }
+    public void setOutputs(Outputs outputs) { this.outputs = outputs; }
 
-    Pipeline p = Pipeline.create(opts);
-    ObjectMapper mapper = new ObjectMapper();
+    public static class Outputs {
+        private String audit;
+        private String rootCause;
+        private String parseErrors;
 
-    // Side-output tag for parse errors
-    final TupleTag<TableRow> parseErrorTag = new TupleTag<TableRow>("parseErrors"){};
+        public String getAudit() { return audit; }
+        public void setAudit(String audit) { this.audit = audit; }
 
-    // 2) Generic Extract + Key DoFn
-    class ExtractAndKeyFn extends DoFn<TableRow, KV<String, Payload>> {
-      private final StageConfig stage;
-      ExtractAndKeyFn(StageConfig stage) { this.stage = stage; }
+        public String getRootCause() { return rootCause; }
+        public void setRootCause(String rootCause) { this.rootCause = rootCause; }
 
-      @ProcessElement
-      public void process(ProcessContext c) {
-        TableRow row = c.element();
-        try {
-          JsonNode root = mapper.readTree((String) row.get("DATA"));
-          JsonNode data = JsonUtil.navigate(root, stage.getJsonRoot());
-          Map<String,String> vals = JsonUtil.pick(data, joinKeys, cols);
-          String key = joinKeys.stream()
-            .map(vals::get)
-            .collect(Collectors.joining("|"));
-          c.output(KV.of(key, new Payload(key, vals)));
-        } catch (Exception e) {
-          c.output(parseErrorTag, new TableRow()
-            .set("stage", stage.getName())
-            .set("raw_data", row.get("DATA"))
-            .set("error", e.getMessage())
-            .set("ts", Instant.now().toString()));
-        }
-      }
+        public String getParseErrors() { return parseErrors; }
+        public void setParseErrors(String parseErrors) { this.parseErrors = parseErrors; }
     }
-
-    // 3) Read & extract each stage
-    Map<String, PCollection<KV<String,Payload>>> keyed = new LinkedHashMap<>();
-    PCollectionList<TableRow> allParseErrors = PCollectionList.empty(p);
-    for (StageConfig st : stages) {
-      PCollectionTuple split = p
-        .apply("Read" + st.getName(), BigQueryIO.readTableRows().from(st.getTable()))
-        .apply("Extract" + st.getName(), ParDo.of(new ExtractAndKeyFn(st))
-          .withOutputTags(new TupleTag<KV<String,Payload>>() {}, TupleTagList.of(parseErrorTag)));
-
-      keyed.put(st.getName(), split.get(new TupleTag<KV<String,Payload>>() {}));
-      allParseErrors = allParseErrors.and(split.get(parseErrorTag));
-    }
-
-    // 4) Merge & write parse errors
-    allParseErrors
-      .apply("FlattenErrors", Flatten.pCollections())
-      .apply("WriteParseErrors", BigQueryIO.writeTableRows()
-        .to(appCfg.getOutputs().getParseErrorTable())
-        .withSchema(new TableSchema().setFields(Arrays.asList(
-          new TableFieldSchema().setName("stage").setType("STRING"),
-          new TableFieldSchema().setName("raw_data").setType("STRING"),
-          new TableFieldSchema().setName("error").setType("STRING"),
-          new TableFieldSchema().setName("ts").setType("TIMESTAMP")
-        )))
-        .withCreateDisposition(CreateDisposition.CREATE_IF_NEEDED)
-        .withWriteDisposition(WriteDisposition.WRITE_APPEND));
-
-    // 5) Build TupleTags map
-    Map<String, TupleTag<Payload>> tags = stages.stream()
-      .collect(Collectors.toMap(
-        StageConfig::getName,
-        st -> new TupleTag<Payload>(st.getName()){}));
-
-    // 6) CoGroupByKey
-    KeyedPCollectionTuple<String> joinTuple =
-      KeyedPCollectionTuple.of(tags.get(stages.get(0).getName()), keyed.get(stages.get(0).getName()));
-    for (int i = 1; i < stages.size(); i++) {
-      String nm = stages.get(i).getName();
-      joinTuple = joinTuple.and(tags.get(nm), keyed.get(nm));
-    }
-    PCollection<KV<String,CoGbkResult>> joined =
-      joinTuple.apply("JoinAll", CoGroupByKey.create());
-
-    // 7) Apply RootCauseAndAuditFn
-    PCollectionTuple results = joined.apply("AuditAndRoot", ParDo.of(
-      new RootCauseAndAuditFn(stages, cols, tags))
-      .withOutputTags(RootCauseAndAuditFn.AUDIT_TAG,
-                      TupleTagList.of(RootCauseAndAuditFn.ROOT_CAUSE_TAG)));
-
-    // 8a) Write audit summary
-    results.get(RootCauseAndAuditFn.AUDIT_TAG)
-      .apply("WriteAudit", BigQueryIO.writeTableRows()
-        .to(appCfg.getOutputs().getRootCauseTable() + "_audit")
-        .withSchema(RootCauseAndAuditFn.getAuditSchema())
-        .withCreateDisposition(CreateDisposition.CREATE_IF_NEEDED)
-        .withWriteDisposition(WriteDisposition.WRITE_TRUNCATE));
-
-    // 8b) Write detailed root causes
-    results.get(RootCauseAndAuditFn.ROOT_CAUSE_TAG)
-      .apply("WriteRootCauses", BigQueryIO.writeTableRows()
-        .to(appCfg.getOutputs().getRootCauseTable())
-        .withSchema(RootCauseAndAuditFn.getRootCauseSchema())
-        .withCreateDisposition(CreateDisposition.CREATE_IF_NEEDED)
-        .withWriteDisposition(WriteDisposition.WRITE_APPEND));
-
-    p.run().waitUntilFinish();
-  }
 }
 
-package com.trustiq.pipeline;
+// DataQualityConfig.java
+package com.trustiq.config;
 
-import java.io.Serializable;
-import java.util.Map;
+import java.util.List;
 
-public class Payload implements Serializable {
-  private final String key;
-  private final Map<String,String> values;
+public class DataQualityConfig {
+    private List<String> joinKeys;
+    private ComparisonConfig comparison;
 
-  public Payload(String key, Map<String,String> values) {
-    this.key = key;
-    this.values = values;
-  }
-  public String getKey() { return key; }
-  public Map<String,String> getValues() { return values; }
+    public List<String> getJoinKeys() { return joinKeys; }
+    public void setJoinKeys(List<String> joinKeys) { this.joinKeys = joinKeys; }
+
+    public ComparisonConfig getComparison() { return comparison; }
+    public void setComparison(ComparisonConfig comparison) { this.comparison = comparison; }
 }
 
-package com.trustiq.pipeline;
+// ComparisonConfig.java
+package com.trustiq.config;
 
-import com.google.api.services.bigquery.model.*;
-import com.trustiq.config.*;
-import org.apache.beam.sdk.transforms.DoFn;
-import org.apache.beam.sdk.transforms.DoFn.ProcessContext;
-import org.apache.beam.sdk.transforms.DoFn.ProcessElement;
-import org.apache.beam.sdk.values.KV;
-import org.apache.beam.sdk.values.TupleTag;
-import org.apache.beam.sdk.transforms.join.CoGbkResult;
+import java.util.List;
 
-import java.time.Instant;
-import java.util.*;
+public class ComparisonConfig {
+    private List<ColumnConfig> columns;
+    private String ruleType;
 
-public class RootCauseAndAuditFn extends DoFn<KV<String,CoGbkResult>,TableRow> {
-  public static final TupleTag<TableRow> AUDIT_TAG = new TupleTag<TableRow>("audit"){};
-  public static final TupleTag<TableRow> ROOT_CAUSE_TAG = new TupleTag<TableRow>("rootcause"){};
+    public List<ColumnConfig> getColumns() { return columns; }
+    public void setColumns(List<ColumnConfig> columns) { this.columns = columns; }
 
-  private final List<StageConfig> stages;
-  private final List<ColumnConfig> columns;
-  private final Map<String,TupleTag<Payload>> tags;
-
-  public RootCauseAndAuditFn(List<StageConfig> stages,
-                              List<ColumnConfig> columns,
-                              Map<String,TupleTag<Payload>> tags) {
-    this.stages = stages;
-    this.columns = columns;
-    this.tags = tags;
-  }
-
-  @ProcessElement
-  public void process(ProcessContext c) {
-    String key = c.element().getKey();
-    CoGbkResult res = c.element().getValue();
-
-    for (ColumnConfig col : columns) {
-      boolean[] present = new boolean[stages.size()];
-      Object[] vals = new Object[stages.size()];
-
-      for (int i = 0; i < stages.size(); i++) {
-        Iterator<Payload> it = res.getAll(tags.get(stages.get(i).getName())).iterator();
-        if (it.hasNext()) {
-          present[i] = true;
-          vals[i] = it.next().getValues().get(col.getName());
-        }
-      }
-      long eq=0, ne=0;
-      for (int i = 0; i < stages.size()-1; i++) {
-        boolean m = ComparisonUtil.equals(vals[i], vals[i+1], col.getType(), col.getTolerance());
-        if (m) eq++; else ne++;
-      }
-      c.output(AUDIT_TAG, new TableRow()
-        .set("rule", col.getName())
-        .set("equals_count", eq)
-        .set("not_equals_count", ne)
-        .set("ts", Instant.now().toString()));
-
-      if (ne > 0) {
-        String cause = determineRootCause(present, vals, col);
-        c.output(ROOT_CAUSE_TAG, new TableRow()
-          .set("key", key)
-          .set("column", col.getName())
-          .set("stages_present", Arrays.toString(present))
-          .set("values", Arrays.toString(vals))
-          .set("root_cause", cause)
-          .set("ts", Instant.now().toString()));
-      }
-    }
-  }
-
-  private String determineRootCause(boolean[] p, Object[] v, ColumnConfig c) {
-    if (!p[0]) return "missing_in_" + stages.get(0).getName();
-    for (int i = 1; i < p.length; i++) {
-      if (!p[i]) return "lost_between_" + stages.get(i-1).getName() +
-                              "_and_" + stages.get(i).getName();
-      if (!ComparisonUtil.equals(v[i-1], v[i], c.getType(), c.getTolerance()))
-        return "value_mismatch_between_" + stages.get(i-1).getName() +
-               "_and_" + stages.get(i).getName();
-    }
-    return "unknown";
-  }
-
-  public static TableSchema getAuditSchema() {
-    return new TableSchema().setFields(Arrays.asList(
-      new TableFieldSchema().setName("rule").setType("STRING"),
-      new TableFieldSchema().setName("equals_count").setType("INTEGER"),
-      new TableFieldSchema().setName("not_equals_count").setType("INTEGER"),
-      new TableFieldSchema().setName("ts").setType("TIMESTAMP")
-    ));
-  }
-
-  public static TableSchema getRootCauseSchema() {
-    return new TableSchema().setFields(Arrays.asList(
-      new TableFieldSchema().setName("key").setType("STRING"),
-      new TableFieldSchema().setName("column").setType("STRING"),
-      new TableFieldSchema().setName("stages_present").setType("STRING"),
-      new TableFieldSchema().setName("values").setType("STRING"),
-      new TableFieldSchema().setName("root_cause").setType("STRING"),
-      new TableFieldSchema().setName("ts").setType("TIMESTAMP")
-    ));
-  }
+    public String getRuleType() { return ruleType; }
+    public void setRuleType(String ruleType) { this.ruleType = ruleType; }
 }
 
-============================
+// ColumnConfig.java
+package com.trustiq.config;
 
+public class ColumnConfig {
+    private String name;
+    private String type;
+    private Double tolerance;
 
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+
+    public String getType() { return type; }
+    public void setType(String type) { this.type = type; }
+
+    public Double getTolerance() { return tolerance; }
+    public void setTolerance(Double tolerance) { this.tolerance = tolerance; }
+}
+
+// StageConfig.java
+package com.trustiq.config;
+
+public class StageConfig {
+    private String name;
+    private String type;
+    private String table;
+    private String jsonRoot;
+
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+
+    public String getType() { return type; }
+    public void setType(String type) { this.type = type; }
+
+    public String getTable() { return table; }
+    public void setTable(String table) { this.table = table; }
+
+    public String getJsonRoot() { return jsonRoot; }
+    public void setJsonRoot(String jsonRoot) { this.jsonRoot = jsonRoot; }
+}
+
+---
+
+// DataQualityPipeline.java
 package com.trustiq.pipeline;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.api.services.bigquery.model.*;
 import com.google.cloud.bigquery.LegacySQLTypeName;
-import com.trustiq.config.AppConfig;
-import com.trustiq.config.ConfigLoader;
-import com.trustiq.config.DataQualityConfig;
-import com.trustiq.config.ComparisonConfig;
+import com.trustiq.config.*;
 import org.apache.beam.runners.dataflow.DataflowRunner;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
@@ -328,298 +166,256 @@ import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
-/**
- * Dataflow pipeline for data-quality auditing and root-cause analysis
- * across legacy CJCM table and new Cassandra pipeline, using intermediate
- * gg_replica and payloads_table JSON sources.
- */
 public class DataQualityPipeline {
 
-  public interface Options extends PipelineOptions, DataflowPipelineOptions {
-    @Description("GCS URI to your app-config.yaml containing joinKeys and comparison columns")
-    @Validation.Required String getConfigGcsPath();
-    void setConfigGcsPath(String v);
+    public interface Options extends PipelineOptions, DataflowPipelineOptions {
+        @Description("GCS URI to config.yaml")
+        @Validation.Required String getConfigGcsPath();
+        void setConfigGcsPath(String v);
 
-    @Description("BigQuery table for legacy CJCM source (non-JSON)")
-    @Validation.Required String getTable1();
-    void setTable1(String v);
+        @Description("BQ table1: legacy CJCM")
+        @Validation.Required String getTable1();
+        void setTable1(String v);
 
-    @Description("BigQuery table for final Cassandra-backed table2 (non-JSON)")
-    @Validation.Required String getTable2();
-    void setTable2(String v);
+        @Description("BQ table2: final Cassandra BQ")
+        @Validation.Required String getTable2();
+        void setTable2(String v);
 
-    @Description("BigQuery table for gg_replica intermediate (JSON in DATA column)")
-    @Validation.Required String getGgTable();
-    void setGgTable(String v);
+        @Description("BQ gg_replica JSON source")
+        @Validation.Required String getGgTable();
+        void setGgTable(String v);
 
-    @Description("BigQuery table for payloads_table intermediate (JSON in DATA column)")
-    @Validation.Required String getPayloadTable();
-    void setPayloadTable(String v);
+        @Description("BQ payloads_table JSON source")
+        @Validation.Required String getPayloadTable();
+        void setPayloadTable(String v);
 
-    @Description("Output BigQuery table for audit counts")
-    @Validation.Required String getAuditOutput();
-    void setAuditOutput(String v);
+        @Description("BQ output for audit counts")
+        @Validation.Required String getAuditOutput();
+        void setAuditOutput(String v);
 
-    @Description("Output BigQuery table for detailed root-cause rows")
-    @Validation.Required String getRootCauseOutput();
-    void setRootCauseOutput(String v);
+        @Description("BQ output for root-cause details")
+        @Validation.Required String getRootCauseOutput();
+        void setRootCauseOutput(String v);
 
-    @Description("Output BigQuery table for JSON parse errors")
-    @Validation.Required String getErrorOutput();
-    void setErrorOutput(String v);
-  }
-
-  public static void main(String[] args) {
-    Options opts = PipelineOptionsFactory.fromArgs(args).withValidation().as(Options.class);
-    opts.setRunner(DataflowRunner.class);
-
-    // Load YAML config
-    AppConfig appCfg = ConfigLoader.load(opts.getConfigGcsPath());
-    DataQualityConfig dq = appCfg.getDataQuality();
-    List<String> joinKeys = dq.getJoinKeys();
-    ComparisonConfig comp = dq.getComparison();
-    List<String> columns = comp.getColumns();
-    String ruleType = comp.getRuleType();
-    List<String> stages = Arrays.asList("orig","gg","payload","new");
-
-    // BigQuery clients for schema
-    com.google.cloud.bigquery.BigQuery bq = com.google.cloud.bigquery.BigQueryOptions.getDefaultInstance().getService();
-    com.google.cloud.bigquery.TableId tid = parseTableId(opts.getTable1());
-    com.google.cloud.bigquery.Schema schema = bq.getTable(tid).getDefinition().getSchema();
-
-    // Map column types
-    List<KV<String,LegacySQLTypeName>> typeList = new ArrayList<>();
-    for (com.google.cloud.bigquery.Field f : schema.getFields()) {
-      typeList.add(KV.of(f.getName(), f.getType()));
+        @Description("BQ output for JSON parse errors")
+        @Validation.Required String getErrorOutput();
+        void setErrorOutput(String v);
     }
 
-    Pipeline p = Pipeline.create(opts);
+    public static void main(String[] args) {
+        Options opts = PipelineOptionsFactory.fromArgs(args).withValidation().as(Options.class);
+        opts.setRunner(DataflowRunner.class);
 
-    // Side-input for types
-    PCollectionView<Map<String,LegacySQLTypeName>> typeView = p
-      .apply("MakeTypeList", Create.of(typeList))
-      .apply("ToTypeMap", View.asMap());
+        AppConfig cfg = ConfigLoader.load(opts.getConfigGcsPath());
+        DataQualityConfig dq = cfg.getDataQuality();
+        List<String> joinKeys = dq.getJoinKeys();
+        List<ColumnConfig> cols = dq.getComparison().getColumns();
+        String rule = dq.getComparison().getRuleType();
 
-    // JSON mapper
-    final ObjectMapper mapper = new ObjectMapper();
-
-    // Side-output for parse errors
-    final TupleTag<TableRow> errorTag = new TupleTag<TableRow>("parseErrors"){};
-
-    // Generic JSON extractor for a stage
-    class ExtractJSONFn extends DoFn<TableRow, KV<String,TableRow>> {
-      private final String stageName;
-      private final String jsonRoot;
-      ExtractJSONFn(String stageName, String jsonRoot) {
-        this.stageName = stageName;
-        this.jsonRoot = jsonRoot;
-      }
-      @ProcessElement public void process(ProcessContext c) {
-        TableRow row = c.element();
-        try {
-          JsonNode root = mapper.readTree((String)row.get("DATA"));
-          JsonNode data = jsonRoot.isEmpty() ? root : root.at(jsonRoot);
-          // build new TableRow with joinKeys + all comparison columns
-          TableRow out = new TableRow();
-          for (String key : joinKeys) {
-            out.set(key, data.path(key).asText(null));
-          }
-          for (String col : columns) {
-            out.set(col, data.path(col).asText(null));
-          }
-          // preserve original for other uses
-          out.set("__orig", row.get("DATA"));
-          // generate key
-          String k = joinKeys.stream()
-            .map(kk -> Objects.toString(out.get(kk),""))
-            .collect(Collectors.joining("|"));
-          c.output(KV.of(k, out));
-        } catch (IOException e) {
-          c.output(errorTag, new TableRow()
-            .set("stage", stageName)
-            .set("raw_data", row.get("DATA"))
-            .set("error", e.getMessage())
-            .set("ts", Instant.now().toString()));
+        // Fetch schema types for table1
+        com.google.cloud.bigquery.BigQuery bq =
+          com.google.cloud.bigquery.BigQueryOptions.getDefaultInstance().getService();
+        com.google.cloud.bigquery.TableId tid = parseTableId(opts.getTable1());
+        com.google.cloud.bigquery.Schema schema = bq.getTable(tid).getDefinition().getSchema();
+        List<KV<String,LegacySQLTypeName>> typeList = new ArrayList<>();
+        for (com.google.cloud.bigquery.Field f : schema.getFields()) {
+            typeList.add(KV.of(f.getName(), f.getType()));
         }
-      }
-    }
 
-    // Read raw table1 (non-JSON)
-    PCollection<KV<String,TableRow>> orig = p
-      .apply("ReadOrig", BigQueryIO.readTableRows().from(opts.getTable1()))
-      .apply("KeyOrig", MapElements.into(
-        TypeDescriptors.kvs(TypeDescriptors.strings(), TypeDescriptor.of(TableRow.class)))
-        .via(r -> KV.of(joinKeys.stream()
-                          .map(k -> Objects.toString(r.get(k),""))
-                          .collect(Collectors.joining("|")), r)));
+        Pipeline p = Pipeline.create(opts);
+        PCollectionView<Map<String,LegacySQLTypeName>> typeView = p
+          .apply("TypeList", Create.of(typeList))
+          .apply("TypeMap", View.asMap());
 
-    // Read table2 (non-JSON)
-    PCollection<KV<String,TableRow>> fin = p
-      .apply("ReadNew", BigQueryIO.readTableRows().from(opts.getTable2()))
-      .apply("KeyNew", MapElements.into(
-        TypeDescriptors.kvs(TypeDescriptors.strings(), TypeDescriptor.of(TableRow.class)))
-        .via(r -> KV.of(joinKeys.stream()
-                          .map(k -> Objects.toString(r.get(k),""))
-                          .collect(Collectors.joining("|")), r)));
+        ObjectMapper mapper = new ObjectMapper();
+        TupleTag<TableRow> errTag = new TupleTag<>("errors");
 
-    // Read gg_replica JSON
-    PCollectionTuple ggSplit = p
-      .apply("ReadGG", BigQueryIO.readTableRows().from(opts.getGgTable()))
-      .apply("ExtractGG", ParDo.of(new ExtractJSONFn("gg_replica","/after"))
-        .withOutputTags(new TupleTag<KV<String,TableRow>>() {}, TupleTagList.of(errorTag)));
-    PCollection<KV<String,TableRow>> gg = ggSplit.get(new TupleTag<KV<String,TableRow>>(){});
+        // Extract JSON from DATA column
+        class ExtractFn extends DoFn<TableRow, KV<String,TableRow>> {
+            private final String stage;
+            private final String jsonRoot;
+            ExtractFn(String stage, String jsonRoot) {
+                this.stage = stage;
+                this.jsonRoot = jsonRoot;
+            }
+            @ProcessElement
+            public void process(ProcessContext c) {
+                TableRow row = c.element();
+                try {
+                    JsonNode root = mapper.readTree((String) row.get("DATA"));
+                    JsonNode data = jsonRoot.isEmpty() ? root : root.at(jsonRoot);
+                    String custId = data.path("cust_id").asText(null);
+                    String acctNum = data.path("acct_num").asText(null);
+                    String mtn = data.path("mtn").asText(null);
+                    String key = String.join("|", custId, acctNum, mtn);
 
-    // Read payloads_table JSON
-    PCollectionTuple plSplit = p
-      .apply("ReadPayload", BigQueryIO.readTableRows().from(opts.getPayloadTable()))
-      .apply("ExtractPayload", ParDo.of(new ExtractJSONFn("payloads_table",""))
-        .withOutputTags(new TupleTag<KV<String,TableRow>>() {}, TupleTagList.of(errorTag)));
-    PCollection<KV<String,TableRow>> payload = plSplit.get(new TupleTag<KV<String,TableRow>>(){});
+                    TableRow out = new TableRow()
+                        .set("cust_id", custId)
+                        .set("acct_num", acctNum)
+                        .set("mtn", mtn);
+                    for (ColumnConfig cc : cols) {
+                        if (!joinKeys.contains(cc.getName())) {
+                            out.set(cc.getName(), data.path(cc.getName()).asText(null));
+                        }
+                    }
+                    c.output(KV.of(key, out));
+                } catch (IOException e) {
+                    c.output(errTag, new TableRow()
+                        .set("stage", stage)
+                        .set("raw_data", row.get("DATA"))
+                        .set("error", e.getMessage())
+                        .set("ts", Instant.now().toString()));
+                }
+            }
+        }
 
-    // Merge and write parse errors
-    PCollection<TableRow> errors = PCollectionList.of(ggSplit.get(errorTag))
-      .and(plSplit.get(errorTag))
-      .apply(Flatten.pCollections());
-    errors.apply("WriteErrors", BigQueryIO.writeTableRows()
-      .to(opts.getErrorOutput())
-      .withSchema(new TableSchema().setFields(Arrays.asList(
-        new TableFieldSchema().setName("stage").setType("STRING"),
-        new TableFieldSchema().setName("raw_data").setType("STRING"),
-        new TableFieldSchema().setName("error").setType("STRING"),
-        new TableFieldSchema().setName("ts").setType("TIMESTAMP")
-      )))
-      .withCreateDisposition(BigQueryIO.Write.CreateDisposition.CREATE_IF_NEEDED)
-      .withWriteDisposition(BigQueryIO.Write.WriteDisposition.WRITE_APPEND));
+        // Read & key Table1
+        PCollection<KV<String,TableRow>> orig = p
+          .apply("ReadT1", BigQueryIO.readTableRows().from(opts.getTable1()))
+          .apply("KeyT1", MapElements.into(
+            TypeDescriptors.kvs(TypeDescriptors.strings(), TypeDescriptor.of(TableRow.class)))
+            .via(r -> KV.of(
+              joinKeys.stream().map(k -> Objects.toString(r.get(k), "")).collect(Collectors.joining("|")), r)));
 
-    // CoGroupByKey all four
-    TupleTag<TableRow> tOrig = new TupleTag<>("orig");
-    TupleTag<TableRow> tGG = new TupleTag<>("gg");
-    TupleTag<TableRow> tPL = new TupleTag<>("payload");
-    TupleTag<TableRow> tNew = new TupleTag<>("new");
+        // Read & parse gg_replica
+        PCollectionTuple ggSplit = p.apply("ReadGG", BigQueryIO.readTableRows().from(opts.getGgTable()))
+          .apply("ExtractGG", ParDo.of(new ExtractFn("gg_replica", "/after"))
+            .withOutputTags(new TupleTag<KV<String,TableRow>>() {}, TupleTagList.of(errTag)));
+        PCollection<KV<String,TableRow>> gg = ggSplit.get(new TupleTag<KV<String,TableRow>>(){});
 
-    PCollection<KV<String,CoGbkResult>> joined = KeyedPCollectionTuple
-      .of(tOrig, orig)
-      .and(tGG,    gg)
-      .and(tPL,    payload)
-      .and(tNew,   fin)
-      .apply("JoinAll", CoGroupByKey.create());
+        // Read & parse payloads_table
+        PCollectionTuple plSplit = p.apply("ReadPL", BigQueryIO.readTableRows().from(opts.getPayloadTable()))
+          .apply("ExtractPL", ParDo.of(new ExtractFn("payloads_table", ""))
+            .withOutputTags(new TupleTag<KV<String,TableRow>>() {}, TupleTagList.of(errTag)));
+        PCollection<KV<String,TableRow>> payload = plSplit.get(new TupleTag<KV<String,TableRow>>(){});
 
-    // Compare + root-cause
-    final TupleTag<KV<String,long[]>> countsTag = new TupleTag<>("counts");
-    final TupleTag<TableRow> rootTag = new TupleTag<>("rootCause");
-    PCollectionTuple out = joined.apply("CompareAndRootCause",
-      ParDo.of(new DoFn<KV<String,CoGbkResult>, KV<String,long[]>>() {
-        @ProcessElement public void process(ProcessContext c) {
-          String key = c.element().getKey();
-          CoGbkResult r = c.element().getValue();
-          Map<String,LegacySQLTypeName> types = c.sideInput(typeView);
+        // Read & key Table2
+        PCollection<KV<String,TableRow>> fin = p
+          .apply("ReadT2", BigQueryIO.readTableRows().from(opts.getTable2()))
+          .apply("KeyT2", MapElements.into(
+            TypeDescriptors.kvs(TypeDescriptors.strings(), TypeDescriptor.of(TableRow.class)))
+            .via(r -> KV.of(
+              joinKeys.stream().map(k -> Objects.toString(r.get(k), "")).collect(Collectors.joining("|")), r)));
 
-          boolean pOrig = r.getAll(tOrig).iterator().hasNext();
-          boolean pGG   = r.getAll(tGG).iterator().hasNext();
-          boolean pPL   = r.getAll(tPL).iterator().hasNext();
-          boolean pNew  = r.getAll(tNew).iterator().hasNext();
+        // Write parse errors
+        PCollection<TableRow> errs = PCollectionList.of(ggSplit.get(errTag)).and(plSplit.get(errTag))
+          .apply(Flatten.pCollections());
+        errs.apply("WriteErrors", BigQueryIO.writeTableRows()
+          .to(opts.getErrorOutput())
+          .withSchema(new TableSchema().setFields(Arrays.asList(
+            new TableFieldSchema().setName("stage").setType("STRING"),
+            new TableFieldSchema().setName("raw_data").setType("STRING"),
+            new TableFieldSchema().setName("error").setType("STRING"),
+            new TableFieldSchema().setName("ts").setType("TIMESTAMP")
+          ))));
 
-          for (String col : columns) {
-            long eq=0, ne=0;
-            for (TableRow o : r.getAll(tOrig)) {
-              for (TableRow n : r.getAll(tNew)) {
-                boolean m = equalsTyped(o.get(col), n.get(col), types.get(col));
-                if (m) eq++; else ne++;
+        // CoGroup all stages
+        TupleTag<TableRow> t1=new TupleTag<>("t1"), tg=new TupleTag<>("gg"), tp=new TupleTag<>("pl"), t2=new TupleTag<>("t2");
+        PCollection<KV<String,CoGbkResult>> joined = KeyedPCollectionTuple.of(t1,orig)
+          .and(tg,gg).and(tp,payload).and(t2,fin)
+          .apply("JoinAll", CoGroupByKey.create());
+
+        // Audit & root-cause
+        TupleTag<KV<String,long[]>> countTag = new TupleTag<>("counts");
+        TupleTag<TableRow> rootTag = new TupleTag<>("rootCause");
+        PCollectionTuple multi = joined.apply("AuditAndRootCause",
+          ParDo.of(new DoFn<KV<String,CoGbkResult>, KV<String,long[]>>() {
+            @ProcessElement public void process(ProcessContext c) {
+              String key = c.element().getKey();
+              CoGbkResult r = c.element().getValue();
+              Map<String,LegacySQLTypeName> types = c.sideInput(typeView);
+              boolean p1 = r.getAll(t1).iterator().hasNext();
+              boolean p2 = r.getAll(tg).iterator().hasNext();
+              boolean p3 = r.getAll(tp).iterator().hasNext();
+              boolean p4 = r.getAll(t2).iterator().hasNext();
+              for (ColumnConfig cc : cols) {
+                String col = cc.getName();
+                long eq=0, ne=0;
+                for (TableRow a : r.getAll(t1)) for (TableRow b : r.getAll(t2)) {
+                  if (equalsTyped(a.get(col), b.get(col), types.get(col))) eq++; else ne++;
+                }
+                c. output(countTag, KV.of(col+"_"+rule, new long[]{eq,ne}));
+                if (ne>0) {
+                  String cause = !p1 ? "missing_in_table1"
+                    : !p2 ? "missing_in_gg_replica"
+                    : !p3 ? "missing_in_payloads_table"
+                    : !p4 ? "failed_spanner_insert"
+                    : "value_mismatch";
+                  TableRow rc = new TableRow();
+                  String[] parts = key.split("\\|", -1);
+                  for (int i=0; i<joinKeys.size(); i++) rc.set(joinKeys.get(i), parts[i]);
+                  rc.set("column", col)
+                    .set("root_cause", cause)
+                    .set("ts", Instant.now().toString());
+                  c.output(rootTag, rc);
+                }
               }
             }
-            c.output(countsTag, KV.of(col+"_"+ruleType, new long[]{eq,ne}));
-            if (ne>0) {
-              String cause;
-              if (!pOrig)    cause = "missing_in_table1";
-              else if (!pGG) cause = "missing_in_gg_replica";
-              else if (!pPL) cause = "missing_in_payloads_table";
-              else if (!pNew) cause = "failed_spanner_insert";
-              else cause = "value_mismatch";
+          }).withSideInputs(typeView)
+            .withOutputTags(countTag, TupleTagList.of(rootTag)));
 
-              String[] parts = key.split("\\|", -1);
-              TableRow rc = new TableRow();
-              for (int i=0; i<joinKeys.size(); i++) rc.set(joinKeys.get(i), parts[i]);
-              rc.set("column", col)
-                .set("root_cause", cause)
-                .set("ts", Instant.now().toString());
-              c.output(rootTag, rc);
-            }
-          }
-        }
-      }).withSideInputs(typeView)
-        .withOutputTags(countsTag, TupleTagList.of(rootTag)));
+        // Write audit
+        multi.get(countTag)
+          .apply(Combine.perKey(new Combine.CombineFn<long[],long[],long[]>(){
+            public long[] createAccumulator(){return new long[2];}
+            public long[] addInput(long[] a,long[] b){return new long[]{a[0]+b[0],a[1]+b[1]};}
+            public long[] mergeAccumulators(Iterable<long[]> it){long e=0,n=0;for(long[]x:it){e+=x[0];n+=x[1];}return new long[]{e,n};}
+            public long[] extractOutput(long[]a){return a;}
+          }))
+          .apply(MapElements.into(TypeDescriptor.of(TableRow.class))
+            .via(kv->new TableRow()
+              .set("rule",kv.getKey())
+              .set("equals_count",kv.getValue()[0])
+              .set("not_equals_count",kv.getValue()[1])
+              .set("run_date",Instant.now().toString())))
+          .apply(BigQueryIO.writeTableRows().to(opts.getAuditOutput())
+            .withSchema(new TableSchema().setFields(Arrays.asList(
+              new TableFieldSchema().setName("rule").setType("STRING"),
+              new TableFieldSchema().setName("equals_count").setType("INTEGER"),
+              new TableFieldSchema().setName("not_equals_count").setType("INTEGER"),
+              new TableFieldSchema().setName("run_date").setType("TIMESTAMP")
+            ))));
 
-    // Sum counts & write audit table
-    out.get(countsTag)
-      .apply("SumCounts", Combine.perKey(new Combine.CombineFn<long[],long[],long[]>() {
-        public long[] createAccumulator() { return new long[]{0,0}; }
-        public long[] addInput(long[] acc, long[] in) { return new long[]{acc[0]+in[0],acc[1]+in[1]}; }
-        public long[] mergeAccumulators(Iterable<long[]> it) { long e=0,n=0; for(long[] a:it){ e+=a[0]; n+=a[1]; } return new long[]{e,n}; }
-        public long[] extractOutput(long[] acc){ return acc; }
-      }))
-      .apply("AuditToRow", MapElements.into(TypeDescriptor.of(TableRow.class))
-        .via(kv -> {
-          long[] ct = kv.getValue();
-          return new TableRow()
-            .set("rule", kv.getKey())
-            .set("equals_count", ct[0])
-            .set("not_equals_count", ct[1])
-            .set("run_date", Instant.now().toString());
-        }))
-      .apply("WriteAudit", BigQueryIO.writeTableRows()
-        .to(opts.getAuditOutput())
-        .withSchema(new TableSchema().setFields(Arrays.asList(
-          new TableFieldSchema().setName("rule").setType("STRING"),
-          new TableFieldSchema().setName("equals_count").setType("INTEGER"),
-          new TableFieldSchema().setName("not_equals_count").setType("INTEGER"),
-          new TableFieldSchema().setName("run_date").setType("TIMESTAMP")
-        )))
-        .withCreateDisposition(BigQueryIO.Write.CreateDisposition.CREATE_IF_NEEDED)
-        .withWriteDisposition(BigQueryIO.Write.WriteDisposition.WRITE_TRUNCATE));
+        // Write root causes
+        multi.get(rootTag)
+          .apply(BigQueryIO.writeTableRows().to(opts.getRootCauseOutput())
+            .withSchema(new TableSchema().setFields(buildRootSchema(joinKeys))));
 
-    // Write root causes
-    out.get(rootTag)
-      .apply("WriteRoots", BigQueryIO.writeTableRows()
-        .to(opts.getRootCauseOutput())
-        .withSchema(new TableSchema().setFields(buildRootSchema(joinKeys)))
-        .withCreateDisposition(BigQueryIO.Write.CreateDisposition.CREATE_IF_NEEDED)
-        .withWriteDisposition(BigQueryIO.Write.WriteDisposition.WRITE_APPEND));
-
-    p.run().waitUntilFinish();
-  }
-
-  private static List<TableFieldSchema> buildRootSchema(List<String> joinKeys) {
-    List<TableFieldSchema> fs = new ArrayList<>();
-    for (String k : joinKeys) fs.add(new TableFieldSchema().setName(k).setType("STRING"));
-    fs.add(new TableFieldSchema().setName("column").setType("STRING"));
-    fs.add(new TableFieldSchema().setName("root_cause").setType("STRING"));
-    fs.add(new TableFieldSchema().setName("ts").setType("TIMESTAMP"));
-    return fs;
-  }
-
-  private static com.google.cloud.bigquery.TableId parseTableId(String ref) {
-    String[] parts = ref.split(":");
-    String proj = parts[0];
-    String[] dsTbl = parts[1].split("\\.");
-    return com.google.cloud.bigquery.TableId.of(proj, dsTbl[0], dsTbl[1]);
-  }
-
-  private static boolean equalsTyped(Object o1, Object o2, LegacySQLTypeName type) {
-    if (o1==null && o2==null) return true;
-    if (o1==null || o2==null) return false;
-    try {
-      switch(type) {
-        case STRING: return o1.toString().equals(o2.toString());
-        case INTEGER: return ((Number)o1).longValue()==((Number)o2).longValue();
-        case FLOAT: return Float.compare(((Number)o1).floatValue(),((Number)o2).floatValue())==0;
-        case DOUBLE: return Double.compare(((Number)o1).doubleValue(),((Number)o2).doubleValue())==0;
-        case BOOLEAN: return Boolean.parseBoolean(o1.toString())==Boolean.parseBoolean(o2.toString());
-        case DATE: return java.time.LocalDate.parse(o1.toString()).equals(java.time.LocalDate.parse(o2.toString()));
-        case TIMESTAMP: return Instant.parse(o1.toString()).equals(Instant.parse(o2.toString()));
-        default: return o1.toString().equals(o2.toString());
-      }
-    } catch(Exception e) {
-      return false;
+        p.run().waitUntilFinish();
     }
-  }
+
+    private static List<TableFieldSchema> buildRootSchema(List<String> keys) {
+        List<TableFieldSchema> fields = new ArrayList<>();
+        for (String k : keys) fields.add(new TableFieldSchema().setName(k).setType("STRING"));
+        fields.add(new TableFieldSchema().setName("column").setType("STRING"));
+        fields.add(new TableFieldSchema().setName("root_cause").setType("STRING"));
+        fields.add(new TableFieldSchema().setName("ts").setType("TIMESTAMP"));
+        return fields;
+    }
+
+    private static com.google.cloud.bigquery.TableId parseTableId(String ref) {
+        String[] parts = ref.split(":");
+        String proj = parts[0];
+        String[] dsTbl = parts[1].split("\\.");
+        return com.google.cloud.bigquery.TableId.of(proj, dsTbl[0], dsTbl[1]);
+    }
+
+    private static boolean equalsTyped(Object o1, Object o2, LegacySQLTypeName type) {
+        if (o1 == null && o2 == null) return true;
+        if (o1 == null || o2 == null) return false;
+        try {
+            switch (type) {
+                case STRING:    return o1.toString().equals(o2.toString());
+                case INTEGER:   return ((Number)o1).longValue() == ((Number)o2).longValue();
+                case FLOAT:     return Float.compare(((Number)o1).floatValue(), ((Number)o2).floatValue()) == 0;
+                case DOUBLE:    return Double.compare(((Number)o1).doubleValue(), ((Number)o2).doubleValue()) == 0;
+                case BOOLEAN:   return Boolean.parseBoolean(o1.toString()) == Boolean.parseBoolean(o2.toString());
+                case DATE:      return java.time.LocalDate.parse(o1.toString()).equals(java.time.LocalDate.parse(o2.toString()));
+                case TIMESTAMP: return Instant.parse(o1.toString()).equals(Instant.parse(o2.toString()));
+                default:        return o1.toString().equals(o2.toString());
+            }
+        } catch (Exception e) {
+            return false;
+        }
+    }
 }
