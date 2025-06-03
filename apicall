@@ -1,10 +1,16 @@
-We have two Dataflow jobs (“Job2” and “Job3”) that copy data from Spanner to BigQuery.  
-• Job3 in particular is incurring unexpectedly high costs—processing volumes have not changed, but spend is up by ~X%.  
-• We need guidance on pipeline tuning (worker type, autoscaling settings, fusion breakpoints, batch vs. streaming) to minimize cost.  
-• We’re also seeing intermittent “AccessDeniedException: Permission denied” errors when the pipeline tries to load its JAR from GCS; it appears to be a bucket IAM/ACL issue but only affects some executions.  
-
-Please help us:  
-1. Identify why costs have spiked and recommend configuration/architecture optimizations.  
-2. Diagnose and resolve the intermittent GCS permission failures (our service account roles include Storage Object Viewer).  
-
-We can share logs, job IDs, and billing snapshots as needed.
+CREATE OR REPLACE TABLE
+  `myproject.mydataset.mytable_deduped` AS
+SELECT
+  *
+FROM (
+  SELECT
+    *,
+    ROW_NUMBER() OVER (
+      PARTITION BY cist_id, acct_num, mtn, status_ind
+      ORDER BY cist_id  -- no real order needed; this just forces a deterministic tie-breaker
+    ) AS rn
+  FROM
+    `myproject.mydataset.mytable`
+)
+WHERE
+  rn = 1;
