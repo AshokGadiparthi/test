@@ -1,3 +1,10 @@
 gcloud spanner databases execute-sql your-db \
   --instance=your-instance \
   --sql="EXPORT DATA OPTIONS(uri='gs://your-bucket/spanner_export/', format='CSV') AS SELECT * FROM your_table_name;"
+
+
+
+bq load --autodetect --source_format=CSV \
+  your_dataset.your_table \
+  gs://your-bucket/spanner_export/*.csv
+
