@@ -1,12 +1,13 @@
-gcloud dataflow jobs run spanner-to-bq-job-$(date +%s) \
-  --gcs-location gs://dataflow-templates/latest/Cloud_Spanner_to_BigQuery \
-  --region us-central1 \
-  --parameters \
-spannerInstanceId=YOUR_SPANNER_INSTANCE, \
-spannerDatabaseId=YOUR_DATABASE_NAME, \
-spannerTable=YOUR_TABLE_NAME, \
-bigQueryDataset=YOUR_BQ_DATASET, \
-bigQueryTable=YOUR_BQ_TABLE, \
-bigQueryProject=YOUR_PROJECT_ID, \
-createDisposition=CREATE_IF_NEEDED, \
-writeDisposition=WRITE_TRUNCATE
+SELECT
+  FORMAT_TIMESTAMP('%Y-%m-%d', insert_ts) AS event_date,
+  CONCAT(
+    LPAD(CAST(4 * DIV(EXTRACT(HOUR FROM insert_ts), 4) AS STRING), 2, '0'),
+    ':00 - ',
+    LPAD(CAST(4 * DIV(EXTRACT(HOUR FROM insert_ts), 4) + 4 AS STRING), 2, '0'),
+    ':00'
+  ) AS four_hour_bucket,
+  COUNT(*) AS record_count
+FROM your_table
+WHERE insert_ts IS NOT NULL
+GROUP BY event_date, four_hour_bucket
+ORDER BY event_date, four_hour_bucket;
