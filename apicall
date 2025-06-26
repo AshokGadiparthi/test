@@ -1,15 +1,17 @@
+CREATE TABLE latest_updates (
+  customer_id STRING(MAX),
+  updated_at TIMESTAMP,
+) PRIMARY KEY (customer_id);
+
+
+INSERT INTO latest_updates (customer_id, updated_at)
+SELECT customer_id, MAX(updated_at)
+FROM your_table
+GROUP BY customer_id;
+
 SELECT t.*
 FROM your_table t
-JOIN (
-  SELECT customer_id,
-         ARRAY(SELECT AS STRUCT * 
-               FROM your_table sub 
-               WHERE sub.customer_id = main.customer_id 
-               ORDER BY updated_at DESC, event_id DESC
-               LIMIT 1)[OFFSET(0)] AS latest_record
-  FROM your_table main
-  GROUP BY customer_id
-) records
-ON t.customer_id = records.customer_id
-   AND t.updated_at = records.latest_record.updated_at
-   AND t.event_id = records.latest_record.event_id
+JOIN latest_updates u
+ON t.customer_id = u.customer_id AND t.updated_at = u.updated_at;
+
+CREATE INDEX idx_customer_latest ON your_table(customer_id, updated_at DESC);
