@@ -1,13 +1,210 @@
-SELECT
-  FORMAT_TIMESTAMP('%Y-%m-%d', insert_ts) AS event_date,
-  CONCAT(
-    LPAD(CAST(4 * DIV(EXTRACT(HOUR FROM insert_ts), 4) AS STRING), 2, '0'),
-    ':00 - ',
-    LPAD(CAST(4 * DIV(EXTRACT(HOUR FROM insert_ts), 4) + 4 AS STRING), 2, '0'),
-    ':00'
-  ) AS four_hour_bucket,
-  COUNT(*) AS record_count
-FROM your_table
-WHERE insert_ts IS NOT NULL
-GROUP BY event_date, four_hour_bucket
-ORDER BY event_date, four_hour_bucket;
+```java
+import com.google.api.services.bigquery.model.TableRow;
+import com.google.common.collect.Lists;
+import org.apache.beam.sdk.Pipeline;
+import org.apache.beam.sdk.extensions.gcp.options.GcpOptions;
+import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
+import org.apache.beam.sdk.options.Default;
+import org.apache.beam.sdk.options.Description;
+import org.apache.beam.sdk.options.PipelineOptions;
+import org.apache.beam.sdk.options.PipelineOptionsFactory;
+import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.transforms.ParDo;
+import org.apache.beam.sdk.transforms.GroupByKey;
+import org.apache.beam.sdk.transforms.join.CoGbkResult;
+import org.apache.beam.sdk.transforms.join.CoGroupByKey;
+import org.apache.beam.sdk.transforms.join.KeyedPCollectionTuple;
+import org.apache.beam.sdk.values.KV;
+import org.apache.beam.sdk.values.PCollection;
+import org.apache.beam.sdk.values.PCollectionTuple;
+import org.apache.beam.sdk.values.TupleTag;
+import org.apache.beam.sdk.values.TupleTagList;
+import org.joda.time.Instant;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public class LatestCustomerRecordsPipeline {
+
+    private static final Logger LOG = LoggerFactory.getLogger(LatestCustomerRecordsPipeline.class);
+
+    // Pipeline options interface
+    public interface Options extends PipelineOptions, GcpOptions {
+        @Description("BigQuery input table (project:dataset.table)")
+        @Default.String("your_project:your_dataset.your_table")
+        String getInputTable();
+        void setInputTable(String value);
+
+        @Description("BigQuery output table (project:dataset.table)")
+        @Default.String("your_project:your_dataset.latest_customer_records")
+        String getOutputTable();
+        void setOutputTable(String value);
+
+        @Description("BigQuery DLQ table for failed records")
+        @Default.String("your_project:your_dataset.dlq_customer_records")
+        String getDlqTable();
+        void setDlqTable(String value);
+    }
+
+    // DoFn to extract customer_id and insert_ts as KV pair
+    static class ExtractKeyAndTimestamp extends DoFn<TableRow, KV<String, Instant>> {
+        @ProcessElement
+        public void processElement(ProcessContext c) {
+            TableRow row = c.element();
+            try {
+                String customerId = row.get("customer_id").toString();
+                String insertTsStr = row.get("insert_ts").toString();
+                Instant insertTs = Instant.parse(insertTsStr);
+                c.output(KV.of(customerId, insertTs));
+            } catch (Exception e) {
+                LOG.error("Error processing row: {}", row, e);
+                c.output(TupleTagList.of(new TupleTag<TableRow>("dlq"){}), row);
+            }
+        }
+    }
+
+    // DoFn to find max insert_ts per customer_id
+    static class FindMaxTimestamp extends DoFn<KV<String, Iterable<Instant>>, KV<String, Instant>> {
+        @ProcessElement
+        public void processElement(ProcessContext c) {
+            String customerId = c.element().getKey();
+            Iterable<Instant> timestamps = c.element().getValue();
+            Instant maxTs = null;
+            for (Instant ts : timestamps) {
+                if (maxTs == null || ts.isAfter(maxTs)) {
+                    maxTs = ts;
+                }
+            }
+            c.output(KV.of(customerId, maxTs));
+        }
+    }
+
+    // DoFn to extract full row with customer_id as key
+    static class ExtractRowWithKey extends DoFn<TableRow, KV<String, TableRow>> {
+        @ProcessElement
+        public void processElement(ProcessContext c) {
+            TableRow row = c.element();
+            try {
+                String customerId = row.get("customer_id").toString();
+                c.output(KV.of(customerId, row));
+            } catch (Exception e) {
+                LOG.error("Error processing row: {}", row, e);
+                c.output(TupleTagList.of(new TupleTag<TableRow>("dlq"){}), row);
+            }
+        }
+    }
+
+    // DoFn to join rows with max timestamps
+    static class JoinRowsWithMaxTimestamp extends DoFn<KV<String, CoGbkResult>, TableRow> {
+        private final TupleTag<Instant> maxTsTag;
+        private final TupleTag<TableRow> rowTag;
+
+        public JoinRowsWithMaxTimestamp(TupleTag<Instant> maxTsTag, TupleTag<TableRow> rowTag) {
+            this.maxTsTag = maxTsTag;
+            this.rowTag = rowTag;
+        }
+
+        @ProcessElement
+        public void processElement(ProcessContext c) {
+            KV<String, CoGbkResult> element = c.element();
+            String customerId = element.getKey();
+            CoGbkResult result = element.getValue();
+            Instant maxTs = result.getOnly(maxTsTag, null);
+            if (maxTs == null) {
+                LOG.warn("No max timestamp for customer_id: {}", customerId);
+                return;
+            }
+
+            for (TableRow row : result.getAll(rowTag)) {
+                try {
+                    String insertTsStr = row.get("insert_ts").toString();
+                    Instant insertTs = Instant.parse(insertTsStr);
+                    if (insertTs.equals(maxTs)) {
+                        c.output(row);
+                    }
+                } catch (Exception e) {
+                    LOG.error("Error joining row: {}", row, e);
+                    c.output(TupleTagList.of(new TupleTag<TableRow>("dlq"){}), row);
+                }
+            }
+        }
+    }
+
+    public static void main(String[] args) {
+        // Parse pipeline options
+        Options options = PipelineOptionsFactory.fromArgs(args).withValidation().as(Options.class);
+        Pipeline pipeline = Pipeline.create(options);
+
+        // Tuple tags for main and DLQ outputs
+        final TupleTag<TableRow> mainOutputTag = new TupleTag<>() {};
+        final TupleTag<TableRow> dlqTag = new TupleTag<>() {};
+        final TupleTag<Instant> maxTsTag = new TupleTag<>() {};
+        final TupleTag<TableRow> rowTag = new TupleTag<>() {};
+
+        // Read from BigQuery
+        PCollection<TableRow> inputRows = pipeline.apply(
+            "ReadFromBigQuery",
+            BigQueryIO.readTableRows()
+                .from(options.getInputTable())
+                .withMethod(BigQueryIO.TypedRead.Method.DIRECT_READ)
+        );
+
+        // Extract customer_id and insert_ts for max timestamp calculation
+        PCollectionTuple timestampTuple = inputRows.apply(
+            "ExtractKeyAndTimestamp",
+            ParDo.of(new ExtractKeyAndTimestamp())
+                .withOutputTags(mainOutputTag, TupleTagList.of(dlqTag))
+        );
+
+        PCollection<KV<String, Instant>> timestamps = timestampTuple.get(mainOutputTag);
+
+        // Group by customer_id and find max insert_ts
+        PCollection<KV<String, Instant>> maxTimestamps = timestamps
+            .apply("GroupByCustomerId", GroupByKey.create())
+            .apply("FindMaxTimestamp", ParDo.of(new FindMaxTimestamp()));
+
+        // Extract full rows with customer_id as key
+        PCollectionTuple rowTuple = inputRows.apply(
+            "ExtractRowWithKey",
+            ParDo.of(new ExtractRowWithKey())
+                .withOutputTags(mainOutputTag, TupleTagList.of(dlqTag))
+        );
+
+        PCollection<KV<String, TableRow>> rows = rowTuple.get(mainOutputTag);
+
+        // Join rows with max timestamps
+        PCollection<TableRow> joinedRows = KeyedPCollectionTuple
+            .of(maxTsTag, maxTimestamps)
+            .and(rowTag, rows)
+            .apply("CoGroupByKey", CoGroupByKey.create())
+            .apply("JoinRowsWithMaxTimestamp",
+                ParDo.of(new JoinRowsWithMaxTimestamp(maxTsTag, rowTag)));
+
+        // Combine main and DLQ outputs
+        PCollection<TableRow> dlqRows = PCollectionTuple
+            .of(mainOutputTag, timestampTuple.get(dlqTag))
+            .and(rowTag, rowTuple.get(dlqTag))
+            .apply("FlattenDLQ", org.apache.beam.sdk.transforms.Flatten.pCollections());
+
+        // Write main output to BigQuery
+        joinedRows.apply(
+            "WriteToBigQuery",
+            BigQueryIO.writeTableRows()
+                .to(options.getOutputTable())
+                .withCreateDisposition(BigQueryIO.Write.CreateDisposition.CREATE_IF_NEEDED)
+                .withWriteDisposition(BigQueryIO.Write.WriteDisposition.WRITE_APPEND)
+        );
+
+        // Write DLQ to BigQuery
+        dlqRows.apply(
+            "WriteDLQToBigQuery",
+            BigQueryIO.writeTableRows()
+                .to(options.getDlqTable())
+                .withCreateDisposition(BigQueryIO.Write.CreateDisposition.CREATE_IF_NEEDED)
+                .withWriteDisposition(BigQueryIO.Write.WriteDisposition.WRITE_APPEND)
+        );
+
+        // Run the pipeline
+        pipeline.run().waitUntilFinish();
+    }
+}
+```
