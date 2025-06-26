@@ -1,17 +1,66 @@
-CREATE TABLE latest_updates (
-  customer_id STRING(MAX),
-  updated_at TIMESTAMP,
-) PRIMARY KEY (customer_id);
+public class SpannerDeduplicationPipeline {
 
+    public static void main(String[] args) {
+        PipelineOptionsFactory.register(SpannerOptions.class);
+        SpannerOptions options = PipelineOptionsFactory.fromArgs(args).withValidation().as(SpannerOptions.class);
+        Pipeline p = Pipeline.create(options);
 
-INSERT INTO latest_updates (customer_id, updated_at)
-SELECT customer_id, MAX(updated_at)
-FROM your_table
-GROUP BY customer_id;
+        SpannerConfig spannerConfig = SpannerConfig.create()
+            .withProjectId(options.getProject())
+            .withInstanceId(options.getInstanceId())
+            .withDatabaseId(options.getDatabaseId());
 
-SELECT t.*
-FROM your_table t
-JOIN latest_updates u
-ON t.customer_id = u.customer_id AND t.updated_at = u.updated_at;
+        // Step 1: Read from source Spanner table
+        PCollection<Struct> input = p.apply("ReadSpannerData", SpannerIO.read()
+            .withSpannerConfig(spannerConfig)
+            .withQuery("SELECT customer_id, updated_at, event_id, payload FROM your_table"));
 
-CREATE INDEX idx_customer_latest ON your_table(customer_id, updated_at DESC);
+        // Step 2: KV by customer_id
+        PCollection<KV<String, Struct>> kvRecords = input.apply("ToKV", MapElements.into(
+            TypeDescriptors.kvs(TypeDescriptors.strings(), TypeDescriptor.of(Struct.class)))
+            .via((Struct row) -> KV.of(row.getString("customer_id"), row)));
+
+        // Step 3: Combine by customer_id → latest updated_at
+        PCollection<Struct> latestRecords = kvRecords
+            .apply("GetLatestByTimestamp", Combine.perKey(new LatestRecordFn()))
+            .apply("ExtractStruct", Values.create());
+
+        // Step 4: Write to target Spanner table
+        latestRecords.apply("WriteToSpanner", SpannerIO.write()
+            .withSpannerConfig(spannerConfig)
+            .withInstanceId(options.getInstanceId())
+            .withDatabaseId(options.getDatabaseId())
+            .withTable("your_table_latest"));
+
+        p.run();
+    }
+
+    static class LatestRecordFn extends Combine.CombineFn<Struct, Struct, Struct> {
+        @Override
+        public Struct createAccumulator() {
+            return null;
+        }
+
+        @Override
+        public Struct addInput(Struct acc, Struct input) {
+            if (acc == null) return input;
+            Instant accTime = acc.getTimestamp("updated_at").toInstant();
+            Instant inputTime = input.getTimestamp("updated_at").toInstant();
+            return inputTime.isAfter(accTime) ? input : acc;
+        }
+
+        @Override
+        public Struct mergeAccumulators(Iterable<Struct> accs) {
+            Struct latest = null;
+            for (Struct s : accs) {
+                latest = addInput(latest, s);
+            }
+            return latest;
+        }
+
+        @Override
+        public Struct extractOutput(Struct acc) {
+            return acc;
+        }
+    }
+}
