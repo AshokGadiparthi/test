@@ -11,3 +11,11 @@ bq load \
   --source_format=CSV \
   YOUR_DATASET.YOUR_TABLE \
   gs://YOUR_BUCKET/spanner-export/YOUR_TABLE_NAME*.csv
+
+
+
+gcloud dataflow jobs run spanner-to-gcs-export-$(date +%Y%m%d%H%M%S) \
+  --gcs-location=gs://dataflow-templates/latest/Cloud_Spanner_to_GCS_Avro \
+  --region=us-central1 \
+  --staging-location=gs://your-bucket-name/staging/ \
+  --parameters="instanceId=YOUR_SPANNER_INSTANCE,databaseId=YOUR_DATABASE_NAME,outputDir=gs://your-bucket-name/spanner-export/,tableId=YOUR_TABLE_NAME"
