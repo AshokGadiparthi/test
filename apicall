@@ -1,8 +1,13 @@
-UPDATE your_table t
-SET latest_flag = 'N'
-WHERE STRUCT(t.customer_id, t.insert_ts) NOT IN (
-  SELECT AS STRUCT customer_id, MAX(insert_ts)
-  FROM your_table
-  GROUP BY customer_id
-  HAVING COUNT(*) > 1
-);
+gcloud spanner databases export sql \
+  gs://YOUR_BUCKET/spanner-export/ \
+  --instance=YOUR_SPANNER_INSTANCE \
+  --database=YOUR_DATABASE_NAME \
+  --file-format=CSV \
+  --async
+
+
+bq load \
+  --autodetect \
+  --source_format=CSV \
+  YOUR_DATASET.YOUR_TABLE \
+  gs://YOUR_BUCKET/spanner-export/YOUR_TABLE_NAME*.csv
