@@ -1,21 +1,37 @@
-gcloud spanner databases export sql \
-  gs://YOUR_BUCKET/spanner-export/ \
-  --instance=YOUR_SPANNER_INSTANCE \
-  --database=YOUR_DATABASE_NAME \
-  --file-format=CSV \
-  --async
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.hash.Hashing;
 
+import java.nio.charset.StandardCharsets;
 
-bq load \
-  --autodetect \
-  --source_format=CSV \
-  YOUR_DATASET.YOUR_TABLE \
-  gs://YOUR_BUCKET/spanner-export/YOUR_TABLE_NAME*.csv
+public class JsonChangeDetector {
 
+    private static final ObjectMapper mapper = new ObjectMapper();
 
+    public static boolean isPayloadChanged(String jsonPayload) {
+        try {
+            JsonNode root = mapper.readTree(jsonPayload);
+            JsonNode before = root.path("before");
+            JsonNode after = root.path("after");
 
-gcloud dataflow jobs run spanner-to-gcs-export-$(date +%Y%m%d%H%M%S) \
-  --gcs-location=gs://dataflow-templates/latest/Cloud_Spanner_to_GCS_Avro \
-  --region=us-central1 \
-  --staging-location=gs://your-bucket-name/staging/ \
-  --parameters="instanceId=YOUR_SPANNER_INSTANCE,databaseId=YOUR_DATABASE_NAME,outputDir=gs://your-bucket-name/spanner-export/,tableId=YOUR_TABLE_NAME"
+            // Convert entire sections to canonical string representations
+            String beforeStr = before.isMissingNode() || before.isNull() ? "" : mapper.writeValueAsString(before);
+            String afterStr = after.isMissingNode() || after.isNull() ? "" : mapper.writeValueAsString(after);
+
+            // Generate fingerprints (same as FARM_FINGERPRINT)
+            long beforeHash = Hashing.farmHashFingerprint64()
+                                     .hashString(beforeStr, StandardCharsets.UTF_8)
+                                     .asLong();
+
+            long afterHash = Hashing.farmHashFingerprint64()
+                                    .hashString(afterStr, StandardCharsets.UTF_8)
+                                    .asLong();
+
+            // Return true if the content has changed
+            return beforeHash != afterHash;
+
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to compare payload: " + e.getMessage(), e);
+        }
+    }
+}
