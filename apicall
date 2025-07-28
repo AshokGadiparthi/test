@@ -3,3 +3,7 @@
 3. The "To OrderMutations" transform uses a DoFn that loops over all Mods, outputting one OrderMutation per Mod, causing a fan-out expansion to ~18M elements.
 4. This increase reflects batched operations in Spanner (e.g., bulk inserts/updates), common for efficiency and atomicity in high-volume apps like order processing.
 5. The design ensures row-level syncing to BigQuery; to mitigate high counts, optimize transactions for fewer rows or bundle outputs in the DoFn.
+
+
+https://beam.apache.org/releases/javadoc/2.50.0/org/apache/beam/sdk/io/gcp/spanner/changestreams/model/DataChangeRecord.html
+https://cloud.google.com/spanner/docs/change-streams/details
