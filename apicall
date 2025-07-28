@@ -1,20 +1,5 @@
-Subject: Idea to Improve Our Data Validation Using Gemini
-
-Business Benefits
-This will save a lot of time we currently spend writing and running manual validation queries.
-
-It helps us catch issues early and explain clearly what went wrong, so teams can fix things faster.
-
-Over time, this can reduce the cost of checking data quality and avoid downstream issues in reports or dashboards.
-
-Technical Benefits
-We can use Gemini (from Vertex AI) to generate SQL checks automatically based on the table and past patterns.
-
-It can also read the mismatched data and help explain what’s causing the issue, even in complex logic.
-
-It works well with what we already use — BigQuery, Dataflow, and Airflow — so no big changes needed.
-
-Operational Benefits
-Team members can ask simple questions like “show mismatched records for today” instead of writing SQL.
-
-It can also give quick summaries or alerts that we can add to our dashboards or even post in Slack.
+1. Spanner change streams bundle multiple row changes from a single transaction into one DataChangeRecord, resulting in ~4M initial elements representing transactions, not individual rows.
+2. Each DataChangeRecord contains a list of Mod objects, averaging ~4.5 Mods per record in this workload, where each Mod details a specific row insert, update, or delete.
+3. The "To OrderMutations" transform uses a DoFn that loops over all Mods, outputting one OrderMutation per Mod, causing a fan-out expansion to ~18M elements.
+4. This increase reflects batched operations in Spanner (e.g., bulk inserts/updates), common for efficiency and atomicity in high-volume apps like order processing.
+5. The design ensures row-level syncing to BigQuery; to mitigate high counts, optimize transactions for fewer rows or bundle outputs in the DoFn.
