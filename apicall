@@ -1,9 +1,62 @@
-1. Spanner change streams bundle multiple row changes from a single transaction into one DataChangeRecord, resulting in ~4M initial elements representing transactions, not individual rows.
-2. Each DataChangeRecord contains a list of Mod objects, averaging ~4.5 Mods per record in this workload, where each Mod details a specific row insert, update, or delete.
-3. The "To OrderMutations" transform uses a DoFn that loops over all Mods, outputting one OrderMutation per Mod, causing a fan-out expansion to ~18M elements.
-4. This increase reflects batched operations in Spanner (e.g., bulk inserts/updates), common for efficiency and atomicity in high-volume apps like order processing.
-5. The design ensures row-level syncing to BigQuery; to mitigate high counts, optimize transactions for fewer rows or bundle outputs in the DoFn.
+pip install apache-beam[gcp] google-cloud-bigquery
+gcloud auth application-default login
+gcloud config set project YOUR_PROJECT_ID
 
 
-https://beam.apache.org/releases/javadoc/2.50.0/org/apache/beam/sdk/io/gcp/spanner/changestreams/model/DataChangeRecord.html
-https://cloud.google.com/spanner/docs/change-streams/details
+import apache_beam as beam
+from apache_beam.options.pipeline_options import PipelineOptions, GoogleCloudOptions, StandardOptions, SetupOptions
+
+class CustomOptions(PipelineOptions):
+    @classmethod
+    def _add_argparse_args(cls, parser):
+        parser.add_value_provider_argument('--input_table', type=str, help='Input BigQuery table')
+        parser.add_value_provider_argument('--output_table', type=str, help='Output BigQuery table')
+
+def run():
+    pipeline_options = PipelineOptions()
+    google_cloud_options = pipeline_options.view_as(GoogleCloudOptions)
+    google_cloud_options.project = 'your-project-id'
+    google_cloud_options.job_name = 'bq-to-bq-job'
+    google_cloud_options.region = 'us-central1'
+    google_cloud_options.staging_location = 'gs://your-bucket-name/staging'
+    google_cloud_options.temp_location = 'gs://your-bucket-name/temp'
+
+    pipeline_options.view_as(StandardOptions).runner = 'DataflowRunner'
+    pipeline_options.view_as(SetupOptions).save_main_session = True
+
+    custom_options = pipeline_options.view_as(CustomOptions)
+
+    with beam.Pipeline(options=pipeline_options) as p:
+        (
+            p
+            | 'ReadFromBigQuery' >> beam.io.ReadFromBigQuery(table=custom_options.input_table)
+            # | 'Transform' >> beam.Map(lambda row: row)  # Optional: transformation logic
+            | 'WriteToBigQuery' >> beam.io.WriteToBigQuery(
+                table=custom_options.output_table,
+                write_disposition=beam.io.BigQueryDisposition.WRITE_TRUNCATE,
+                create_disposition=beam.io.BigQueryDisposition.CREATE_IF_NEEDED
+            )
+        )
+
+if __name__ == '__main__':
+    run()
+
+
+
+
+
+python bq_to_bq_pipeline.py \
+  --runner DataflowRunner \
+  --project your-project-id \
+  --region us-central1 \
+  --staging_location gs://your-bucket-name/staging \
+  --temp_location gs://your-bucket-name/temp \
+  --input_table your-dataset.source_table \
+  --output_table your-dataset.destination_table \
+  --job_name bq_to_bq_pipeline
+
+
+python bq_to_bq_pipeline.py \
+  --runner DirectRunner \
+  --input_table your-project-id:your_dataset.source_table \
+  --output_table your-project-id:your_dataset.destination_table
