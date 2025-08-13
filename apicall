@@ -1,80 +1,24 @@
-pip install apache-beam[gcp] google-cloud-bigquery
-gcloud auth application-default login
-gcloud config set project YOUR_PROJECT_ID
+<dependencies>
+  <dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-web</artifactId>
+  </dependency>
 
-
-import apache_beam as beam
-from apache_beam.options.pipeline_options import PipelineOptions, GoogleCloudOptions, StandardOptions, SetupOptions
-
-class CustomOptions(PipelineOptions):
-    @classmethod
-    def _add_argparse_args(cls, parser):
-        parser.add_value_provider_argument('--input_table', type=str, help='Input BigQuery table')
-        parser.add_value_provider_argument('--output_table', type=str, help='Output BigQuery table')
-
-def run():
-    pipeline_options = PipelineOptions()
-    google_cloud_options = pipeline_options.view_as(GoogleCloudOptions)
-    google_cloud_options.project = 'your-project-id'
-    google_cloud_options.job_name = 'bq-to-bq-job'
-    google_cloud_options.region = 'us-central1'
-    google_cloud_options.staging_location = 'gs://your-bucket-name/staging'
-    google_cloud_options.temp_location = 'gs://your-bucket-name/temp'
-
-    pipeline_options.view_as(StandardOptions).runner = 'DataflowRunner'
-    pipeline_options.view_as(SetupOptions).save_main_session = True
-
-    custom_options = pipeline_options.view_as(CustomOptions)
-
-    with beam.Pipeline(options=pipeline_options) as p:
-        (
-            p
-            | 'ReadFromBigQuery' >> beam.io.ReadFromBigQuery(table=custom_options.input_table)
-            # | 'Transform' >> beam.Map(lambda row: row)  # Optional: transformation logic
-            | 'WriteToBigQuery' >> beam.io.WriteToBigQuery(
-                table=custom_options.output_table,
-                write_disposition=beam.io.BigQueryDisposition.WRITE_TRUNCATE,
-                create_disposition=beam.io.BigQueryDisposition.CREATE_IF_NEEDED
-            )
-        )
-
-if __name__ == '__main__':
-    run()
-
-
-
-
-
-python bq_to_bq_pipeline.py \
-  --runner DataflowRunner \
-  --project your-project-id \
-  --region us-central1 \
-  --staging_location gs://your-bucket-name/staging \
-  --temp_location gs://your-bucket-name/temp \
-  --input_table your-dataset.source_table \
-  --output_table your-dataset.destination_table \
-  --job_name bq_to_bq_pipeline
-
-
-python bq_to_bq_pipeline.py \
-  --runner DirectRunner \
-  --input_table your-project-id:your_dataset.source_table \
-  --output_table your-project-id:your_dataset.destination_table
-
-
-
-
-python my_pipeline.py \
-  --runner DataflowRunner \
-  --project=my-project \
-  --region=us-central1 \
-  --staging_location=gs://my-bucket/staging \
-  --temp_location=gs://my-bucket/temp \
-  --template_location=gs://my-bucket/templates/bq_to_bq_template
-
-
-gcloud dataflow jobs run bq-to-bq-job \
-  --gcs-location=gs://my-bucket/templates/bq_to_bq_template \
-  --region=us-central1 \
-  --parameters input_table=my_dataset.source,output_table=my_dataset.target
-
+  <!-- Google API client + Dataflow v1b3 -->
+  <dependency>
+    <groupId>com.google.apis</groupId>
+    <artifactId>google-api-services-dataflow</artifactId>
+    <!-- Use the latest v1b3 rev available in Maven Central -->
+    <version>v1b3-rev20240709-2.0.0</version>
+  </dependency>
+  <dependency>
+    <groupId>com.google.api-client</groupId>
+    <artifactId>google-api-client</artifactId>
+    <version>2.5.0</version>
+  </dependency>
+  <dependency>
+    <groupId>com.google.auth</groupId>
+    <artifactId>google-auth-library-oauth2-http</artifactId>
+    <version>1.23.0</version>
+  </dependency>
+</dependencies>
