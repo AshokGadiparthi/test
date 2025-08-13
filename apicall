@@ -1,3 +1,15 @@
+7) What you get out of the box
+
+GET /api/dataflow/jobs
+Lists active jobs with id, name, type, state, createTime, currentStateTime.
+
+GET /api/dataflow/jobs/{jobId}/metrics?interestingOnly=true
+Handy subset (SystemLag, ElementCount, user counters, Bytes, etc.)
+Use without the flag to see all metric keys/values and pick what matters.
+
+GET /api/dataflow/jobs/{jobId}/warnings
+Recent warnings/errors to surface health signals.
+
 dataflow:
   projectId: your-gcp-project
   region: us-central1   # match where your jobs run (e.g., us-central1, europe-west1)
