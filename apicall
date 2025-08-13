@@ -1,24 +1,249 @@
-<dependencies>
-  <dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-web</artifactId>
-  </dependency>
+dataflow:
+  projectId: your-gcp-project
+  region: us-central1   # match where your jobs run (e.g., us-central1, europe-west1)
+  jobNamePrefix: nrt_   # optional: filter list by prefix
+server:
+  port: 8080
 
-  <!-- Google API client + Dataflow v1b3 -->
-  <dependency>
-    <groupId>com.google.apis</groupId>
-    <artifactId>google-api-services-dataflow</artifactId>
-    <!-- Use the latest v1b3 rev available in Maven Central -->
-    <version>v1b3-rev20240709-2.0.0</version>
-  </dependency>
-  <dependency>
-    <groupId>com.google.api-client</groupId>
-    <artifactId>google-api-client</artifactId>
-    <version>2.5.0</version>
-  </dependency>
-  <dependency>
-    <groupId>com.google.auth</groupId>
-    <artifactId>google-auth-library-oauth2-http</artifactId>
-    <version>1.23.0</version>
-  </dependency>
-</dependencies>
+
+package com.example.dataflow;
+
+import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
+import com.google.api.client.json.jackson2.JacksonFactory;
+import com.google.api.services.dataflow.Dataflow;
+import com.google.api.services.dataflow.DataflowScopes;
+import com.google.api.client.http.HttpRequestInitializer;
+import com.google.auth.http.HttpCredentialsAdapter;
+import com.google.auth.oauth2.GoogleCredentials;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class DataflowClientConfig {
+
+    @Value("${dataflow.projectId}")
+    private String projectId;
+
+    @Value("${dataflow.region}")
+    private String region;
+
+    @Bean
+    public Dataflow dataflowClient() throws Exception {
+        GoogleCredentials creds = GoogleCredentials.getApplicationDefault()
+                .createScoped(DataflowScopes.CLOUD_PLATFORM);
+        HttpRequestInitializer requestInitializer = new HttpCredentialsAdapter(creds);
+
+        return new Dataflow.Builder(
+                GoogleNetHttpTransport.newTrustedTransport(),
+                JacksonFactory.getDefaultInstance(),
+                requestInitializer)
+                .setApplicationName("spring-boot-dataflow-monitor")
+                .build();
+    }
+
+    @Bean
+    public DataflowSettings dataflowSettings() {
+        return new DataflowSettings(projectId, region);
+    }
+
+    public record DataflowSettings(String projectId, String region) {}
+}
+
+
+
+
+package com.example.dataflow;
+
+import com.google.api.services.dataflow.Dataflow;
+import com.google.api.services.dataflow.model.Job;
+import com.google.api.services.dataflow.model.ListJobMessagesResponse;
+import com.google.api.services.dataflow.model.ListJobsResponse;
+import com.google.api.services.dataflow.model.MetricUpdate;
+import com.google.api.services.dataflow.model.JobMessage;
+import org.springframework.stereotype.Service;
+
+import java.io.IOException;
+import java.time.Instant;
+import java.util.*;
+import java.util.stream.Collectors;
+
+@Service
+public class DataflowMonitorService {
+
+    private final Dataflow dataflow;
+    private final DataflowClientConfig.DataflowSettings settings;
+
+    public DataflowMonitorService(Dataflow dataflow, DataflowClientConfig.DataflowSettings settings) {
+        this.dataflow = dataflow;
+        this.settings = settings;
+    }
+
+    /** List ACTIVE jobs (Running, Pending, Cancelling, etc.). Use filter=ALL to include Done/Failed. */
+    public List<JobSummary> listJobs(String namePrefix, String filter) throws IOException {
+        String project = settings.projectId();
+        String region = settings.region();
+
+        ListJobsResponse resp = dataflow.projects().locations().jobs()
+                .list(project, region)
+                .setFilter(filter == null ? "ACTIVE" : filter) // ACTIVE | TERMINATED | ALL
+                .execute();
+
+        if (resp.getJobs() == null) return List.of();
+
+        return resp.getJobs().stream()
+                .filter(j -> namePrefix == null || j.getName().startsWith(namePrefix))
+                .map(JobSummary::from)
+                .sorted(Comparator.comparing(JobSummary::currentStateTime).reversed())
+                .collect(Collectors.toList());
+    }
+
+    /** Fetch raw job by id. */
+    public Job getJob(String jobId) throws IOException {
+        return dataflow.projects().locations().jobs()
+                .get(settings.projectId(), settings.region(), jobId)
+                .execute();
+    }
+
+    /** Pull metrics and flatten into key/value map: step.metricName -> value (if scalar). */
+    public Map<String, Object> getJobMetrics(String jobId) throws IOException {
+        var metricsResp = dataflow.projects().locations().jobs()
+                .getMetrics(settings.projectId(), settings.region(), jobId)
+                .execute();
+
+        List<MetricUpdate> updates = Optional.ofNullable(metricsResp.getMetrics()).orElse(List.of());
+
+        Map<String, Object> map = new LinkedHashMap<>();
+        for (MetricUpdate mu : updates) {
+            String key = metricKey(mu);
+            Object val = mu.getScalar() != null ? mu.getScalar() : mu.getMeanSum() != null ? mu.getMeanSum() : mu.getDistribution() != null ? mu.getDistribution() : null;
+            map.put(key, val);
+        }
+        return map;
+    }
+
+    /** Convenience filters for common metrics. */
+    public Map<String, Object> getInterestingMetrics(String jobId) throws IOException {
+        Map<String, Object> all = getJobMetrics(jobId);
+        // Common useful keys (names vary by runner/SDK); keep loose matches:
+        return all.entrySet().stream()
+                .filter(e ->
+                        e.getKey().contains("ElementCount") ||
+                        e.getKey().contains("SystemLag") ||
+                        e.getKey().contains("user-") ||
+                        e.getKey().contains("DroppedElements") ||
+                        e.getKey().contains("Bytes") ||
+                        e.getKey().contains("Backlog") ||
+                        e.getKey().contains("Parallelism"))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (a,b)->a, LinkedHashMap::new));
+    }
+
+    /** Pull recent WARNING/ERROR job messages (helpful for health). */
+    public List<JobMessage> getRecentWarnings(String jobId, String minImportance) throws IOException {
+        var resp = dataflow.projects().locations().jobs().messages()
+                .list(settings.projectId(), settings.region(), jobId)
+                .setMinimumImportance(minImportance == null ? "JOB_MESSAGE_WARNING" : minImportance) // JOB_MESSAGE_DEBUG|BASIC|WARNING|ERROR
+                .execute();
+
+        return Optional.ofNullable(resp.getJobMessages()).orElse(List.of());
+    }
+
+    private static String metricKey(MetricUpdate mu) {
+        // Build a readable path like "stepName:ElementCount"
+        String step = Optional.ofNullable(mu.getName())
+                .map(n -> n.getContext() != null ? n.getContext().get("step") : null)
+                .orElse(null);
+        String name = Optional.ofNullable(mu.getName()).map(n -> n.getName()).orElse("unknown");
+        return (step != null ? step + ":" : "") + name;
+    }
+
+    /** Small DTO for job list UI/API consumers. */
+    public record JobSummary(
+            String id,
+            String name,
+            String type,             // JOB_TYPE_BATCH | JOB_TYPE_STREAMING
+            String state,            // JOB_STATE_RUNNING, DONE, FAILED, ...
+            Instant createTime,
+            Instant currentStateTime,
+            String environmentVersion
+    ) {
+        static JobSummary from(Job j) {
+            return new JobSummary(
+                    j.getId(),
+                    j.getName(),
+                    j.getType(),
+                    j.getCurrentState(),
+                    parseInstant(j.getCreateTime()),
+                    parseInstant(j.getCurrentStateTime()),
+                    j.getEnvironment() != null && j.getEnvironment().getVersion() != null
+                            ? j.getEnvironment().getVersion().toString() : null
+            );
+        }
+
+        private static Instant parseInstant(String ts) {
+            try {
+                return ts == null ? null : Instant.parse(ts);
+            } catch (Exception e) {
+                return null;
+            }
+        }
+    }
+}
+
+
+package com.example.dataflow;
+
+import com.google.api.services.dataflow.model.JobMessage;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.bind.annotation.*;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/dataflow")
+public class DataflowController {
+
+    private final DataflowMonitorService service;
+
+    @Value("${dataflow.jobNamePrefix:}")
+    private String defaultPrefix;
+
+    public DataflowController(DataflowMonitorService service) {
+        this.service = service;
+    }
+
+    /** GET /api/dataflow/jobs?filter=ACTIVE|ALL|TERMINATED&prefix=myjob_ */
+    @GetMapping("/jobs")
+    public List<DataflowMonitorService.JobSummary> listJobs(
+            @RequestParam(required = false) String filter,
+            @RequestParam(required = false) String prefix
+    ) throws IOException {
+        String namePrefix = (prefix != null && !prefix.isBlank()) ? prefix :
+                (defaultPrefix != null && !defaultPrefix.isBlank() ? defaultPrefix : null);
+        return service.listJobs(namePrefix, filter);
+    }
+
+    /** GET /api/dataflow/jobs/{jobId}/metrics (all metrics, flattened) */
+    @GetMapping("/jobs/{jobId}/metrics")
+    public Map<String, Object> getMetrics(@PathVariable String jobId,
+                                          @RequestParam(defaultValue = "false") boolean interestingOnly)
+            throws IOException {
+        return interestingOnly ? service.getInterestingMetrics(jobId) : service.getJobMetrics(jobId);
+    }
+
+    /** GET /api/dataflow/jobs/{jobId}/warnings */
+    @GetMapping("/jobs/{jobId}/warnings")
+    public List<JobMessage> getWarnings(@PathVariable String jobId,
+                                        @RequestParam(required = false) String minImportance)
+            throws IOException {
+        return service.getRecentWarnings(jobId, minImportance);
+    }
+}
+
+
+
+gcloud auth application-default login
+export GOOGLE_CLOUD_PROJECT=your-gcp-project
+
