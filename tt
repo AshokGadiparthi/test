@@ -1,393 +1,1108 @@
----
-# config.yaml (host on GCS, passed via --configGcsPath)
-dataQuality:
-  # Composite join key fields
-  joinKeys:
-    - cust_id
-    - acct_num
-    - mtn
-  # Dynamic list of any number of comparison columns
-  comparison:
-    columns: [status, balance, last_update]
-    ruleType: "equals"
-stages:
-  - name: orig
-    type: BIGQUERY
-    table: "PROJECT:DS.table1"
-    jsonRoot: ""       # flat schema
-  - name: gg_replica
-    type: BIGQUERY
-    table: "PROJECT:DS.gg_replica"
-    jsonRoot: "/after" # JSON under $.after
-  - name: payloads
-    type: BIGQUERY
-    table: "PROJECT:DS.payloads_table"
-    jsonRoot: ""       # JSON root
-  - name: new
-    type: BIGQUERY
-    table: "PROJECT:DS.table2"
-    jsonRoot: ""       # flat
-outputs:
-  audit:       "PROJECT:DS.compare_audit"
-  rootCause:   "PROJECT:DS.compare_root_cause"
-  parseErrors: "PROJECT:DS.data_quality_parse_errors"
----
+# Mesh CDC (MariaDB) — Self‑Service Spanner→Dataflow→BigQuery Backend
 
-// AppConfig.java
-package com.trustiq.config;
+A **production‑grade Spring Boot backend** that turns your existing Dataflow CDC Docker image into **self‑service, contract‑first Data Mesh data products**.
 
-import java.util.List;
+- **MariaDB/MySQL + JPA + Flyway** persistence
+- **Contract → Provision → Launch (Flex Template)** flow
+- **Sidecar SLOs + Dataflow metrics** → health API
+- **Access requests** + **basic DQ** scaffolding
+- Cleanly split **controllers / services / entities**
 
-public class AppConfig {
-    private DataQualityConfig dataQuality;
-    private List<StageConfig> stages;
-    private Outputs outputs;
-
-    public DataQualityConfig getDataQuality() { return dataQuality; }
-    public void setDataQuality(DataQualityConfig dq) { this.dataQuality = dq; }
-
-    public List<StageConfig> getStages() { return stages; }
-    public void setStages(List<StageConfig> stages) { this.stages = stages; }
-
-    public Outputs getOutputs() { return outputs; }
-    public void setOutputs(Outputs outputs) { this.outputs = outputs; }
-
-    public static class Outputs {
-        private String audit;
-        private String rootCause;
-        private String parseErrors;
-
-        public String getAudit() { return audit; }
-        public void setAudit(String audit) { this.audit = audit; }
-
-        public String getRootCause() { return rootCause; }
-        public void setRootCause(String rootCause) { this.rootCause = rootCause; }
-
-        public String getParseErrors() { return parseErrors; }
-        public void setParseErrors(String parseErrors) { this.parseErrors = parseErrors; }
-    }
-}
-
-// DataQualityConfig.java
-package com.trustiq.config;
-
-import java.util.List;
-
-public class DataQualityConfig {
-    private List<String> joinKeys;
-    private ComparisonConfig comparison;
-
-    public List<String> getJoinKeys() { return joinKeys; }
-    public void setJoinKeys(List<String> joinKeys) { this.joinKeys = joinKeys; }
-
-    public ComparisonConfig getComparison() { return comparison; }
-    public void setComparison(ComparisonConfig comparison) { this.comparison = comparison; }
-}
-
-// ComparisonConfig.java
-package com.trustiq.config;
-
-import java.util.List;
-
-public class ComparisonConfig {
-    private List<String> columns;
-    private String ruleType;
-
-    public List<String> getColumns() { return columns; }
-    public void setColumns(List<String> columns) { this.columns = columns; }
-
-    public String getRuleType() { return ruleType; }
-    public void setRuleType(String ruleType) { this.ruleType = ruleType; }
-}
-
-// StageConfig.java
-package com.trustiq.config;
-
-public class StageConfig {
-    private String name;
-    private String type;
-    private String table;
-    private String jsonRoot;
-
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-
-    public String getType() { return type; }
-    public void setType(String type) { this.type = type; }
-
-    public String getTable() { return table; }
-    public void setTable(String table) { this.table = table; }
-
-    public String getJsonRoot() { return jsonRoot; }
-    public void setJsonRoot(String jsonRoot) { this.jsonRoot = jsonRoot; }
-}
+> You provide the Dataflow **Docker image** and a **Flex Template containerSpec.json** in GCS. The backend writes a per‑product **replication config JSON** to GCS and launches a Flex job with it.
 
 ---
 
-// DataQualityPipeline.java
-package com.trustiq.pipeline;
+## Project layout
+```
+mesh-cdc/
+├─ pom.xml
+├─ README.md
+├─ docker-compose.mariadb.yml
+├─ src/main/resources/
+│  ├─ application.yml
+│  ├─ openapi.yaml
+│  └─ db/migration/V1__init.sql
+├─ src/main/java/com/example/meshcdc/
+│  ├─ MeshCdcApplication.java
+│  ├─ config/GoogleClientsConfig.java
+│  ├─ model/ReplicationContract.java
+│  ├─ util/JsonUtil.java
+│  ├─ jpa/
+│  │  ├─ Entities.java
+│  │  ├─ MoreEntities.java
+│  │  └─ Repos.java
+│  ├─ service/
+│  │  ├─ ProductService.java
+│  │  ├─ PipelineService.java
+│  │  ├─ ProvisionerService.java
+│  │  ├─ DataflowLauncherService.java
+│  │  ├─ HealthService.java
+│  │  └─ DqService.java
+│  └─ web/
+│     ├─ V2Controllers.java
+│     ├─ ObservabilityController.java
+│     └─ AccessController.java
+```
 
-import com.fasterxml.jackson.databind.JsonNode;
+---
+
+## pom.xml
+```xml
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.example</groupId>
+  <artifactId>mesh-cdc</artifactId>
+  <version>1.0.0</version>
+  <properties>
+    <java.version>17</java.version>
+    <spring.boot.version>3.3.2</spring.boot.version>
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-dependencies</artifactId>
+        <version>${spring.boot.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-validation</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-data-jpa</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.flywaydb</groupId>
+      <artifactId>flyway-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.mariadb.jdbc</groupId>
+      <artifactId>mariadb-java-client</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+
+    <!-- Google Cloud clients -->
+    <dependency>
+      <groupId>com.google.cloud</groupId>
+      <artifactId>google-cloud-storage</artifactId>
+      <version>2.40.1</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.cloud</groupId>
+      <artifactId>google-cloud-bigquery</artifactId>
+      <version>2.44.0</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.apis</groupId>
+      <artifactId>google-api-services-dataflow</artifactId>
+      <version>v1b3-rev20240709-2.0.0</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.auth</groupId>
+      <artifactId>google-auth-library-oauth2-http</artifactId>
+      <version>1.23.0</version>
+    </dependency>
+
+    <!-- JSON -->
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.datatype</groupId>
+      <artifactId>jackson-datatype-jsr310</artifactId>
+    </dependency>
+
+    <!-- OpenAPI UI (optional) -->
+    <dependency>
+      <groupId>org.springdoc</groupId>
+      <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+      <version>2.5.0</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
+</project>
+```
+
+---
+
+## docker-compose.mariadb.yml
+```yaml
+version: "3.9"
+services:
+  db:
+    image: mariadb:11
+    environment:
+      MYSQL_DATABASE: mesh
+      MYSQL_USER: mesh
+      MYSQL_PASSWORD: mesh
+      MYSQL_ROOT_PASSWORD: root
+    command: ["--character-set-server=utf8mb4","--collation-server=utf8mb4_unicode_ci"]
+    ports: ["3306:3306"]
+    volumes:
+      - mysqldata:/var/lib/mysql
+volumes:
+  mysqldata: {}
+```
+
+---
+
+## src/main/resources/application.yml
+```yaml
+server:
+  port: 8080
+
+spring:
+  datasource:
+    url: jdbc:mariadb://${DB_HOST:localhost}:3306/${DB_NAME:mesh}?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC
+    username: ${DB_USER:mesh}
+    password: ${DB_PASS:mesh}
+    driver-class-name: org.mariadb.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MariaDBDialect
+  flyway:
+    enabled: true
+
+mesh:
+  project-id: ${GCP_PROJECT:your-project}
+  region: ${REGION:us-central1}
+  config-bucket: ${CFG_BUCKET:your-project-mesh-config}
+  bigquery:
+    location: ${BQ_LOCATION:US}
+    sidecar-table: ${BQ_SIDECAR:${GCP_PROJECT:your-project}.dp_orders.mesh_sync_status}
+  dataflow:
+    # Either set containerSpecGcs to a gs:// path OR ensure the spec exists at that path.
+    containerSpecGcs: ${FLEX_SPEC_GCS:gs://your-bucket/flex/containerSpec.json}
+    image: ${DATAFLOW_IMAGE:gcr.io/your-project/spanner-bq-repl:1.0.0}
+    service-account: ${SA_EMAIL:dp-mesh@your-project.iam.gserviceaccount.com}
+    temp-location: gs://${CFG_BUCKET:your-project-mesh-config}/tmp
+```
+
+> **Note:** BigQuery dataset locations are like `US`, `EU`, or a regional location; set `BQ_LOCATION` to match your target dataset.
+
+---
+
+## src/main/resources/db/migration/V1__init.sql
+```sql
+-- MariaDB schema (UUID as CHAR(36), JSON columns, UTC timestamps)
+CREATE TABLE domain (
+  id CHAR(36) PRIMARY KEY,
+  name VARCHAR(255) UNIQUE NOT NULL,
+  owner_email VARCHAR(320) NOT NULL,
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
+);
+
+CREATE TABLE data_product (
+  id CHAR(36) PRIMARY KEY,
+  domain_id CHAR(36),
+  product_key VARCHAR(255) UNIQUE NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  owner_email VARCHAR(320) NOT NULL,
+  visibility VARCHAR(32) DEFAULT 'INTERNAL',
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  CONSTRAINT fk_dp_domain FOREIGN KEY (domain_id) REFERENCES domain(id)
+);
+
+CREATE TABLE data_product_tags (
+  product_id CHAR(36) NOT NULL,
+  tag VARCHAR(255) NOT NULL,
+  PRIMARY KEY (product_id, tag),
+  CONSTRAINT fk_tags_product FOREIGN KEY (product_id) REFERENCES data_product(id) ON DELETE CASCADE
+);
+
+CREATE TABLE data_contract (
+  id CHAR(36) PRIMARY KEY,
+  product_id CHAR(36) NOT NULL,
+  version VARCHAR(64) NOT NULL,
+  spec_json JSON NOT NULL,
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  created_by VARCHAR(320),
+  CONSTRAINT fk_contract_product FOREIGN KEY (product_id) REFERENCES data_product(id) ON DELETE CASCADE
+);
+
+CREATE TABLE pipeline (
+  id CHAR(36) PRIMARY KEY,
+  product_id CHAR(36) NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  template VARCHAR(64) NOT NULL,
+  spec_json JSON,
+  last_job_id VARCHAR(128),
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  CONSTRAINT fk_pipeline_product FOREIGN KEY (product_id) REFERENCES data_product(id) ON DELETE CASCADE
+);
+
+CREATE TABLE pipeline_run (
+  id CHAR(36) PRIMARY KEY,
+  pipeline_id CHAR(36) NOT NULL,
+  external_run_id VARCHAR(128),
+  status VARCHAR(32),
+  started_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  finished_at DATETIME(3),
+  metrics_json JSON,
+  CONSTRAINT fk_run_pipeline FOREIGN KEY (pipeline_id) REFERENCES pipeline(id) ON DELETE CASCADE
+);
+
+CREATE TABLE dq_rule (
+  id CHAR(36) PRIMARY KEY,
+  product_id CHAR(36) NOT NULL,
+  dataset_ref VARCHAR(512) NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  type VARCHAR(64) NOT NULL,
+  expr TEXT NOT NULL,
+  threshold VARCHAR(64),
+  owner_email VARCHAR(320),
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  CONSTRAINT fk_rule_product FOREIGN KEY (product_id) REFERENCES data_product(id) ON DELETE CASCADE
+);
+
+CREATE TABLE dq_result (
+  id CHAR(36) PRIMARY KEY,
+  rule_id CHAR(36) NOT NULL,
+  window_start DATETIME(3),
+  window_end DATETIME(3),
+  status VARCHAR(32),
+  passed_pct DOUBLE,
+  fail_count BIGINT,
+  link VARCHAR(1024),
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  CONSTRAINT fk_result_rule FOREIGN KEY (rule_id) REFERENCES dq_rule(id) ON DELETE CASCADE
+);
+
+CREATE TABLE access_request (
+  id CHAR(36) PRIMARY KEY,
+  product_id CHAR(36) NOT NULL,
+  dataset_ref VARCHAR(512) NOT NULL,
+  columns JSON,
+  principal VARCHAR(320) NOT NULL,
+  purpose VARCHAR(512),
+  duration_days INT,
+  status VARCHAR(32) DEFAULT 'PENDING',
+  decided_by VARCHAR(320),
+  decided_at DATETIME(3),
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  CONSTRAINT fk_access_product FOREIGN KEY (product_id) REFERENCES data_product(id) ON DELETE CASCADE
+);
+
+CREATE TABLE audit_event (
+  id CHAR(36) PRIMARY KEY,
+  entity_type VARCHAR(64),
+  entity_id VARCHAR(128),
+  actor VARCHAR(320),
+  action VARCHAR(128),
+  payload_json JSON,
+  at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
+);
+```
+
+---
+
+## src/main/resources/openapi.yaml
+```yaml
+openapi: 3.0.3
+info: {title: Mesh CDC API, version: 1.0.0}
+paths:
+  /v2/products:
+    post: {summary: Create product}
+  /v2/products/{id}/contract:
+    put: {summary: Upsert contract}
+  /v2/products/{id}/provision:apply:
+    post: {summary: Provision BQ + write per-product config}
+  /v2/pipelines:
+    post: {summary: Create pipeline}
+  /v2/pipelines/{id}:deploy:
+    post: {summary: Launch Flex job}
+  /v1/observability/products/{productId}/health:
+    get: {summary: Health (Dataflow + sidecar + freshness)}
+  /v2/access/requests:
+    post: {summary: Request access}
+  /v2/access/requests/{id}:approve:
+    post: {summary: Approve access request}
+  /v2/access/requests/{id}:reject:
+    post: {summary: Reject access request}
+```
+
+---
+
+## src/main/java/com/example/meshcdc/MeshCdcApplication.java
+```java
+package com.example.meshcdc;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class MeshCdcApplication {
+  public static void main(String[] args) {
+    SpringApplication.run(MeshCdcApplication.class, args);
+  }
+}
+```
+
+---
+
+## src/main/java/com/example/meshcdc/config/GoogleClientsConfig.java
+```java
+package com.example.meshcdc.config;
+
+import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
+import com.google.api.client.http.HttpRequestInitializer;
+import com.google.api.client.json.jackson2.JacksonFactory;
+import com.google.api.services.dataflow.Dataflow;
+import com.google.api.services.dataflow.DataflowScopes;
+import com.google.auth.http.HttpCredentialsAdapter;
+import com.google.auth.oauth2.GoogleCredentials;
+import com.google.cloud.bigquery.BigQuery;
+import com.google.cloud.bigquery.BigQueryOptions;
+import com.google.cloud.storage.Storage;
+import com.google.cloud.storage.StorageOptions;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class GoogleClientsConfig {
+  @Bean
+  public Storage storage() { return StorageOptions.getDefaultInstance().getService(); }
+
+  @Bean
+  public BigQuery bigQuery() { return BigQueryOptions.getDefaultInstance().getService(); }
+
+  @Bean
+  public Dataflow dataflow() throws Exception {
+    GoogleCredentials creds = GoogleCredentials.getApplicationDefault().createScoped(DataflowScopes.CLOUD_PLATFORM);
+    HttpRequestInitializer hri = new HttpCredentialsAdapter(creds);
+    return new Dataflow.Builder(
+        GoogleNetHttpTransport.newTrustedTransport(),
+        JacksonFactory.getDefaultInstance(),
+        hri).setApplicationName("mesh-cdc").build();
+  }
+}
+```
+
+---
+
+## src/main/java/com/example/meshcdc/model/ReplicationContract.java
+```java
+package com.example.meshcdc.model;
+
+import com.fasterxml.jackson.annotation.JsonInclude;
+import jakarta.validation.constraints.NotBlank;
+import java.util.List;
+import java.util.Map;
+
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class ReplicationContract {
+  public String version;
+  public Replication replication;
+
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public static class Replication {
+    public Source source;
+    public Sink sink;
+    public Privacy privacy;
+    public Slos slos;
+    public Sidecar sidecar;
+    public Backfill backfill;
+  }
+
+  public static class Source { // Spanner Change Streams
+    @NotBlank public String type; // SPANNER_CHANGE_STREAM
+    @NotBlank public String instance;
+    @NotBlank public String database;
+    @NotBlank public String changeStream;
+    public List<TableSpec> tables;
+  }
+  public static class TableSpec { public String name; public List<String> pk; public String commitTsCol; }
+
+  public static class Sink { // BigQuery
+    @NotBlank public String type; // BIGQUERY
+    @NotBlank public String project;
+    @NotBlank public String dataset;
+    @NotBlank public String table;
+    public Partition partition; public List<String> cluster; public String writeMode; // UPSERT
+    public Dlq dlq;
+  }
+  public static class Partition { public String field; public String type; }
+  public static class Dlq { public String type; public String bucket; }
+
+  public static class Privacy { public Map<String,String> policyTags; }
+  public static class Slos { public Integer freshnessMinutes; public Double completenessPct; }
+  public static class Sidecar { public String statusTable; }
+  public static class Backfill { public boolean enabled; public String snapshotTime; }
+}
+```
+
+---
+
+## src/main/java/com/example/meshcdc/util/JsonUtil.java
+```java
+package com.example.meshcdc.util;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.api.services.bigquery.model.*;
-import com.google.cloud.bigquery.LegacySQLTypeName;
-import com.trustiq.config.*;
-import org.apache.beam.runners.dataflow.DataflowRunner;
-import org.apache.beam.sdk.Pipeline;
-import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
-import org.apache.beam.sdk.options.*;
-import org.apache.beam.sdk.transforms.*;
-import org.apache.beam.sdk.transforms.join.CoGbkResult;
-import org.apache.beam.sdk.transforms.join.KeyedPCollectionTuple;
-import org.apache.beam.sdk.transforms.join.TupleTag;
-import org.apache.beam.sdk.values.*;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
-import java.io.IOException;
+public class JsonUtil {
+  private static final ObjectMapper M = new ObjectMapper().registerModule(new JavaTimeModule());
+  public static ObjectMapper MAPPER() { return M; }
+  public static byte[] toJsonBytes(Object o) throws Exception { return M.writerWithDefaultPrettyPrinter().writeValueAsBytes(o); }
+  public static String toJson(Object o) throws Exception { return M.writerWithDefaultPrettyPrinter().writeValueAsString(o); }
+  public static <T> T fromJson(String s, Class<T> cls) throws Exception { return M.readValue(s, cls); }
+}
+```
+
+---
+
+## src/main/java/com/example/meshcdc/jpa/Entities.java
+```java
+package com.example.meshcdc.jpa;
+
+import jakarta.persistence.*;
 import java.time.Instant;
 import java.util.*;
+
+@Entity @Table(name="domain")
+public class DomainEntity {
+  @Id @Column(length=36) public String id = java.util.UUID.randomUUID().toString();
+  @Column(nullable=false, unique=true) public String name;
+  @Column(name="owner_email", nullable=false) public String ownerEmail;
+  @Column(name="created_at", nullable=false) public Instant createdAt = Instant.now();
+}
+
+@Entity @Table(name="data_product")
+public class ProductEntity {
+  @Id @Column(length=36) public String id = java.util.UUID.randomUUID().toString();
+  @ManyToOne @JoinColumn(name="domain_id") public DomainEntity domain;
+  @Column(name="product_key", nullable=false, unique=true) public String productKey;
+  @Column(nullable=false) public String name;
+  @Column(name="owner_email", nullable=false) public String ownerEmail;
+  public String visibility = "INTERNAL";
+  @ElementCollection @CollectionTable(name="data_product_tags", joinColumns=@JoinColumn(name="product_id"))
+  @Column(name="tag") public Set<String> tags = new HashSet<>();
+  @Column(name="created_at", nullable=false) public Instant createdAt = Instant.now();
+}
+
+@Entity @Table(name="data_contract")
+public class ContractEntity {
+  @Id @Column(length=36) public String id = java.util.UUID.randomUUID().toString();
+  @ManyToOne @JoinColumn(name="product_id", nullable=false) public ProductEntity product;
+  @Column(nullable=false) public String version;
+  @Column(name="spec_json", columnDefinition="json", nullable=false) public String specJson;
+  @Column(name="created_at", nullable=false) public Instant createdAt = Instant.now();
+  @Column(name="created_by") public String createdBy;
+}
+
+@Entity @Table(name="pipeline")
+public class PipelineEntity {
+  @Id @Column(length=36) public String id = java.util.UUID.randomUUID().toString();
+  @ManyToOne @JoinColumn(name="product_id", nullable=false) public ProductEntity product;
+  @Column(nullable=false) public String name;
+  @Column(nullable=false) public String template; // DATAFLOW_FLEX
+  @Column(name="spec_json", columnDefinition="json") public String specJson;
+  @Column(name="last_job_id") public String lastJobId;
+  @Column(name="created_at", nullable=false) public Instant createdAt = Instant.now();
+}
+```
+
+---
+
+## src/main/java/com/example/meshcdc/jpa/MoreEntities.java
+```java
+package com.example.meshcdc.jpa;
+
+import jakarta.persistence.*;
+import java.time.Instant;
+
+@Entity @Table(name="pipeline_run")
+public class PipelineRunEntity {
+  @Id @Column(length=36) public String id = java.util.UUID.randomUUID().toString();
+  @ManyToOne @JoinColumn(name="pipeline_id", nullable=false) public PipelineEntity pipeline;
+  @Column(name="external_run_id") public String externalRunId;
+  public String status;
+  @Column(name="started_at") public Instant startedAt = Instant.now();
+  @Column(name="finished_at") public Instant finishedAt;
+  @Column(name="metrics_json", columnDefinition="json") public String metricsJson;
+}
+
+@Entity @Table(name="dq_rule")
+public class DqRuleEntity {
+  @Id @Column(length=36) public String id = java.util.UUID.randomUUID().toString();
+  @ManyToOne @JoinColumn(name="product_id", nullable=false) public ProductEntity product;
+  @Column(name="dataset_ref", nullable=false) public String datasetRef;
+  @Column(nullable=false) public String name;
+  @Column(nullable=false) public String type; // COMPLETENESS, VALIDATION
+  @Column(nullable=false, columnDefinition="TEXT") public String expr;
+  public String threshold; public String ownerEmail;
+  @Column(name="created_at") public Instant createdAt = Instant.now();
+}
+
+@Entity @Table(name="dq_result")
+public class DqResultEntity {
+  @Id @Column(length=36) public String id = java.util.UUID.randomUUID().toString();
+  @ManyToOne @JoinColumn(name="rule_id", nullable=false) public DqRuleEntity rule;
+  @Column(name="window_start") public Instant windowStart;
+  @Column(name="window_end") public Instant windowEnd;
+  public String status; public Double passedPct; public Long failCount; public String link;
+  @Column(name="created_at") public Instant createdAt = Instant.now();
+}
+
+@Entity @Table(name="access_request")
+public class AccessRequestEntity {
+  @Id @Column(length=36) public String id = java.util.UUID.randomUUID().toString();
+  @ManyToOne @JoinColumn(name="product_id", nullable=false) public ProductEntity product;
+  @Column(name="dataset_ref", nullable=false) public String datasetRef;
+  @Column(name="columns", columnDefinition="json") public String columnsJson; // JSON array
+  public String principal; public String purpose; @Column(name="duration_days") public Integer durationDays;
+  public String status = "PENDING"; public String decidedBy; public java.time.Instant decidedAt;
+  @Column(name="created_at") public java.time.Instant createdAt = java.time.Instant.now();
+}
+
+@Entity @Table(name="audit_event")
+public class AuditEventEntity {
+  @Id @Column(length=36) public String id = java.util.UUID.randomUUID().toString();
+  @Column(name="entity_type") public String entityType;
+  @Column(name="entity_id") public String entityId;
+  public String actor; public String action;
+  @Column(name="payload_json", columnDefinition="json") public String payloadJson;
+  @Column(name="at") public java.time.Instant at = java.time.Instant.now();
+}
+```
+
+---
+
+## src/main/java/com/example/meshcdc/jpa/Repos.java
+```java
+package com.example.meshcdc.jpa;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import java.util.*;
+
+public interface DomainRepo extends JpaRepository<DomainEntity, String> {}
+public interface ProductRepo extends JpaRepository<ProductEntity, String> {
+  Optional<ProductEntity> findByProductKey(String key);
+}
+public interface ContractRepo extends JpaRepository<ContractEntity, String> {
+  Optional<ContractEntity> findFirstByProductIdOrderByCreatedAtDesc(String productId);
+}
+public interface PipelineRepo extends JpaRepository<PipelineEntity, String> {
+  List<PipelineEntity> findByProductId(String productId);
+}
+public interface PipelineRunRepo extends JpaRepository<PipelineRunEntity, String> {}
+public interface DqRuleRepo extends JpaRepository<DqRuleEntity, String> { List<DqRuleEntity> findByProductId(String productId); }
+public interface DqResultRepo extends JpaRepository<DqResultEntity, String> {}
+public interface AccessRequestRepo extends JpaRepository<AccessRequestEntity, String> {}
+public interface AuditEventRepo extends JpaRepository<AuditEventEntity, String> {}
+```
+
+---
+
+## src/main/java/com/example/meshcdc/service/ProductService.java
+```java
+package com.example.meshcdc.service;
+
+import com.example.meshcdc.jpa.*;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.stereotype.Service;
+
+@Service
+public class ProductService {
+  private final ProductRepo productRepo; private final ContractRepo contractRepo; private final ObjectMapper M = new ObjectMapper();
+  public ProductService(ProductRepo pr, ContractRepo cr){ this.productRepo=pr; this.contractRepo=cr; }
+
+  public ProductEntity create(String productKey, String name, String ownerEmail){
+    ProductEntity p = new ProductEntity(); p.productKey=productKey; p.name=name; p.ownerEmail=ownerEmail; return productRepo.save(p);
+  }
+
+  public ContractEntity saveContract(String productId, String version, Object spec) throws Exception {
+    ProductEntity p = productRepo.findById(productId).orElseThrow();
+    ContractEntity c = new ContractEntity(); c.product=p; c.version=version; c.specJson=M.writeValueAsString(spec); return contractRepo.save(c);
+  }
+
+  public ContractEntity latest(String productId){ return contractRepo.findFirstByProductIdOrderByCreatedAtDesc(productId).orElse(null); }
+}
+```
+
+---
+
+## src/main/java/com/example/meshcdc/service/PipelineService.java
+```java
+package com.example.meshcdc.service;
+
+import com.example.meshcdc.jpa.*;
+import org.springframework.stereotype.Service;
+
+@Service
+public class PipelineService {
+  final PipelineRepo repo; final ProductRepo products; final PipelineRunRepo runs;
+  public PipelineService(PipelineRepo r, ProductRepo p, PipelineRunRepo runs){ this.repo=r; this.products=p; this.runs=runs; }
+
+  public PipelineEntity create(String productId, String name, String template){
+    PipelineEntity pl = new PipelineEntity(); pl.product = products.findById(productId).orElseThrow(); pl.name=name; pl.template=template; return repo.save(pl);
+  }
+
+  public PipelineEntity findById(String id){ return repo.findById(id).orElseThrow(); }
+
+  public void recordRun(PipelineEntity pl, String jobId){ pl.lastJobId = jobId; repo.save(pl); }
+}
+```
+
+---
+
+## src/main/java/com/example/meshcdc/service/ProvisionerService.java
+```java
+package com.example.meshcdc.service;
+
+import com.example.meshcdc.model.ReplicationContract;
+import com.example.meshcdc.util.JsonUtil;
+import com.google.cloud.bigquery.*;
+import com.google.cloud.storage.*;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+
+@Service
+public class ProvisionerService {
+  private final Storage storage; private final BigQuery bq;
+  private final String cfgBucket; private final String sidecarTable; private final String bqLocation;
+
+  public ProvisionerService(Storage storage, BigQuery bq,
+                            @Value("${mesh.config-bucket}") String cfgBucket,
+                            @Value("${mesh.bigquery.sidecar-table}") String sidecarTable,
+                            @Value("${mesh.bigquery.location}") String bqLocation) {
+    this.storage = storage; this.bq = bq; this.cfgBucket = cfgBucket; this.sidecarTable = sidecarTable; this.bqLocation = bqLocation;
+  }
+
+  public void ensureBigQuerySurface(ReplicationContract rc) throws Exception {
+    var s = rc.replication.sink;
+    DatasetId did = DatasetId.of(s.project, s.dataset);
+    if (bq.getDataset(did) == null) {
+      bq.create(DatasetInfo.newBuilder(did).setLocation(bqLocation).build());
+    }
+    TableId tid = TableId.of(s.project, s.dataset, s.table);
+    if (bq.getTable(tid) == null) {
+      var fields = List.of(
+          Field.of("order_id", StandardSQLTypeName.STRING),
+          Field.of("status", StandardSQLTypeName.STRING),
+          Field.of("amount", StandardSQLTypeName.NUMERIC),
+          Field.of("email", StandardSQLTypeName.STRING),
+          Field.of("_commit_ts", StandardSQLTypeName.TIMESTAMP),
+          Field.of("_op", StandardSQLTypeName.STRING)
+      );
+      StandardTableDefinition.Builder def = StandardTableDefinition.newBuilder().setSchema(Schema.of(fields));
+      if (s.partition != null && s.partition.field != null) {
+        def.setTimePartitioning(TimePartitioning.of(TimePartitioning.Type.DAY).toBuilder().setField(s.partition.field).build());
+      }
+      if (s.cluster != null && !s.cluster.isEmpty()) def.setClustering(Clustering.newBuilder().setFields(s.cluster).build());
+      bq.create(TableInfo.of(tid, def.build()));
+    }
+    // Ensure sidecar exists (recommended to pre-create via README DDL). Best-effort create if missing.
+    String[] parts = sidecarTable.split("\\.");
+    if (parts.length==3 && bq.getTable(TableId.of(parts[0], parts[1], parts[2]))==null) {
+      String ddl = "CREATE TABLE `"+sidecarTable+"` (" +
+          "src_database STRING, src_table STRING, " +
+          "last_seen_commit_ts TIMESTAMP, last_applied_commit_ts TIMESTAMP, " +
+          "backlog_seconds INT64, window_start TIMESTAMP, window_end TIMESTAMP, " +
+          "inserts INT64, updates INT64, deletes INT64, error_count INT64, last_error STRING, " +
+          "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP() ) PARTITION BY DATE(updated_at)";
+      bq.query(QueryJobConfiguration.newBuilder(ddl).build());
+    }
+  }
+
+  public String writeReplicationConfig(String productId, ReplicationContract rc) throws Exception {
+    String key = "replications/" + productId + ".json";
+    byte[] json = JsonUtil.toJsonBytes(rc.replication);
+    storage.create(BlobInfo.newBuilder(BlobId.of(cfgBucket, key)).build(), json);
+    return "gs://" + cfgBucket + "/" + key;
+  }
+}
+```
+
+---
+
+## src/main/java/com/example/meshcdc/service/DataflowLauncherService.java
+```java
+package com.example.meshcdc.service;
+
+import com.google.api.services.dataflow.Dataflow;
+import com.google.api.services.dataflow.model.*;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import java.io.IOException;
+import java.util.Map;
+
+@Service
+public class DataflowLauncherService {
+  private final Dataflow df; private final String projectId; private final String region; private final String flexSpecGcs; private final String saEmail; private final String tempLocation;
+
+  public DataflowLauncherService(Dataflow df,
+      @Value("${mesh.project-id}") String projectId,
+      @Value("${mesh.region}") String region,
+      @Value("${mesh.dataflow.containerSpecGcs}") String flexSpecGcs,
+      @Value("${mesh.dataflow.service-account}") String saEmail,
+      @Value("${mesh.dataflow.temp-location}") String tempLocation) {
+    this.df = df; this.projectId = projectId; this.region = region; this.flexSpecGcs = flexSpecGcs; this.saEmail = saEmail; this.tempLocation = tempLocation;
+  }
+
+  public String launchReplication(String jobName, String configLocation, String metricsTable, String dlqPath) throws IOException {
+    FlexTemplateRuntimeEnvironment env = new FlexTemplateRuntimeEnvironment()
+        .setServiceAccountEmail(saEmail)
+        .setTempLocation(tempLocation)
+        .setEnableStreamingEngine(true)
+        .setAdditionalUserLabels(Map.of("product", jobName));
+
+    LaunchFlexTemplateParameter param = new LaunchFlexTemplateParameter()
+        .setJobName(jobName)
+        .setContainerSpecGcsPath(flexSpecGcs)
+        .setEnvironment(env)
+        .setParameters(Map.of(
+            "configLocation", configLocation,
+            "metricsTable", metricsTable,
+            "dlqPath", dlqPath
+        ));
+
+    LaunchFlexTemplateRequest req = new LaunchFlexTemplateRequest().setLaunchParameter(param);
+    Dataflow.Projects.Locations.FlexTemplates.Launch call = df.projects().locations().flexTemplates().launch(projectId, region, req);
+    LaunchFlexTemplateResponse resp = call.execute();
+    return resp.getJob() != null ? resp.getJob().getId() : null;
+  }
+}
+```
+
+> Put your **containerSpec.json** at `gs://…/flex/containerSpec.json` and point `mesh.dataflow.containerSpecGcs` to it. Example at the end of this file.
+
+---
+
+## src/main/java/com/example/meshcdc/service/HealthService.java
+```java
+package com.example.meshcdc.service;
+
+import com.google.api.services.dataflow.Dataflow;
+import com.google.api.services.dataflow.model.JobMetrics;
+import com.google.api.services.dataflow.model.MetricUpdate;
+import com.google.cloud.bigquery.*;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import java.util.*;
+
+@Service
+public class HealthService {
+  private final Dataflow df; private final BigQuery bq;
+  private final String projectId; private final String region; private final String sidecarTable;
+
+  public HealthService(Dataflow df, BigQuery bq,
+      @Value("${mesh.project-id}") String projectId,
+      @Value("${mesh.region}") String region,
+      @Value("${mesh.bigquery.sidecar-table}") String sidecarTable) {
+    this.df = df; this.bq = bq; this.projectId = projectId; this.region = region; this.sidecarTable = sidecarTable;
+  }
+
+  public Map<String,Object> computeHealth(String jobId, String dataset, String table, int freshnessSloMin) throws Exception {
+    Double systemLagMin = fetchSystemLagMinutes(jobId);
+    long freshnessMin = queryFreshnessMinutes(projectId, dataset, table);
+    long backlogSec = queryBacklogSeconds();
+
+    String status;
+    if (systemLagMin.isNaN()) systemLagMin = -1.0; // tolerate empty early runs
+    if (freshnessMin <= freshnessSloMin && (systemLagMin < 0 || systemLagMin <= freshnessSloMin) && backlogSec <= freshnessSloMin*60) {
+      status = "GREEN";
+    } else if (freshnessMin <= freshnessSloMin*2) {
+      status = "YELLOW";
+    } else {
+      status = "RED";
+    }
+
+    return Map.of(
+        "status", status,
+        "freshnessMinutes", freshnessMin,
+        "systemLagMinutes", systemLagMin,
+        "backlogSeconds", backlogSec
+    );
+  }
+
+  private Double fetchSystemLagMinutes(String jobId) throws Exception {
+    if (jobId == null) return Double.NaN;
+    JobMetrics m = df.projects().locations().jobs().getMetrics(projectId, region, jobId).execute();
+    List<MetricUpdate> mus = m.getMetrics();
+    if (mus == null) return Double.NaN;
+    long maxLagMs = 0;
+    for (MetricUpdate mu : mus) {
+      try {
+        String n = mu.getName()!=null ? mu.getName().getName() : "";
+        String ctx = (mu.getName()!=null && mu.getName().getContext()!=null) ? mu.getName().getContext().toString() : "";
+        if (((n!=null && n.toLowerCase().contains("lag")) || ctx.toLowerCase().contains("lag")) && mu.getScalar()!=null) {
+          long v = Long.parseLong(mu.getScalar().toString());
+          if (v > maxLagMs) maxLagMs = v; // often ms
+        }
+      } catch (Exception ignore) {}
+    }
+    return maxLagMs > 0 ? (maxLagMs / 1000.0 / 60.0) : Double.NaN;
+  }
+
+  private long queryFreshnessMinutes(String project, String dataset, String table) throws Exception {
+    String sql = "SELECT TIMESTAMP_DIFF(CURRENT_TIMESTAMP(), MAX(_commit_ts), MINUTE) AS freshness_m FROM `"+project+"."+dataset+"."+table+"`";
+    TableResult tr = bq.query(QueryJobConfiguration.newBuilder(sql).build());
+    return tr.iterateAll().iterator().hasNext() ? tr.iterateAll().iterator().next().get("freshness_m").getLongValue() : -1L;
+  }
+
+  private long queryBacklogSeconds() throws Exception {
+    String sql = "SELECT IFNULL(MAX(backlog_seconds),0) AS backlog_s FROM `"+sidecarTable+"`";
+    TableResult tr = bq.query(QueryJobConfiguration.newBuilder(sql).build());
+    return tr.iterateAll().iterator().hasNext() ? tr.iterateAll().iterator().next().get("backlog_s").getLongValue() : 0L;
+  }
+}
+```
+
+---
+
+## src/main/java/com/example/meshcdc/service/DqService.java
+```java
+package com.example.meshcdc.service;
+
+import com.example.meshcdc.jpa.*;
+import com.google.cloud.bigquery.*;
+import org.springframework.stereotype.Service;
+import java.time.Instant;
+
+@Service
+public class DqService {
+  private final DqRuleRepo rules; private final DqResultRepo results; private final BigQuery bq;
+  public DqService(DqRuleRepo r, DqResultRepo res, BigQuery bq){ this.rules=r; this.results=res; this.bq=bq; }
+
+  public DqResultEntity runRule(DqRuleEntity rule) throws Exception {
+    String sql = "SELECT COUNT(1) AS fails FROM `"+rule.datasetRef+"` WHERE NOT("+rule.expr+")";
+    TableResult tr = bq.query(QueryJobConfiguration.newBuilder(sql).build());
+    long fails = tr.iterateAll().iterator().next().get("fails").getLongValue();
+    DqResultEntity r = new DqResultEntity(); r.rule = rule; r.windowStart = Instant.now(); r.windowEnd=r.windowStart; r.failCount=fails; r.passedPct = (fails==0?100.0:0.0); r.status = fails==0?"PASS":"FAIL"; return results.save(r);
+  }
+}
+```
+
+---
+
+## src/main/java/com/example/meshcdc/web/V2Controllers.java
+```java
+package com.example.meshcdc.web;
+
+import com.example.meshcdc.jpa.*;
+import com.example.meshcdc.model.ReplicationContract;
+import com.example.meshcdc.service.*;
+import com.example.meshcdc.util.JsonUtil;
+import org.springframework.web.bind.annotation.*;
+
+@RestController @RequestMapping("/v2/products")
+public class ProductsV2Controller {
+  private final ProductService svc; private final ProvisionerService prov;
+  public ProductsV2Controller(ProductService svc, ProvisionerService prov){ this.svc=svc; this.prov=prov; }
+
+  public record CreateProductReq(String productKey, String name, String ownerEmail) {}
+
+  @PostMapping public ProductEntity create(@RequestBody CreateProductReq r){ return svc.create(r.productKey(), r.name(), r.ownerEmail()); }
+
+  @PutMapping("/{id}/contract")
+  public ContractEntity upsertContract(@PathVariable String id, @RequestBody ReplicationContract rc) throws Exception { return svc.saveContract(id, rc.version, rc); }
+
+  @PostMapping("/{id}/provision:apply")
+  public java.util.Map<String,String> provision(@PathVariable String id) throws Exception {
+    var c = svc.latest(id); if (c==null) return java.util.Map.of("error","no contract");
+    ReplicationContract rc = JsonUtil.fromJson(c.specJson, ReplicationContract.class);
+    prov.ensureBigQuerySurface(rc);
+    String cfg = prov.writeReplicationConfig(id, rc);
+    return java.util.Map.of("configLocation", cfg);
+  }
+}
+
+@RestController @RequestMapping("/v2/pipelines")
+class PipelinesV2Controller {
+  private final PipelineService svc; private final ProductService products; private final DataflowLauncherService launcher;
+  public PipelinesV2Controller(PipelineService s, ProductService p, DataflowLauncherService l){ this.svc=s; this.products=p; this.launcher=l; }
+
+  public record CreatePipelineReq(String productId, String name, String template){}
+
+  @PostMapping public PipelineEntity create(@RequestBody CreatePipelineReq r){ return svc.create(r.productId(), r.name(), r.template()); }
+
+  @PostMapping("/{id}:deploy") public java.util.Map<String,String> deploy(@PathVariable String id) throws Exception {
+    PipelineEntity pl = svc.findById(id);
+    ContractEntity c = products.latest(pl.product.id);
+    ReplicationContract rc = JsonUtil.fromJson(c.specJson, ReplicationContract.class);
+    String cfg = "gs://"+System.getenv().getOrDefault("CFG_BUCKET", "")+"/replications/"+pl.product.id+".json";
+    String jobId = launcher.launchReplication(("repl-"+pl.product.id.substring(0,8)).toLowerCase(), cfg, rc.replication.sidecar.statusTable, "gs://"+System.getenv().getOrDefault("CFG_BUCKET", "")+"/dlq/"+pl.product.id+"/");
+    svc.recordRun(pl, jobId);
+    return java.util.Map.of("jobId", jobId);
+  }
+}
+```
+
+---
+
+## src/main/java/com/example/meshcdc/web/ObservabilityController.java
+```java
+package com.example.meshcdc.web;
+
+import com.example.meshcdc.jpa.*;
+import com.example.meshcdc.model.ReplicationContract;
+import com.example.meshcdc.service.HealthService;
+import com.example.meshcdc.util.JsonUtil;
+import org.springframework.web.bind.annotation.*;
+
+@RestController @RequestMapping("/v1/observability")
+public class ObservabilityController {
+  private final ContractRepo contracts; private final PipelineRepo pipelines; private final HealthService health;
+  public ObservabilityController(ContractRepo c, PipelineRepo p, HealthService h){ this.contracts=c; this.pipelines=p; this.health=h; }
+
+  @GetMapping("/products/{productId}/health")
+  public java.util.Map<String,Object> health(@PathVariable String productId) throws Exception {
+    ContractEntity c = contracts.findFirstByProductIdOrderByCreatedAtDesc(productId).orElse(null);
+    if (c==null) return java.util.Map.of("error","no contract");
+    ReplicationContract rc = JsonUtil.fromJson(c.specJson, ReplicationContract.class);
+    PipelineEntity pl = pipelines.findByProductId(productId).stream().findFirst().orElse(null);
+    String jobId = pl!=null ? pl.lastJobId : null;
+    var s = rc.replication.sink;
+    int freshnessSlo = rc.replication.slos!=null && rc.replication.slos.freshnessMinutes!=null ? rc.replication.slos.freshnessMinutes : 15;
+    return health.computeHealth(jobId, s.dataset, s.table, freshnessSlo);
+  }
+}
+```
+
+---
+
+## src/main/java/com/example/meshcdc/web/AccessController.java
+```java
+package com.example.meshcdc.web;
+
+import com.example.meshcdc.jpa.*;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.web.bind.annotation.*;
+
+@RestController @RequestMapping("/v2/access")
+public class AccessController {
+  private final AccessRequestRepo repo; private final ProductRepo products; private final ObjectMapper M = new ObjectMapper();
+  public AccessController(AccessRequestRepo r, ProductRepo p){ this.repo=r; this.products=p; }
+
+  public record AccessReq(String productId, String datasetRef, java.util.List<String> columns, String principal, String purpose, Integer durationDays){}
+
+  @PostMapping("/requests") public AccessRequestEntity request(@RequestBody AccessReq r) throws Exception {
+    AccessRequestEntity e = new AccessRequestEntity(); e.product = products.findById(r.productId()).orElseThrow(); e.datasetRef=r.datasetRef(); e.columnsJson = M.writeValueAsString(r.columns()); e.principal=r.principal(); e.purpose=r.purpose(); e.durationDays=r.durationDays(); return repo.save(e);
+  }
+
+  @PostMapping("/requests/{id}:approve") public AccessRequestEntity approve(@PathVariable String id, @RequestParam String by){
+    AccessRequestEntity e = repo.findById(id).orElseThrow(); e.status="APPROVED"; e.decidedBy=by; e.decidedAt=java.time.Instant.now(); return repo.save(e);
+  }
+
+  @PostMapping("/requests/{id}:reject") public Acc
+
+package com.example.meshcdc.web;
+
+import com.example.meshcdc.jpa.AccessRequestEntity;
+import com.example.meshcdc.jpa.AccessRequestRepo;
+import com.example.meshcdc.jpa.ProductRepo;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 import java.util.stream.Collectors;
 
-public class DataQualityPipeline {
+@RestController
+@RequestMapping("/v2/access")
+public class AccessController {
 
-    public interface Options extends PipelineOptions, DataflowPipelineOptions {
-        @Description("GCS URI to config.yaml")
-        @Validation.Required String getConfigGcsPath(); void setConfigGcsPath(String v);
-        @Description("BQ table1: legacy source")
-        @Validation.Required String getTable1(); void setTable1(String v);
-        @Description("BQ table2: final Cassandra BQ")
-        @Validation.Required String getTable2(); void setTable2(String v);
-        @Description("BQ gg_replica JSON source")
-        @Validation.Required String getGgTable(); void setGgTable(String v);
-        @Description("BQ payloads_table JSON source")
-        @Validation.Required String getPayloadTable(); void setPayloadTable(String v);
-        @Description("BQ output for audit counts")
-        @Validation.Required String getAuditOutput(); void setAuditOutput(String v);
-        @Description("BQ output for root-cause details")
-        @Validation.Required String getRootCauseOutput(); void setRootCauseOutput(String v);
-        @Description("BQ output for JSON parse errors")
-        @Validation.Required String getErrorOutput(); void setErrorOutput(String v);
-    }
+  private final AccessRequestRepo repo;
+  private final ProductRepo products;
+  private final ObjectMapper M = new ObjectMapper();
 
-    public static void main(String[] args) {
-        Options opts = PipelineOptionsFactory.fromArgs(args).withValidation().as(Options.class);
-        opts.setRunner(DataflowRunner.class);
+  public AccessController(AccessRequestRepo r, ProductRepo p) {
+    this.repo = r;
+    this.products = p;
+  }
 
-        AppConfig cfg = ConfigLoader.load(opts.getConfigGcsPath());
-        DataQualityConfig dq = cfg.getDataQuality();
-        List<String> joinKeys = dq.getJoinKeys();
-        List<String> cols = dq.getComparison().getColumns();
-        String rule = dq.getComparison().getRuleType();
+  public record AccessReq(
+      String productId,
+      String datasetRef,
+      java.util.List<String> columns,
+      String principal,
+      String purpose,
+      Integer durationDays
+  ) {}
 
-        // Fetch schema types for table1
-        com.google.cloud.bigquery.BigQuery bq = com.google.cloud.bigquery.BigQueryOptions.getDefaultInstance().getService();
-        com.google.cloud.bigquery.TableId tid = parseTableId(opts.getTable1());
-        com.google.cloud.bigquery.Schema schema = bq.getTable(tid).getDefinition().getSchema();
-        List<KV<String,LegacySQLTypeName>> typeList = schema.getFields().stream()
-            .map(f -> KV.of(f.getName(), f.getType()))
-            .collect(Collectors.toList());
+  /** Create a new access request */
+  @PostMapping("/requests")
+  public AccessRequestEntity request(@RequestBody AccessReq r) throws Exception {
+    AccessRequestEntity e = new AccessRequestEntity();
+    e.product = products.findById(r.productId()).orElseThrow();
+    e.datasetRef = r.datasetRef();
+    e.columnsJson = M.writeValueAsString(r.columns());
+    e.principal = r.principal();
+    e.purpose = r.purpose();
+    e.durationDays = r.durationDays();
+    return repo.save(e);
+  }
 
-        Pipeline p = Pipeline.create(opts);
-        PCollectionView<Map<String,LegacySQLTypeName>> typeView = p
-            .apply("TypeList", Create.of(typeList))
-            .apply("TypeMap", View.asMap());
+  /** Approve an existing access request */
+  @PostMapping("/requests/{id}:approve")
+  public AccessRequestEntity approve(@PathVariable String id, @RequestParam String by) {
+    AccessRequestEntity e = repo.findById(id).orElseThrow();
+    e.status = "APPROVED";
+    e.decidedBy = by;
+    e.decidedAt = java.time.Instant.now();
+    return repo.save(e);
+  }
 
-        ObjectMapper mapper = new ObjectMapper();
-        final TupleTag<TableRow> errTag = new TupleTag<>("errors");
+  /** Reject an existing access request */
+  @PostMapping("/requests/{id}:reject")
+  public AccessRequestEntity reject(@PathVariable String id, @RequestParam String by) {
+    AccessRequestEntity e = repo.findById(id).orElseThrow();
+    e.status = "REJECTED";
+    e.decidedBy = by;
+    e.decidedAt = java.time.Instant.now();
+    return repo.save(e);
+  }
 
-        // Extract JSON payload into structured TableRow
-        class ExtractFn extends DoFn<TableRow, KV<String,TableRow>> {
-            private final String jsonRoot;
-            ExtractFn(String jsonRoot) { this.jsonRoot = jsonRoot; }
+  /** Get a single request by id */
+  @GetMapping("/requests/{id}")
+  public AccessRequestEntity get(@PathVariable String id) {
+    return repo.findById(id).orElseThrow();
+  }
 
-            @ProcessElement
-            public void process(ProcessContext c) {
-                TableRow row = c.element();
-                try {
-                    JsonNode root = mapper.readTree((String) row.get("DATA"));
-                    JsonNode data = jsonRoot.isEmpty() ? root : root.at(jsonRoot);
-                    String cust  = data.path("cust_id").asText(null);
-                    String acct  = data.path("acct_num").asText(null);
-                    String mtn   = data.path("mtn").asText(null);
-                    String key   = String.join("|", cust, acct, mtn);
-
-                    TableRow out = new TableRow()
-                        .set("cust_id", cust)
-                        .set("acct_num", acct)
-                        .set("mtn", mtn);
-                    for (String col : cols) {
-                        out.set(col, data.path(col).asText(null));
-                    }
-                    c.output(KV.of(key, out));
-                } catch (IOException e) {
-                    c.output(errTag, new TableRow()
-                        .set("stage", jsonRoot)
-                        .set("raw_data", row.get("DATA"))
-                        .set("error", e.getMessage())
-                        .set("ts", Instant.now().toString()));
-                }
-            }
-        }
-
-        // Read & key original table
-        PCollection<KV<String,TableRow>> orig = p.apply("ReadOrig",
-            BigQueryIO.readTableRows().from(opts.getTable1()))
-          .apply("KeyOrig", MapElements.into(
-            TypeDescriptors.kvs(TypeDescriptors.strings(), TypeDescriptor.of(TableRow.class)))
-          .via(r -> KV.of(
-            joinKeys.stream().map(k -> Objects.toString(r.get(k), "")).collect(Collectors.joining("|")),
-            r)));
-
-        // Read & extract gg_replica JSON
-        PCollectionTuple ggSplit = p.apply("ReadGG",
-            BigQueryIO.readTableRows().from(opts.getGgTable()))
-          .apply("ExtractGG",
-            ParDo.of(new ExtractFn("/after"))
-              .withOutputTags(new TupleTag<KV<String,TableRow>>() {}, TupleTagList.of(errTag)));
-        PCollection<KV<String,TableRow>> gg = ggSplit.get(new TupleTag<KV<String,TableRow>>(){});
-
-        // Read & extract payloads_table JSON
-        PCollectionTuple plSplit = p.apply("ReadPL",
-            BigQueryIO.readTableRows().from(opts.getPayloadTable()))
-          .apply("ExtractPL",
-            ParDo.of(new ExtractFn(""))
-              .withOutputTags(new TupleTag<KV<String,TableRow>>() {}, TupleTagList.of(errTag)));
-        PCollection<KV<String,TableRow>> pl = plSplit.get(new TupleTag<KV<String,TableRow>>(){});
-
-        // Read & key final table
-        PCollection<KV<String,TableRow>> fin = p.apply("ReadNew",
-            BigQueryIO.readTableRows().from(opts.getTable2()))
-          .apply("KeyNew", MapElements.into(
-            TypeDescriptors.kvs(TypeDescriptors.strings(), TypeDescriptor.of(TableRow.class)))
-          .via(r -> KV.of(
-            joinKeys.stream().map(k -> Objects.toString(r.get(k), "")).collect(Collectors.joining("|")),
-            r)));
-
-        // Merge parse errors and write
-        PCollection<TableRow> errs = PCollectionList.of(ggSplit.get(errTag))
-          .and(plSplit.get(errTag))
-          .apply(Flatten.pCollections());
-        errs.apply("WriteErrors",
-          BigQueryIO.writeTableRows().to(opts.getErrorOutput())
-            .withSchema(new TableSchema().setFields(Arrays.asList(
-              new TableFieldSchema().setName("stage").setType("STRING"),
-              new TableFieldSchema().setName("raw_data").setType("STRING"),
-              new TableFieldSchema().setName("error").setType("STRING"),
-              new TableFieldSchema().setName("ts").setType("TIMESTAMP")
-            ))));
-
-        // CoGroup all four stages
-        TupleTag<TableRow> t1 = new TupleTag<>("t1"), tg=new TupleTag<>("gg"), tp2=new TupleTag<>("pl"), t2=new TupleTag<>("t2");
-        PCollection<KV<String,CoGbkResult>> joined = KeyedPCollectionTuple.of(t1, orig)
-          .and(tg, gg).and(tp2, pl).and(t2, fin)
-          .apply("JoinAllStages", CoGroupByKey.create());
-
-        // Compare & root-cause
-        TupleTag<KV<String,long[]>> countTag = new TupleTag<>("counts");
-        TupleTag<TableRow> rootTag = new TupleTag<>("rootCause");
-        PCollectionTuple multi = joined.apply("AuditAndRootCause",
-          ParDo.of(new DoFn<KV<String,CoGbkResult>, KV<String,long[]>>() {
-            @ProcessElement public void process(ProcessContext c) {
-              String key = c.element().getKey();
-              CoGbkResult r = c.element().getValue();
-              Map<String,LegacySQLTypeName> tv = c.sideInput(typeView);
-
-              boolean p1 = r.getAll(t1).iterator().hasNext();
-              boolean p2 = r.getAll(tg).iterator().hasNext();
-              boolean p3 = r.getAll(tp2).iterator().hasNext();
-              boolean p4 = r.getAll(t2).iterator().hasNext();
-
-              for (String col : cols) {
-                long eq=0, ne=0;
-                for (TableRow a : r.getAll(t1)) {
-                  for (TableRow b : r.getAll(t2)) {
-                    if (equalsTyped(a.get(col), b.get(col), tv.get(col))) eq++; else ne++;
-                  }
-                }
-                c.output(countTag, KV.of(col+"_"+rule, new long[]{eq,ne}));
-                if (ne>0) {
-                  String cause = !p1 ? "missing_in_table1"
-                    : !p2 ? "missing_in_gg_replica"
-                    : !p3 ? "missing_in_payloads_table"
-                    : !p4 ? "failed_spanner_insert"
-                    : "value_mismatch";
-                  TableRow rc = new TableRow();
-                  String[] parts = key.split("\\|", -1);
-                  for (int i=0; i<joinKeys.size(); i++) rc.set(joinKeys.get(i), parts[i]);
-                  rc.set("column", col)
-                    .set("root_cause", cause)
-                    .set("ts", Instant.now().toString());
-                  c.output(rootTag, rc);
-                }
-              }
-            }
-          }).withSideInputs(typeView)
-            .withOutputTags(countTag, TupleTagList.of(rootTag)));
-
-        // Write audit counts
-        multi.get(countTag)
-          .apply("SumCounts", Combine.perKey(new Combine.CombineFn<long[],long[],long[]>() {
-            public long[] createAccumulator() { return new long[]{0,0}; }
-            public long[] addInput(long[] acc, long[] in) { return new long[]{acc[0]+in[0], acc[1]+in[1]}; }
-            public long[] mergeAccumulators(Iterable<long[]> it) {
-              long e=0,n=0; for (long[] a : it) { e+=a[0]; n+=a[1]; } return new long[]{e,n}; }
-            public long[] extractOutput(long[] acc) { return acc; }
-          }))
-          .apply("ToAuditRow", MapElements.into(TypeDescriptor.of(TableRow.class))
-            .via(kv -> new TableRow()
-              .set("rule",           kv.getKey())
-              .set("equals_count",   kv.getValue()[0])
-              .set("not_equals_count", kv.getValue()[1])
-              .set("run_date",       Instant.now().toString())))
-          .apply("WriteAudit", BigQueryIO.writeTableRows()
-            .to(opts.getAuditOutput())
-            .withSchema(new TableSchema().setFields(Arrays.asList(
-              new TableFieldSchema().setName("rule").setType("STRING"),
-              new TableFieldSchema().setName("equals_count").setType("INTEGER"),
-              new TableFieldSchema().setName("not_equals_count").setType("INTEGER"),
-              new TableFieldSchema().setName("run_date").setType("TIMESTAMP")
-            ))));
-
-        // Write root-cause details
-        multi.get(rootTag)
-          .apply("WriteRoots", BigQueryIO.writeTableRows()
-            .to(opts.getRootCauseOutput())
-            .withSchema(new TableSchema().setFields(buildRootSchema(joinKeys))));
-
-        p.run().waitUntilFinish();
-    }
-
-    private static List<TableFieldSchema> buildRootSchema(List<String> keys) {
-        List<TableFieldSchema> fs = new ArrayList<>();
-        for (String k : keys) fs.add(new TableFieldSchema().setName(k).setType("STRING"));
-        fs.add(new TableFieldSchema().setName("column").setType("STRING"));
-        fs.add(new TableFieldSchema().setName("root_cause").setType("STRING"));
-        fs.add(new TableFieldSchema().setName("ts").setType("TIMESTAMP"));
-        return fs;
-    }
-
-    private static com.google.cloud.bigquery.TableId parseTableId(String ref) {
-        String[] p = ref.split(":");
-        String proj = p[0];
-        String[] ds = p[1].split("\\.");
-        return com.google.cloud.bigquery.TableId.of(proj, ds[0], ds[1]);
-    }
-
-    private static boolean equalsTyped(Object o1, Object o2, LegacySQLTypeName type) {
-        if (o1 == null && o2 == null) return true;
-        if (o1 == null || o2 == null) return false;
-        try {
-            switch (type) {
-                case STRING:    return o1.toString().equals(o2.toString());
-                case INTEGER:   return ((Number)o1).longValue() == ((Number)o2).longValue();
-                case FLOAT:     return Float.compare(((Number)o1).floatValue(), ((Number)o2).floatValue()) == 0;
-                case DOUBLE:    return Double.compare(((Number)o1).doubleValue(), ((Number)o2).doubleValue()) == 0;
-                case BOOLEAN:   return Boolean.parseBoolean(o1.toString()) == Boolean.parseBoolean(o2.toString());
-                case DATE:      return java.time.LocalDate.parse(o1.toString()).equals(java.time.LocalDate.parse(o2.toString()));
-                case TIMESTAMP: return Instant.parse(o1.toString()).equals(Instant.parse(o2.toString()));
-                default:        return o1.toString().equals(o2.toString());
-            }
-        } catch (Exception e) {
-            return false;
-        }
-    }
+  /** List requests (optionally filtered by productId) */
+  @GetMapping("/requests")
+  public List<AccessRequestEntity> list(@RequestParam(required = false) String productId) {
+    List<AccessRequestEntity> all = repo.findAll();
+    if (productId == null || productId.isBlank()) return all;
+    return all.stream()
+        .filter(e -> e.product != null && productId.equals(e.product.id))
+        .collect(Collectors.toList());
+  }
 }
