@@ -1,7 +1,10 @@
 package com.example.meshcdc.service;
 
 import com.google.api.services.dataflow.Dataflow;
-import com.google.api.services.dataflow.model.*;
+import com.google.api.services.dataflow.model.FlexTemplateRuntimeEnvironment;
+import com.google.api.services.dataflow.model.LaunchFlexTemplateParameter;
+import com.google.api.services.dataflow.model.LaunchFlexTemplateRequest;
+import com.google.api.services.dataflow.model.LaunchFlexTemplateResponse;
 import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.StorageOptions;
@@ -13,14 +16,17 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 public class DataflowLauncherService {
 
   private final Dataflow df;
   private final Storage storage;
-  private final String projectId, region, flexSpecGcs, saEmail, tempLocation;
+  private final String projectId;
+  private final String region;
+  private final String flexSpecGcs;
+  private final String saEmail;
+  private final String tempLocation;
   private final ObjectMapper M = new ObjectMapper();
 
   public DataflowLauncherService(
@@ -41,16 +47,16 @@ public class DataflowLauncherService {
   }
 
   public String launchReplication(String jobName, String configLocation, String metricsTable, String dlqPath) throws IOException {
-    // Build the parameters our pipeline expects
-    Map<String, Object> reqParams = new LinkedHashMap<>();
-    reqParams.put("configLocation", configLocation);
-    reqParams.put("metricsTable", metricsTable);
-    reqParams.put("dlqPath", dlqPath);
+    // Build String-only parameters (Dataflow API requires Map<String, String>)
+    Map<String, String> reqParams = new LinkedHashMap<>();
+    putIfNonEmpty(reqParams, "configLocation", configLocation);
+    putIfNonEmpty(reqParams, "metricsTable",  metricsTable);
+    putIfNonEmpty(reqParams, "dlqPath",       dlqPath);
 
-    // Normalize common typos/synonyms just in case
+    // Normalize common typos/synonyms (e.g., dlqparg -> dlqPath)
     reqParams = normalizeKeys(reqParams);
 
-    // Validate against the spec in GCS (will throw if mismatch)
+    // Validate against names declared in containerSpec.json (throws if mismatch)
     validateAgainstSpec(reqParams.keySet());
 
     FlexTemplateRuntimeEnvironment env = new FlexTemplateRuntimeEnvironment()
@@ -66,18 +72,23 @@ public class DataflowLauncherService {
         .setParameters(reqParams);
 
     LaunchFlexTemplateRequest req = new LaunchFlexTemplateRequest().setLaunchParameter(param);
-    LaunchFlexTemplateResponse resp = df.projects().locations().flexTemplates().launch(projectId, region, req).execute();
+    LaunchFlexTemplateResponse resp = df.projects().locations().flexTemplates()
+        .launch(projectId, region, req).execute();
     return resp.getJob() != null ? resp.getJob().getId() : null;
   }
 
-  private Map<String,Object> normalizeKeys(Map<String,Object> in) {
+  private static void putIfNonEmpty(Map<String, String> m, String k, String v) {
+    if (v != null && !v.isBlank()) m.put(k, v);
+  }
+
+  private Map<String,String> normalizeKeys(Map<String,String> in) {
     Map<String,String> synonyms = Map.of(
-      "dlqparg", "dlqPath",   // typo seen in your error
-      "dlq",     "dlqPath",
-      "metrics_table", "metricsTable",
-      "config_path",  "configLocation"
+        "dlqparg", "dlqPath",       // your typo seen in error
+        "dlq",     "dlqPath",
+        "metrics_table", "metricsTable",
+        "config_path",  "configLocation"
     );
-    Map<String,Object> out = new LinkedHashMap<>();
+    Map<String,String> out = new LinkedHashMap<>();
     for (var e : in.entrySet()) {
       String k = e.getKey();
       if (synonyms.containsKey(k)) k = synonyms.get(k);
@@ -88,10 +99,12 @@ public class DataflowLauncherService {
 
   private void validateAgainstSpec(Set<String> keys) {
     Set<String> allowed = fetchSpecParameterNames();
-    List<String> bad = keys.stream().filter(k -> !allowed.contains(k)).collect(Collectors.toList());
+    List<String> bad = new ArrayList<>();
+    for (String k : keys) if (!allowed.contains(k)) bad.add(k);
     if (!bad.isEmpty()) {
-      throw new IllegalArgumentException("Flex spec at " + flexSpecGcs +
-          " does not declare parameters: " + bad + ". Allowed: " + allowed);
+      throw new IllegalArgumentException(
+          "containerSpec " + flexSpecGcs + " does not declare parameters " + bad +
+          ". Allowed: " + allowed);
     }
   }
 
@@ -110,7 +123,7 @@ public class DataflowLauncherService {
     try {
       JsonNode root = M.readTree(json);
       JsonNode params = root.get("parameters");
-      if (params == null || !params.isArray()) return Set.of(); // no parameters declared; all would be unrecognized
+      if (params == null || !params.isArray()) return Set.of(); // no parameters declared
       Set<String> names = new LinkedHashSet<>();
       for (JsonNode p : params) {
         JsonNode n = p.get("name");
@@ -122,6 +135,7 @@ public class DataflowLauncherService {
     }
   }
 }
+
 
 
 ==================
