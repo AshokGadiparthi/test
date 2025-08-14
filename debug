@@ -1,3 +1,213 @@
+package com.example.meshcdc.service;
+
+import com.example.meshcdc.model.FlexLaunchSpec;
+import com.google.api.services.dataflow.Dataflow;
+import com.google.api.services.dataflow.model.FlexTemplateRuntimeEnvironment;
+import com.google.api.services.dataflow.model.LaunchFlexTemplateParameter;
+import com.google.api.services.dataflow.model.LaunchFlexTemplateRequest;
+import com.google.api.services.dataflow.model.LaunchFlexTemplateResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import java.io.IOException;
+import java.util.*;
+import java.util.stream.Collectors;
+
+/**
+ * Launches an existing Dataflow Flex Template (containerSpec.json in GCS)
+ * with arbitrary template parameters and runtime environment options.
+ *
+ * NOTE: This variant matches client libraries that require setParameters(Map<String,String>).
+ */
+@Service
+public class DataflowLauncherService {
+
+  private static final Logger LOG = LoggerFactory.getLogger(DataflowLauncherService.class);
+
+  private final Dataflow df;
+  private final String projectId;
+  private final String region;
+  private final String defaultSpecGcs;
+  private final String defaultSaEmail;
+  private final String defaultTempLocation;
+
+  public DataflowLauncherService(
+      Dataflow df,
+      @Value("${mesh.project-id}") String projectId,
+      @Value("${mesh.region}") String region,
+      @Value("${mesh.dataflow.containerSpecGcs}") String defaultSpecGcs,
+      @Value("${mesh.dataflow.service-account}") String defaultSaEmail,
+      @Value("${mesh.dataflow.temp-location}") String defaultTempLocation
+  ) {
+    this.df = df;
+    this.projectId = projectId;
+    this.region = region;
+    this.defaultSpecGcs = defaultSpecGcs;
+    this.defaultSaEmail = defaultSaEmail;
+    this.defaultTempLocation = defaultTempLocation;
+  }
+
+  /**
+   * Launch a Flex job. Returns the Dataflow jobId.
+   */
+  public String launchFlex(String jobName, FlexLaunchSpec inSpec) throws IOException {
+    if (jobName == null || jobName.isBlank()) {
+      throw new IllegalArgumentException("jobName must not be blank");
+    }
+    if (inSpec == null) {
+      throw new IllegalArgumentException("FlexLaunchSpec is null. Create pipeline with a spec first.");
+    }
+
+    // --------- Defensive copy + defaults ---------
+    FlexLaunchSpec spec = new FlexLaunchSpec();
+    spec.templateGcs = nz(inSpec.templateGcs, defaultSpecGcs);
+    spec.parameters  = inSpec.parameters != null ? new LinkedHashMap<>(inSpec.parameters) : new LinkedHashMap<>();
+    spec.env         = inSpec.env != null ? inSpec.env : new FlexLaunchSpec.Env();
+
+    if (spec.env.serviceAccountEmail == null || spec.env.serviceAccountEmail.isBlank()) {
+      spec.env.serviceAccountEmail = defaultSaEmail;
+    }
+    if (spec.env.tempLocation == null || spec.env.tempLocation.isBlank()) {
+      spec.env.tempLocation = defaultTempLocation;
+    }
+    if (spec.env.enableStreamingEngine == null) {
+      spec.env.enableStreamingEngine = Boolean.TRUE;
+    }
+
+    // --------- Build Dataflow environment ---------
+    FlexTemplateRuntimeEnvironment env = new FlexTemplateRuntimeEnvironment()
+        .setServiceAccountEmail(spec.env.serviceAccountEmail)
+        .setTempLocation(spec.env.tempLocation)
+        .setEnableStreamingEngine(spec.env.enableStreamingEngine)
+        .setAdditionalUserLabels(Map.of("product", jobName));
+
+    if (spec.env.machineType != null && !spec.env.machineType.isBlank())
+      env.setMachineType(spec.env.machineType);
+
+    if (spec.env.numWorkers != null)
+      env.setNumWorkers(spec.env.numWorkers);
+
+    if (spec.env.maxWorkers != null)
+      env.setMaxWorkers(spec.env.maxWorkers);
+
+    if (spec.env.network != null && !spec.env.network.isBlank())
+      env.setNetwork(spec.env.network);
+
+    if (spec.env.subnetwork != null && !spec.env.subnetwork.isBlank())
+      env.setSubnetwork(spec.env.subnetwork); // full URL recommended
+
+    if (spec.env.kmsKeyName != null && !spec.env.kmsKeyName.isBlank())
+      env.setKmsKeyName(spec.env.kmsKeyName);
+
+    if (spec.env.ipConfiguration != null && !spec.env.ipConfiguration.isBlank())
+      env.setIpConfiguration(spec.env.ipConfiguration); // e.g., "WORKER_IP_PRIVATE"
+
+    if (spec.env.additionalExperiments != null && !spec.env.additionalExperiments.isEmpty())
+      env.setAdditionalExperiments(spec.env.additionalExperiments);
+
+    // --------- Template parameters (must be Map<String,String>) ---------
+    Map<String, String> params = new LinkedHashMap<>();
+    if (spec.parameters != null) {
+      for (var e : spec.parameters.entrySet()) {
+        if (e.getKey() != null && !e.getKey().isBlank() && e.getValue() != null) {
+          params.put(e.getKey(), String.valueOf(e.getValue()));
+        }
+      }
+    }
+
+    // --------- Log a gcloud-equivalent preview ---------
+    String preview = previewGcloud(jobName, spec);
+    LOG.info("DATAFLOW FLEX PREVIEW:\n{}", preview);
+    LOG.debug("Launch env: {}", env);
+    LOG.debug("Launch parameters: {}", params);
+
+    // --------- Build request ---------
+    LaunchFlexTemplateParameter lp = new LaunchFlexTemplateParameter()
+        .setJobName(jobName)
+        .setContainerSpecGcsPath(spec.templateGcs) // <-- correct setter
+        .setEnvironment(env)
+        .setParameters(params);                    // <-- Map<String,String>
+
+    LaunchFlexTemplateRequest req = new LaunchFlexTemplateRequest().setLaunchParameter(lp);
+
+    // --------- Call Dataflow API ---------
+    LaunchFlexTemplateResponse resp = df.projects().locations().flexTemplates()
+        .launch(projectId, region, req)
+        .execute();
+
+    String jobId = resp.getJob() != null ? resp.getJob().getId() : null;
+    LOG.info("Launched Dataflow jobId={}", jobId);
+    return jobId;
+  }
+
+  /**
+   * Returns a copy-pasteable gcloud command matching the launch payload.
+   */
+  public String previewGcloud(String jobName, FlexLaunchSpec spec) {
+    List<String> flags = new ArrayList<>();
+    flags.add("--region=" + sh(region));
+    flags.add("--template-file-gcs-location=" + sh(nz(spec.templateGcs, defaultSpecGcs)));
+
+    // environment flags
+    if (Boolean.TRUE.equals(spec.env.enableStreamingEngine)) {
+      flags.add("--enable-streaming-engine");
+    }
+    if (spec.env.machineType != null && !spec.env.machineType.isBlank()) {
+      flags.add("--worker-machine-type=" + sh(spec.env.machineType));
+    }
+    if (spec.env.maxWorkers != null) {
+      flags.add("--max-workers=" + spec.env.maxWorkers);
+    }
+    if (spec.env.numWorkers != null) {
+      flags.add("--num-workers=" + spec.env.numWorkers);
+    }
+    if (spec.env.serviceAccountEmail != null && !spec.env.serviceAccountEmail.isBlank()) {
+      flags.add("--service-account-email=" + sh(spec.env.serviceAccountEmail));
+    }
+    if (spec.env.subnetwork != null && !spec.env.subnetwork.isBlank()) {
+      flags.add("--subnetwork=" + sh(spec.env.subnetwork));
+    }
+    // Private workers when org policy blocks external IPs
+    if ("WORKER_IP_PRIVATE".equalsIgnoreCase(nz(spec.env.ipConfiguration, ""))) {
+      flags.add("--disable-public-ips");
+    }
+    if (spec.env.additionalExperiments != null && !spec.env.additionalExperiments.isEmpty()) {
+      String exps = spec.env.additionalExperiments.stream().collect(Collectors.joining(","));
+      flags.add("--additional-experiments=" + sh(exps));
+    }
+    if (spec.env.tempLocation != null && !spec.env.tempLocation.isBlank()) {
+      flags.add("--staging-location=" + sh(spec.env.tempLocation));
+    }
+
+    // parameters (comma-separated k=v)
+    if (spec.parameters != null && !spec.parameters.isEmpty()) {
+      String joined = spec.parameters.entrySet().stream()
+          .filter(e -> e.getKey() != null && !e.getKey().isBlank() && e.getValue() != null)
+          .map(e -> e.getKey() + "=" + e.getValue())
+          .collect(Collectors.joining(","));
+      if (!joined.isBlank()) {
+        flags.add("--parameters=" + sh(joined));
+      }
+    }
+
+    return "gcloud dataflow flex-template run " + sh(jobName) + " \\\n  "
+        + String.join(" \\\n  ", flags);
+  }
+
+  // ---------- helpers ----------
+  private static String nz(String a, String b) { return (a != null && !a.isBlank()) ? a : b; }
+  private static String sh(String s) {
+    if (s == null) return "''";
+    // naive shell escaping: wrap in single quotes, escape embedded ones
+    return "'" + s.replace("'", "'\"'\"'") + "'";
+  }
+}
+
+
+===========
+
 yep—let’s make this super debuggable. Two goals:
 
 1. stop the NullPointerException with safe null-handling/validation
