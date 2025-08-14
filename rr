@@ -1,3 +1,131 @@
+package com.example.meshcdc.service;
+
+import com.google.api.services.dataflow.Dataflow;
+import com.google.api.services.dataflow.model.*;
+import com.google.cloud.storage.Blob;
+import com.google.cloud.storage.Storage;
+import com.google.cloud.storage.StorageOptions;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+import java.util.stream.Collectors;
+
+@Service
+public class DataflowLauncherService {
+
+  private final Dataflow df;
+  private final Storage storage;
+  private final String projectId, region, flexSpecGcs, saEmail, tempLocation;
+  private final ObjectMapper M = new ObjectMapper();
+
+  public DataflowLauncherService(
+      Dataflow df,
+      @Value("${mesh.project-id}") String projectId,
+      @Value("${mesh.region}") String region,
+      @Value("${mesh.dataflow.containerSpecGcs}") String flexSpecGcs,
+      @Value("${mesh.dataflow.service-account}") String saEmail,
+      @Value("${mesh.dataflow.temp-location}") String tempLocation
+  ) {
+    this.df = df;
+    this.storage = StorageOptions.getDefaultInstance().getService();
+    this.projectId = projectId;
+    this.region = region;
+    this.flexSpecGcs = flexSpecGcs;
+    this.saEmail = saEmail;
+    this.tempLocation = tempLocation;
+  }
+
+  public String launchReplication(String jobName, String configLocation, String metricsTable, String dlqPath) throws IOException {
+    // Build the parameters our pipeline expects
+    Map<String, Object> reqParams = new LinkedHashMap<>();
+    reqParams.put("configLocation", configLocation);
+    reqParams.put("metricsTable", metricsTable);
+    reqParams.put("dlqPath", dlqPath);
+
+    // Normalize common typos/synonyms just in case
+    reqParams = normalizeKeys(reqParams);
+
+    // Validate against the spec in GCS (will throw if mismatch)
+    validateAgainstSpec(reqParams.keySet());
+
+    FlexTemplateRuntimeEnvironment env = new FlexTemplateRuntimeEnvironment()
+        .setServiceAccountEmail(saEmail)
+        .setTempLocation(tempLocation)
+        .setEnableStreamingEngine(true)
+        .setAdditionalUserLabels(Map.of("product", jobName));
+
+    LaunchFlexTemplateParameter param = new LaunchFlexTemplateParameter()
+        .setJobName(jobName)
+        .setContainerSpecGcsPath(flexSpecGcs)
+        .setEnvironment(env)
+        .setParameters(reqParams);
+
+    LaunchFlexTemplateRequest req = new LaunchFlexTemplateRequest().setLaunchParameter(param);
+    LaunchFlexTemplateResponse resp = df.projects().locations().flexTemplates().launch(projectId, region, req).execute();
+    return resp.getJob() != null ? resp.getJob().getId() : null;
+  }
+
+  private Map<String,Object> normalizeKeys(Map<String,Object> in) {
+    Map<String,String> synonyms = Map.of(
+      "dlqparg", "dlqPath",   // typo seen in your error
+      "dlq",     "dlqPath",
+      "metrics_table", "metricsTable",
+      "config_path",  "configLocation"
+    );
+    Map<String,Object> out = new LinkedHashMap<>();
+    for (var e : in.entrySet()) {
+      String k = e.getKey();
+      if (synonyms.containsKey(k)) k = synonyms.get(k);
+      out.put(k, e.getValue());
+    }
+    return out;
+  }
+
+  private void validateAgainstSpec(Set<String> keys) {
+    Set<String> allowed = fetchSpecParameterNames();
+    List<String> bad = keys.stream().filter(k -> !allowed.contains(k)).collect(Collectors.toList());
+    if (!bad.isEmpty()) {
+      throw new IllegalArgumentException("Flex spec at " + flexSpecGcs +
+          " does not declare parameters: " + bad + ". Allowed: " + allowed);
+    }
+  }
+
+  private Set<String> fetchSpecParameterNames() {
+    // Parse gs://bucket/path.json
+    String gs = flexSpecGcs.replaceFirst("^gs://", "");
+    int slash = gs.indexOf('/');
+    if (slash < 0) throw new IllegalArgumentException("Invalid GCS URI for containerSpec: " + flexSpecGcs);
+    String bucket = gs.substring(0, slash);
+    String object = gs.substring(slash + 1);
+
+    Blob blob = storage.get(bucket, object);
+    if (blob == null) throw new IllegalArgumentException("containerSpec not found: " + flexSpecGcs);
+    String json = new String(blob.getContent(), StandardCharsets.UTF_8);
+
+    try {
+      JsonNode root = M.readTree(json);
+      JsonNode params = root.get("parameters");
+      if (params == null || !params.isArray()) return Set.of(); // no parameters declared; all would be unrecognized
+      Set<String> names = new LinkedHashSet<>();
+      for (JsonNode p : params) {
+        JsonNode n = p.get("name");
+        if (n != null && n.isTextual()) names.add(n.asText());
+      }
+      return names;
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to parse containerSpec.json: " + e.getMessage(), e);
+    }
+  }
+}
+
+
+==================
+
 CREATE TABLE Orders (
   order_id   STRING(36) NOT NULL,
   user_id    STRING(36) NOT NULL,
