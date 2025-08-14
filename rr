@@ -1,3 +1,15 @@
+CREATE TABLE Orders (
+  order_id   STRING(36) NOT NULL,
+  user_id    STRING(36) NOT NULL,
+  status     STRING(32),
+  amount     NUMERIC,
+  email      STRING(320),
+  created_at TIMESTAMP NOT NULL OPTIONS (allow_commit_timestamp=true),
+  updated_at TIMESTAMP NOT NULL OPTIONS (allow_commit_timestamp=true),
+) PRIMARY KEY (order_id);
+
+=======================================
+
 awesome — let’s test your backend end-to-end, one tiny step at a time. copy–paste in order.
 
 # 0) One-time prerequisites
