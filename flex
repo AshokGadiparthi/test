@@ -1,3 +1,87 @@
+
+package com.example.meshcdc.service;
+
+import com.example.meshcdc.model.FlexLaunchSpec;
+import com.google.api.services.dataflow.Dataflow;
+import com.google.api.services.dataflow.model.FlexTemplateRuntimeEnvironment;
+import com.google.api.services.dataflow.model.LaunchFlexTemplateParameter;
+import com.google.api.services.dataflow.model.LaunchFlexTemplateRequest;
+import com.google.api.services.dataflow.model.LaunchFlexTemplateResponse;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import java.io.IOException;
+import java.util.*;
+
+/** Launches an existing Flex template (containerSpec.json in GCS) with arbitrary params/env. */
+@Service
+public class DataflowLauncherService {
+
+  private final Dataflow df;
+  private final String projectId;
+  private final String region;
+  private final String defaultSpecGcs;
+  private final String defaultSaEmail;
+  private final String defaultTempLocation;
+
+  public DataflowLauncherService(
+      Dataflow df,
+      @Value("${mesh.project-id}") String projectId,
+      @Value("${mesh.region}") String region,
+      @Value("${mesh.dataflow.containerSpecGcs}") String defaultSpecGcs,
+      @Value("${mesh.dataflow.service-account}") String defaultSaEmail,
+      @Value("${mesh.dataflow.temp-location}") String defaultTempLocation
+  ) {
+    this.df = df;
+    this.projectId = projectId;
+    this.region = region;
+    this.defaultSpecGcs = defaultSpecGcs;
+    this.defaultSaEmail = defaultSaEmail;
+    this.defaultTempLocation = defaultTempLocation;
+  }
+
+  public String launchFlex(String jobName, FlexLaunchSpec spec) throws IOException {
+    // ----- Environment (maps your gcloud flags) -----
+    FlexTemplateRuntimeEnvironment env = new FlexTemplateRuntimeEnvironment()
+        .setServiceAccountEmail(or(spec.env.serviceAccountEmail, defaultSaEmail))
+        .setTempLocation(or(spec.env.tempLocation, defaultTempLocation))
+        .setEnableStreamingEngine(spec.env.enableStreamingEngine != null ? spec.env.enableStreamingEngine : Boolean.TRUE)
+        .setAdditionalUserLabels(Map.of("product", jobName));
+
+    if (spec.env.machineType != null) env.setMachineType(spec.env.machineType);
+    if (spec.env.numWorkers != null)  env.setNumWorkers(spec.env.numWorkers);
+    if (spec.env.maxWorkers != null)  env.setMaxWorkers(spec.env.maxWorkers);
+    if (spec.env.network != null)     env.setNetwork(spec.env.network);
+    if (spec.env.subnetwork != null)  env.setSubnetwork(spec.env.subnetwork);
+    if (spec.env.kmsKeyName != null)  env.setKmsKeyName(spec.env.kmsKeyName);
+    if (spec.env.ipConfiguration != null) env.setIpConfiguration(spec.env.ipConfiguration);
+    if (spec.env.additionalExperiments != null && !spec.env.additionalExperiments.isEmpty())
+      env.setAdditionalExperiments(spec.env.additionalExperiments);
+
+    // ----- Parameters (MUST be Map<String,Object> for this client) -----
+    Map<String, Object> params = new LinkedHashMap<>();
+    if (spec.parameters != null) params.putAll(spec.parameters); // String values are fine
+
+    // ----- Launch with your containerSpec GCS path -----
+    LaunchFlexTemplateParameter lp = new LaunchFlexTemplateParameter()
+        .setJobName(jobName)
+        .setContainerSpecGcsPath(or(spec.templateGcs, defaultSpecGcs)) // <-- correct setter
+        .setEnvironment(env)
+        .setParameters(params); // <-- Map<String,Object>
+
+    LaunchFlexTemplateRequest req = new LaunchFlexTemplateRequest().setLaunchParameter(lp);
+    LaunchFlexTemplateResponse resp = df.projects().locations().flexTemplates()
+        .launch(projectId, region, req)
+        .execute();
+
+    return resp.getJob() != null ? resp.getJob().getId() : null;
+  }
+
+  private static String or(String a, String b) { return (a != null && !a.isBlank()) ? a : b; }
+}
+
+==========================
+
 perfect — you already have a working Flex template and a `gcloud dataflow flex-template run …` command. I’ll adjust the backend so it can launch **your** template (with your parameter names like `spannerInstanceId`, `bigQueryDataset`, etc.), and pass all the runtime environment flags you use (`maxWorkers`, `machineType`, `subnetwork`, `use_runner_v2`, `disable_public_ips`, KMS key, etc.).
 
 Below are **drop-in changes** (3 small files) + an example request that mirrors your CLI.
