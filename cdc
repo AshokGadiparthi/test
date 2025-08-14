@@ -1,3 +1,16 @@
+private static Map<String, ColType> children(Field f) {
+  Map<String, ColType> m = new LinkedHashMap<>();
+  FieldList subs = f.getSubFields();          // may be null unless RECORD
+  if (subs != null) {
+    // FieldList implements Iterable<Field> in all supported versions
+    for (Field sf : subs) {
+      m.put(sf.getName().toLowerCase(), fromField(sf));
+    }
+  }
+  return m;
+}
+============
+
 totally hear you — you want a **single, generalized Flex template** that works for *any* Spanner table(s) and *any* column types, including **DATE** and **DATETIME/TIMESTAMP**, with your delete-sentinel rules and robust null/format handling.
 
 Below is a **complete, production-grade** implementation that:
