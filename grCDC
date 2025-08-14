@@ -1,3 +1,35 @@
+@Description("GCS path to schema configuration JSON (e.g., gs://bucket/path/to/schema.json)")
+    String getSchemaConfigGcsPath();
+    void setSchemaConfigGcsPath(String value);
+
+
+// Read schema from GCS
+    String schemaConfigGcsPath = options.getSchemaConfigGcsPath();
+    if (schemaConfigGcsPath == null || schemaConfigGcsPath.isEmpty()) {
+      throw new IllegalArgumentException("Schema config GCS path is required");
+    }
+    String schemaJson;
+    try {
+      Storage storage = StorageOptions.newBuilder()
+          .setProjectId(options.getProject())
+          .build()
+          .getService();
+      String[] parts = schemaConfigGcsPath.replace("gs://", "").split("/", 2);
+      if (parts.length != 2) {
+        throw new IllegalArgumentException("Invalid GCS path format: " + schemaConfigGcsPath);
+      }
+      String bucketName = parts[0];
+      String objectName = parts[1];
+      Blob blob = storage.get(bucketName, objectName);
+      if (blob == null) {
+        throw new IllegalArgumentException("Schema file not found at: " + schemaConfigGcsPath);
+      }
+      schemaJson = new String(blob.getContent(), StandardCharsets.UTF_8);
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to read schema from GCS: " + schemaConfigGcsPath, e);
+    }
+    Config config = Config.parse(schemaJson);
+
 To make the provided code fully self-service by making the classes configurable via a JSON file, we need to replace the hardcoded `Order` and `OrderMutation` classes with a more generic structure that can handle dynamic schemas defined in a JSON configuration. The goal is to maintain all existing functionality while allowing column definitions to be specified externally. Below, I’ll analyze each class one by one, as requested, and provide the necessary modifications to make them configurable. I’ll also explain why certain classes remain unchanged and ensure the main pipeline class (`SpannerToBigQueryUsingCdc`) retains its core logic with only the required changes to support the JSON configuration.
 
 For each class, I’ll:
