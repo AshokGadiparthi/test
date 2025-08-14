@@ -1,98 +1,265 @@
-import com.google.cloud.pubsub.v1.Publisher;
-import com.google.pubsub.v1.PubsubMessage;
-import com.google.pubsub.v1.TopicName;
-import com.google.api.core.ApiFuture;
-import com.google.api.core.ApiFutures;
-import com.google.protobuf.ByteString;
+awesome — let’s test your backend end-to-end, one tiny step at a time. copy–paste in order.
 
-import java.util.concurrent.Executors;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.TimeUnit;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Random;
+# 0) One-time prerequisites
 
-public class PubSubInsertQueryPublisher {
+```bash
+# pick your project/region
+export GCP_PROJECT=<your-project-id>
+export REGION=us-central1
 
-    private static final String PROJECT_ID = "your-project-id";
-    private static final String TOPIC_ID = "your-topic-id";
-    private static final int NUM_THREADS = 10; // Number of threads
-    private static final int TOTAL_MESSAGES = 1000000; // 1 million messages
-    private static final int TIME_LIMIT_MINUTES = 30;
+# config bucket for per-product JSON + DLQ + temp
+export CFG_BUCKET=${GCP_PROJECT}-mesh-config
 
-    public static void main(String[] args) throws Exception {
-        TopicName topicName = TopicName.of(PROJECT_ID, TOPIC_ID);
-        Publisher publisher = Publisher.newBuilder(topicName).build();
+# BigQuery location (must match your target dataset)
+export BQ_LOCATION=US
 
-        ExecutorService executor = Executors.newFixedThreadPool(NUM_THREADS);
-        AtomicLong sequenceNumber = new AtomicLong(1); // Atomic counter for unique sequence numbers
-        Random random = new Random(); // Random object for generating random strings
+# Service account the Dataflow job will run as
+export SA_EMAIL=dp-mesh@${GCP_PROJECT}.iam.gserviceaccount.com
 
-        // Define the total number of messages per thread
-        int messagesPerThread = TOTAL_MESSAGES / NUM_THREADS;
+# Flex Template container spec in GCS (we'll upload in step 4)
+export FLEX_SPEC_GCS=gs://${CFG_BUCKET}/flex/containerSpec.json
+```
 
-        // Submit tasks to generate and publish messages in parallel
-        for (int i = 0; i < NUM_THREADS; i++) {
-            executor.submit(() -> {
-                List<ApiFuture<String>> futures = new ArrayList<>();
-                for (int j = 0; j < messagesPerThread; j++) {
-                    long seqNum = sequenceNumber.getAndIncrement(); // Get unique sequence number
+# 1) Start MariaDB and the app
 
-                    // Generate random values for acct_num, selected_MTN, mtn, order_num
-                    String acctNum = getRandomString(random);
-                    String selectedMTN = getRandomString(random);
-                    String mtn = getRandomString(random);
-                    String orderNum = getRandomString(random);
+```bash
+docker compose -f docker-compose.mariadb.yml up -d
+```
 
-                    // Generate the INSERT SQL query
-                    String sqlInsertQuery = String.format(
-                        "INSERT INTO SpannerToPubsubCDC (cust_id, acct_num, selected_MTN, mtn, order_num) " +
-                        "VALUES ('%d', '%s', '%s', '%s', '%s');",
-                        seqNum, acctNum, selectedMTN, mtn, orderNum);
+Check DB is up (optional):
 
-                    // Create Pub/Sub message
-                    PubsubMessage message = PubsubMessage.newBuilder()
-                            .setData(ByteString.copyFromUtf8(sqlInsertQuery))
-                            .build();
+```bash
+docker exec -it $(docker ps -qf name=db) mysql -umesh -pmesh -e "SELECT 1;"
+```
 
-                    // Publish the message to Pub/Sub
-                    ApiFuture<String> messageIdFuture = publisher.publish(message);
-                    futures.add(messageIdFuture);
-                }
+Run the app (from project root):
 
-                // Wait for all messages in this thread to be sent
-                ApiFutures.allAsList(futures).get();
-            });
-        }
+```bash
+mvn -q spring-boot:run
+```
 
-        // Shutdown the executor after tasks are submitted
-        executor.shutdown();
+You should see `Started MeshCdcApplication` on port `8080`.
 
-        // Wait for all tasks to complete within the time limit
-        if (!executor.awaitTermination(TIME_LIMIT_MINUTES, TimeUnit.MINUTES)) {
-            System.out.println("Not all tasks completed within the time limit.");
-            executor.shutdownNow();
-        }
+# 2) Authenticate to Google & set project
 
-        // Shutdown the Pub/Sub publisher
-        publisher.shutdown();
-        publisher.awaitTermination(1, TimeUnit.MINUTES);
+```bash
+gcloud auth application-default login
+gcloud config set project $GCP_PROJECT
+```
 
-        System.out.println("Successfully published 1 million SQL insert messages to Pub/Sub.");
-    }
+# 3) Enable required APIs
 
-    // Helper method to generate a random string of a given length
-    private static String getRandomString(Random random) {
-        int length = 6; // Define length of the random string
-        String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"; // Characters to choose from
-        StringBuilder sb = new StringBuilder(length);
+```bash
+gcloud services enable \
+  dataflow.googleapis.com storage.googleapis.com bigquery.googleapis.com \
+  spanner.googleapis.com
+```
 
-        for (int i = 0; i < length; i++) {
-            int index = random.nextInt(characters.length());
-            sb.append(characters.charAt(index));
-        }
+# 4) Create the config bucket & upload Flex containerSpec
 
-        return sb.toString(); // Return the random string
-    }
+```bash
+gsutil mb -l $REGION gs://$CFG_BUCKET  # OK if it already exists
+
+# Create a containerSpec.json that points at YOUR Dataflow Docker image
+cat > containerSpec.json <<'JSON'
+{
+  "image": "gcr.io/<your-project>/<your-repo>/spanner-bq-repl:1.0.0",
+  "sdk_info": {"language": "JAVA"},
+  "metadata": {"name": "Spanner→BQ CDC"},
+  "default_environment": {"num_workers": 3},
+  "parameters": [
+    {"name": "configLocation", "label": "Replication config GCS path", "is_optional": false},
+    {"name": "metricsTable",  "label": "BQ sidecar table", "is_optional": false},
+    {"name": "dlqPath",       "label": "GCS DLQ path",    "is_optional": true}
+  ]
 }
+JSON
+gsutil cp containerSpec.json $FLEX_SPEC_GCS
+```
+
+# 5) Create BQ dataset + sidecar table
+
+```bash
+bq --location=$BQ_LOCATION mk -d ${GCP_PROJECT}:dp_orders || true
+bq query --location=$BQ_LOCATION --use_legacy_sql=false "
+CREATE TABLE IF NOT EXISTS \`${GCP_PROJECT}.dp_orders.mesh_sync_status` (
+  src_database STRING, src_table STRING,
+  last_seen_commit_ts TIMESTAMP, last_applied_commit_ts TIMESTAMP,
+  backlog_seconds INT64,
+  window_start TIMESTAMP, window_end TIMESTAMP,
+  inserts INT64, updates INT64, deletes INT64,
+  error_count INT64, last_error STRING,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP()
+) PARTITION BY DATE(updated_at);"
+```
+
+# 6) Create the Dataflow service account & grant roles
+
+```bash
+gcloud iam service-accounts create dp-mesh --display-name="Data Mesh SA" || true
+
+gcloud projects add-iam-policy-binding $GCP_PROJECT \
+  --member="serviceAccount:$SA_EMAIL" --role="roles/dataflow.worker"
+gcloud projects add-iam-policy-binding $GCP_PROJECT \
+  --member="serviceAccount:$SA_EMAIL" --role="roles/dataflow.viewer"
+gcloud projects add-iam-policy-binding $GCP_PROJECT \
+  --member="serviceAccount:$SA_EMAIL" --role="roles/storage.admin"
+gcloud projects add-iam-policy-binding $GCP_PROJECT \
+  --member="serviceAccount:$SA_EMAIL" --role="roles/bigquery.admin"
+gcloud projects add-iam-policy-binding $GCP_PROJECT \
+  --member="serviceAccount:$SA_EMAIL" --role="roles/spanner.viewer"
+gcloud projects add-iam-policy-binding $GCP_PROJECT \
+  --member="serviceAccount:$SA_EMAIL" --role="roles/spanner.databaseReader"
+```
+
+# 7) Ensure Spanner change stream exists
+
+If you already have it, skip. Otherwise:
+
+```bash
+# Example: create change stream on all tables
+gcloud spanner databases ddl update <INSTANCE> --database=<DB> \
+  --ddl="CREATE CHANGE STREAM cs_orders FOR ALL OPTIONS (value_capture_type = 'NEW_VALUES')"
+```
+
+# 8) Create a product
+
+```bash
+PID=$(curl -sX POST localhost:8080/v2/products \
+ -H 'content-type: application/json' \
+ -d '{"productKey":"orders-transactions","name":"Orders","ownerEmail":"you@x.com"}' \
+ | jq -r .id)
+echo "Product ID: $PID"
+```
+
+# 9) Post the contract (edit the source & sink fields to your env)
+
+```bash
+cat > contract.json <<JSON
+{
+  "version": "v1",
+  "replication": {
+    "source": {
+      "type": "SPANNER_CHANGE_STREAM",
+      "instance": "<INSTANCE>",
+      "database": "<DB>",
+      "changeStream": "cs_orders",
+      "tables": [
+        {"name": "orders", "pk": ["order_id"], "commitTsCol": "_commit_ts"}
+      ]
+    },
+    "sink": {
+      "type": "BIGQUERY",
+      "project": "$GCP_PROJECT",
+      "dataset": "dp_orders",
+      "table": "curated",
+      "partition": {"field": "_commit_ts", "type": "DAY"},
+      "cluster": ["order_id","status"],
+      "writeMode": "UPSERT",
+      "dlq": {"type": "GCS", "bucket": "$CFG_BUCKET"}
+    },
+    "privacy": {"policyTags": {"email": "PII_EMAIL"}},
+    "slos": {"freshnessMinutes": 15, "completenessPct": 99.5},
+    "sidecar": {"statusTable": "$GCP_PROJECT.dp_orders.mesh_sync_status"},
+    "backfill": {"enabled": false}
+  }
+}
+JSON
+
+curl -sX PUT localhost:8080/v2/products/$PID/contract \
+  -H 'content-type: application/json' --data-binary @contract.json | jq
+```
+
+# 10) Provision the product surface
+
+```bash
+curl -sX POST localhost:8080/v2/products/$PID/provision:apply | jq
+```
+
+Confirm the per-product config exists:
+
+```bash
+gsutil cat gs://$CFG_BUCKET/replications/$PID.json | jq
+```
+
+# 11) Create the pipeline & deploy (launch Dataflow Flex job)
+
+```bash
+PLID=$(curl -sX POST localhost:8080/v2/pipelines \
+ -H 'content-type: application/json' \
+ -d '{"productId":"'"$PID"'","name":"orders_spanner_to_bq","template":"DATAFLOW_FLEX"}' \
+ | jq -r .id)
+echo "Pipeline ID: $PLID"
+
+curl -sX POST localhost:8080/v2/pipelines/$PLID:deploy | jq
+```
+
+You’ll get a JSON with `"jobId"`. Validate the job exists:
+
+```bash
+gcloud dataflow jobs list --region=$REGION --filter="id:<paste-jobId>"
+```
+
+# 12) Check health
+
+```bash
+curl -s localhost:8080/v1/observability/products/$PID/health | jq
+```
+
+You’ll see fields like:
+
+```json
+{"status":"GREEN|YELLOW|RED","freshnessMinutes":..., "systemLagMinutes":..., "backlogSeconds":...}
+```
+
+# 13) Quick functional checks
+
+**A) Verify target table exists**
+
+```bash
+bq ls ${GCP_PROJECT}:dp_orders
+```
+
+**B) Verify sidecar updates**
+
+```bash
+bq query --use_legacy_sql=false "
+SELECT * FROM \`${GCP_PROJECT}.dp_orders.mesh_sync_status\`
+ORDER BY updated_at DESC LIMIT 10"
+```
+
+**C) Access workflow (optional)**
+
+```bash
+REQ=$(curl -sX POST localhost:8080/v2/access/requests \
+ -H 'content-type: application/json' \
+ -d '{"productId":"'"$PID"'","datasetRef":"'"$GCP_PROJECT"'.dp_orders.curated","columns":["email"],"principal":"user:x@example.com","purpose":"analysis","durationDays":7}' \
+ | jq -r .id)
+
+curl -sX POST "localhost:8080/v2/access/requests/$REQ:approve?by=steward@example.com" | jq
+```
+
+# 14) Common issues & exact fixes
+
+* **`PERMISSION_DENIED` on Flex launch**
+  Ensure `$SA_EMAIL` has the roles in step 6, and your app has ADC (`gcloud auth application-default login`).
+* **`Not found: containerSpec`**
+  Check `mesh.dataflow.containerSpecGcs` in `application.yml` points to your `gs://…/containerSpec.json` uploaded in step 4.
+* **`BigQuery location mismatch`**
+  Your dataset must be in `$BQ_LOCATION` and the `ProvisionerService` uses that location. Set `BQ_LOCATION` correctly before creating the dataset.
+* **No rows in sidecar**
+  Your Dataflow pipeline must implement the **heartbeat** that writes to `mesh_sync_status`. (I included the writer pattern in the canvas; wire it into your job.)
+* **Spanner stream errors**
+  Confirm the change stream name exists on the right DB and that the Dataflow SA has `roles/spanner.databaseReader` and `roles/spanner.viewer`.
+
+# 15) What “100% Data Mesh” looks like here (acceptance)
+
+* **Contract-first**: your posted contract drives provisioning + runtime config (GCS JSON).
+* **Self-service**: users create products/pipelines via API (your Angular can call these).
+* **Observability**: deterministic SLOs via sidecar + Dataflow metrics exposed at `/health`.
+* **Governance**: access request flow included; add Policy Tags/column IAM next if needed.
+* **Change mgmt**: contracts are versioned in DB; you can add an approvals endpoint later.
+
+---
+
+If any step returns an error or a response you didn’t expect, paste the exact command and output — I’ll pinpoint and fix it.
