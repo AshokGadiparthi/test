@@ -1,3 +1,41 @@
+Got it — you want only the keys that were in NRT as-of yesterday but are missing in today’s Batch (no counts, no “today” NRT). Here’s the minimal query:
+
+-- Keys present in NRT (as of end of yesterday) but NOT in today's Batch
+WITH nrt_asof_yday AS (
+  SELECT DISTINCT custid, acctnum, mtn, acctseqlineid
+  FROM `project.dataset.nrt_table`
+  WHERE DATE(event_ts, "America/Chicago") < CURRENT_DATE("America/Chicago")  -- exclude today's NRT
+),
+batch_latest AS (
+  SELECT DISTINCT custid, acctnum, mtn, acctseqlineid
+  FROM `project.dataset.batch_table`
+)
+SELECT
+  n.custid, n.acctnum, n.mtn, n.acctseqlineid
+FROM nrt_asof_yday n
+LEFT JOIN batch_latest b
+USING (custid, acctnum, mtn, acctseqlineid)
+WHERE b.custid IS NULL;
+With the toy data from before, this returns:
+custid
+
+acctnum
+
+mtn
+
+acctseqlineid
+
+C4
+
+A400
+
+M444
+
+L4
+
+
+
+
 Got it. If the batch table has no update/event timestamp, you can still avoid same-day false positives by:
 
 Filtering NRT to exclude today’s rows (use its event/update timestamp), and
