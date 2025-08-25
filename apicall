@@ -1,3 +1,28 @@
+
+WITH nrt_asof_yday AS (
+SELECT DISTINCT custid, acctnum, mtn, acctseqlineid
+FROM `project.dataset.nrt_table`
+WHERE DATE(event_ts) < CURRENT_DATE() -- exclude today's NRT updates
+),
+batch_latest AS (
+SELECT DISTINCT custid, acctnum, mtn, acctseqlineid
+FROM `project.dataset.batch_table`
+)
+SELECT
+COALESCE(b.custid, n.custid) AS custid,
+COALESCE(b.acctnum, n.acctnum) AS acctnum,
+COALESCE(b.mtn, n.mtn) AS mtn,
+COALESCE(b.acctseqlineid, n.acctseqlineid) AS acctseqlineid,
+CASE
+WHEN b.custid IS NULL THEN 'ONLY_IN_NRT_ASOF_YDAY'
+WHEN n.custid IS NULL THEN 'ONLY_IN_BATCH_TODAY'
+ELSE 'IN_BOTH'
+END AS presence_status
+FROM batch_latest b
+FULL OUTER JOIN nrt_asof_yday n
+USING (custid, acctnum, mtn, acctseqlineid)
+WHERE b.custid IS NULL OR n.custid IS NULL;
+
 Got it — you want only the keys that were in NRT as-of yesterday but are missing in today’s Batch (no counts, no “today” NRT). Here’s the minimal query:
 
 -- Keys present in NRT (as of end of yesterday) but NOT in today's Batch
