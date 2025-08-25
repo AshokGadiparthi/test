@@ -1,76 +1,84 @@
-Line level (custid, acctnum, mtn, acctseqlineid)
--- ✅ Compare NRT as-of < today vs today's batch
-DECLARE batch_dt DATE DEFAULT CURRENT_DATE();
+Got it. If the batch table has no update/event timestamp, you can still avoid same-day false positives by:
 
-WITH
--- 1) Only NRT rows strictly before today (so “today updates” don’t trigger diffs)
-nrt_asof_yday AS (
+Filtering NRT to exclude today’s rows (use its event/update timestamp), and
+
+Not filtering Batch at all (treat it as the latest snapshot).
+
+
+
+Below are ready BigQuery templates for both levels.
+
+Row 7 — Line level (custid, acctnum, mtn, acctseqlineid)
+-- Compare today's Batch snapshot vs NRT as-of yesterday
+WITH nrt_asof_yday AS (
   SELECT
     custid, acctnum, mtn, acctseqlineid,
-    -- hash of ALL NON-KEY business columns you care about (exclude audit/ingest cols)
     TO_HEX(MD5(TO_JSON_STRING(STRUCT(
-      col1, col2, col3  -- <-- replace with your non-key columns
+      -- put business (non-key) columns here, same list/order as below
+      plan_id, plan_name, plan_status, start_date, end_date, balance_amt, credit_limit
     )))) AS nrt_hash
   FROM `project.dataset.nrt_table`
-  WHERE DATE(event_ts) < batch_dt                -- <--- your NRT timestamp/partition col
+  WHERE DATE(event_ts) < CURRENT_DATE()           -- exclude today's NRT updates
 ),
-
--- 2) Only today's batch rows
-batch_today AS (
+batch_latest AS (
   SELECT
     custid, acctnum, mtn, acctseqlineid,
     TO_HEX(MD5(TO_JSON_STRING(STRUCT(
-      col1, col2, col3  -- <-- same non-key list as above, same order
+      -- same business (non-key) columns; same order
+      plan_id, plan_name, plan_status, start_date, end_date, balance_amt, credit_limit
+    )))) AS batch_hash
+  FROM `project.dataset.batch_table`              -- no date filter (no ts in batch)
+)
+SELECT COUNT(*) AS diff_count_line_level
+FROM batch_latest b
+FULL OUTER JOIN nrt_asof_yday n
+USING (custid, acctnum, mtn, acctseqlineid)
+WHERE
+  -- present only in NRT (as-of yesterday) → not in today's batch
+  b.custid IS NULL
+  -- or present in both but content differs
+  OR (n.custid IS NOT NULL AND b.custid IS NOT NULL AND n.nrt_hash <> b.batch_hash);
+Row 8 — Account level (custid, acctnum)
+WITH nrt_asof_yday AS (
+  SELECT
+    custid, acctnum, mtn, acctseqlineid,
+    TO_HEX(MD5(TO_JSON_STRING(STRUCT(
+      plan_id, plan_name, plan_status, start_date, end_date, balance_amt, credit_limit
+    )))) AS nrt_hash
+  FROM `project.dataset.nrt_table`
+  WHERE DATE(event_ts) < CURRENT_DATE()
+),
+batch_latest AS (
+  SELECT
+    custid, acctnum, mtn, acctseqlineid,
+    TO_HEX(MD5(TO_JSON_STRING(STRUCT(
+      plan_id, plan_name, plan_status, start_date, end_date, balance_amt, credit_limit
     )))) AS batch_hash
   FROM `project.dataset.batch_table`
-  WHERE DATE(batch_date) = batch_dt              -- <--- your batch partition/date col
-)
-
--- 3) Count line-level differences or missing in today's batch
-SELECT COUNT(*) AS diff_count_line_level
-FROM batch_today b
-FULL OUTER JOIN nrt_asof_yday n
-  USING (custid, acctnum, mtn, acctseqlineid)
-WHERE
-  -- either not present in today's batch (exists only in NRT-as-of-yesterday)
-  b.custid IS NULL
-  -- or present on both sides but values differ
-  OR (n.custid IS NOT NULL AND b.custid IS NOT NULL AND n.nrt_hash <> b.batch_hash);
-Account level (custid, acctnum)
-DECLARE batch_dt DATE DEFAULT CURRENT_DATE();
-
-WITH
-nrt_asof_yday AS (
-  SELECT
-    custid, acctnum, mtn, acctseqlineid,
-    TO_HEX(MD5(TO_JSON_STRING(STRUCT(col1, col2, col3)))) AS nrt_hash
-  FROM `project.dataset.nrt_table`
-  WHERE DATE(event_ts) < batch_dt
-),
-batch_today AS (
-  SELECT
-    custid, acctnum, mtn, acctseqlineid,
-    TO_HEX(MD5(TO_JSON_STRING(STRUCT(col1, col2, col3)))) AS batch_hash
-  FROM `project.dataset.batch_table`
-  WHERE DATE(batch_date) = batch_dt
 ),
 line_diffs AS (
   SELECT
     COALESCE(b.custid, n.custid) AS custid,
     COALESCE(b.acctnum, n.acctnum) AS acctnum
-  FROM batch_today b
+  FROM batch_latest b
   FULL OUTER JOIN nrt_asof_yday n
-    USING (custid, acctnum, mtn, acctseqlineid)
-  WHERE
-      b.custid IS NULL                              -- missing in today's batch
-   OR (n.custid IS NOT NULL AND b.custid IS NOT NULL AND n.nrt_hash <> b.batch_hash)
+  USING (custid, acctnum, mtn, acctseqlineid)
+  WHERE b.custid IS NULL
+     OR (n.custid IS NOT NULL AND b.custid IS NOT NULL AND n.nrt_hash <> b.batch_hash)
 )
 SELECT COUNT(DISTINCT FORMAT('%s|%s', custid, acctnum)) AS diff_count_acct_level
 FROM line_diffs;
-Notes
-Replace table names, the NRT timestamp/partition column (event_ts), and the batch partition column (batch_date).
+If your NRT also lacks a timestamp
+Use partition pseudo column if available: WHERE _PARTITIONDATE < CURRENT_DATE().
 
-Put your business columns into the STRUCT(...) in the same order on both sides. Exclude audit fields (ingest ts, user, job id, etc.).
+If neither table has any date/partition to filter by, you cannot exclude same-day updates. The fix is to add one of:
 
-If you want “as-of yesterday” instead of “< today,” change the filter to DATE(event_ts) <= DATE_SUB(batch_dt, INTERVAL 1 DAY).
+an ingestion/load date column,
 
+ingestion-time partitioning, or
+
+keep daily snapshot tables (e.g., batch_table_20250825) and compare to the latest.
+
+
+
+If you share your actual column names for the “business” fields, I’ll drop them into the query so you can run it directly.
