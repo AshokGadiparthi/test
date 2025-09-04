@@ -1,82 +1,49 @@
-You’re absolutely right 👍 — what you pasted is the first step to dynamically collect column names from INFORMATION_SCHEMA.
+-- Step 1: Identify mismatched rows (single join)
+WITH dq_mismatch_rows AS (
+  SELECT
+    t.cust_id,
+    t.acct_num,
+    t.mtn,
+    t.col1 AS t_col1,
+    s.col1 AS s_col1,
+    t.col2 AS t_col2,
+    s.col2 AS s_col2,
+    t.col3 AS t_col3,
+    s.col3 AS s_col3
+    -- add more columns as needed
+  FROM `project.dataset.Table_T` t
+  JOIN `project.dataset.Table_S` s
+    USING (cust_id, acct_num, mtn)
+  WHERE t.hash_col <> s.hash_col
+),
 
-In the full end-to-end script I gave, I directly embedded INFORMATION_SCHEMA inside the dynamic SQL builder.
-If you prefer a clearer step-by-step flow, here’s the corrected version including your missing DECLARE col_list approach:
+-- Step 2: Unpivot each column into a row for metrics calculation
+unpivoted AS (
+  SELECT
+    cust_id,
+    acct_num,
+    mtn,
+    col_name,
+    t_value,
+    s_value
+  FROM dq_mismatch_rows
+  UNPIVOT(
+    (t_value, s_value) FOR col_name IN (
+      (t_col1, s_col1) AS 'col1',
+      (t_col2, s_col2) AS 'col2',
+      (t_col3, s_col3) AS 'col3'
+      -- add more columns here
+    )
+  )
+)
 
-✅ Full BigQuery Script with col_list
--- Step 0: Declare variables
-DECLARE col_list ARRAY<STRING>;
-DECLARE sql_summary STRING;
-DECLARE sql_details STRING;
-
---------------------------------------------------------------------------------
--- Step 1: Collect column names dynamically (excluding PKs + hash col)
-SET col_list = (
-  SELECT ARRAY_AGG(column_name)
-  FROM `project.dataset.INFORMATION_SCHEMA.COLUMNS`
-  WHERE table_name = 'Table_T'
-    AND column_name NOT IN ('cust_id','acct_num','mtn','hash_col')
-);
-
---------------------------------------------------------------------------------
--- Step 2: Store mismatched row keys into a staging table
-CREATE OR REPLACE TABLE project.dataset.dq_mismatch_rows AS
+-- Step 3: Compute metrics for each column
 SELECT
-  t.cust_id,
-  t.acct_num,
-  t.mtn,
-  t.hash_col AS hash_t,
-  s.hash_col AS hash_s
-FROM project.dataset.Table_T t
-JOIN project.dataset.Table_S s
-  USING (cust_id, acct_num, mtn)
-WHERE t.hash_col <> s.hash_col;
-
---------------------------------------------------------------------------------
--- Step 3: Column-level summary mismatches
-SET sql_summary = (
-  SELECT STRING_AGG(FORMAT("""
-    SELECT
-      CURRENT_DATE() AS run_date,
-      '%s' AS column_name,
-      COUNTIF(t.%s <> s.%s) AS mismatch_count
-    FROM project.dataset.dq_mismatch_rows m
-    JOIN project.dataset.Table_T t USING (cust_id, acct_num, mtn)
-    JOIN project.dataset.Table_S s USING (cust_id, acct_num, mtn)
-  """, col, col, col), " UNION ALL ")
-  FROM UNNEST(col_list) AS col
-);
-
-SET sql_summary = FORMAT("""
-  CREATE OR REPLACE TABLE project.dataset.dq_mismatch_summary AS
-  %s
-""", sql_summary);
-
-EXECUTE IMMEDIATE sql_summary;
-
---------------------------------------------------------------------------------
--- Step 4: Row-level mismatch details (root cause analysis)
-SET sql_details = (
-  SELECT STRING_AGG(FORMAT("""
-    SELECT
-      CURRENT_DATE() AS run_date,
-      m.cust_id,
-      m.acct_num,
-      m.mtn,
-      '%s' AS column_name,
-      CAST(t.%s AS STRING) AS source_value,
-      CAST(s.%s AS STRING) AS target_value
-    FROM project.dataset.dq_mismatch_rows m
-    JOIN project.dataset.Table_T t USING (cust_id, acct_num, mtn)
-    JOIN project.dataset.Table_S s USING (cust_id, acct_num, mtn)
-    WHERE t.%s <> s.%s
-  """, col, col, col, col, col), " UNION ALL ")
-  FROM UNNEST(col_list) AS col
-);
-
-SET sql_details = FORMAT("""
-  CREATE OR REPLACE TABLE project.dataset.dq_mismatch_details AS
-  %s
-""", sql_details);
-
-EXECUTE IMMEDIATE sql_details;
+  col_name,
+  COUNT(*) AS total_mismatched_rows,
+  COUNTIF(t_value IS DISTINCT FROM s_value) AS mismatch_count,
+  COUNTIF(t_value IS NULL OR s_value IS NULL) AS null_count,
+  ARRAY_AGG(STRUCT(cust_id, acct_num, mtn, t_value, s_value) LIMIT 10) AS sample_rows
+FROM unpivoted
+GROUP BY col_name
+ORDER BY col_name;
