@@ -1,147 +1,82 @@
+You’re absolutely right 👍 — what you pasted is the first step to dynamically collect column names from INFORMATION_SCHEMA.
 
-WITH nrt_asof_yday AS (
-SELECT DISTINCT custid, acctnum, mtn, acctseqlineid
-FROM `project.dataset.nrt_table`
-WHERE DATE(event_ts) < CURRENT_DATE() -- exclude today's NRT updates
-),
-batch_latest AS (
-SELECT DISTINCT custid, acctnum, mtn, acctseqlineid
-FROM `project.dataset.batch_table`
-)
+In the full end-to-end script I gave, I directly embedded INFORMATION_SCHEMA inside the dynamic SQL builder.
+If you prefer a clearer step-by-step flow, here’s the corrected version including your missing DECLARE col_list approach:
+
+✅ Full BigQuery Script with col_list
+-- Step 0: Declare variables
+DECLARE col_list ARRAY<STRING>;
+DECLARE sql_summary STRING;
+DECLARE sql_details STRING;
+
+--------------------------------------------------------------------------------
+-- Step 1: Collect column names dynamically (excluding PKs + hash col)
+SET col_list = (
+  SELECT ARRAY_AGG(column_name)
+  FROM `project.dataset.INFORMATION_SCHEMA.COLUMNS`
+  WHERE table_name = 'Table_T'
+    AND column_name NOT IN ('cust_id','acct_num','mtn','hash_col')
+);
+
+--------------------------------------------------------------------------------
+-- Step 2: Store mismatched row keys into a staging table
+CREATE OR REPLACE TABLE project.dataset.dq_mismatch_rows AS
 SELECT
-COALESCE(b.custid, n.custid) AS custid,
-COALESCE(b.acctnum, n.acctnum) AS acctnum,
-COALESCE(b.mtn, n.mtn) AS mtn,
-COALESCE(b.acctseqlineid, n.acctseqlineid) AS acctseqlineid,
-CASE
-WHEN b.custid IS NULL THEN 'ONLY_IN_NRT_ASOF_YDAY'
-WHEN n.custid IS NULL THEN 'ONLY_IN_BATCH_TODAY'
-ELSE 'IN_BOTH'
-END AS presence_status
-FROM batch_latest b
-FULL OUTER JOIN nrt_asof_yday n
-USING (custid, acctnum, mtn, acctseqlineid)
-WHERE b.custid IS NULL OR n.custid IS NULL;
+  t.cust_id,
+  t.acct_num,
+  t.mtn,
+  t.hash_col AS hash_t,
+  s.hash_col AS hash_s
+FROM project.dataset.Table_T t
+JOIN project.dataset.Table_S s
+  USING (cust_id, acct_num, mtn)
+WHERE t.hash_col <> s.hash_col;
 
-Got it — you want only the keys that were in NRT as-of yesterday but are missing in today’s Batch (no counts, no “today” NRT). Here’s the minimal query:
+--------------------------------------------------------------------------------
+-- Step 3: Column-level summary mismatches
+SET sql_summary = (
+  SELECT STRING_AGG(FORMAT("""
+    SELECT
+      CURRENT_DATE() AS run_date,
+      '%s' AS column_name,
+      COUNTIF(t.%s <> s.%s) AS mismatch_count
+    FROM project.dataset.dq_mismatch_rows m
+    JOIN project.dataset.Table_T t USING (cust_id, acct_num, mtn)
+    JOIN project.dataset.Table_S s USING (cust_id, acct_num, mtn)
+  """, col, col, col), " UNION ALL ")
+  FROM UNNEST(col_list) AS col
+);
 
--- Keys present in NRT (as of end of yesterday) but NOT in today's Batch
-WITH nrt_asof_yday AS (
-  SELECT DISTINCT custid, acctnum, mtn, acctseqlineid
-  FROM `project.dataset.nrt_table`
-  WHERE DATE(event_ts, "America/Chicago") < CURRENT_DATE("America/Chicago")  -- exclude today's NRT
-),
-batch_latest AS (
-  SELECT DISTINCT custid, acctnum, mtn, acctseqlineid
-  FROM `project.dataset.batch_table`
-)
-SELECT
-  n.custid, n.acctnum, n.mtn, n.acctseqlineid
-FROM nrt_asof_yday n
-LEFT JOIN batch_latest b
-USING (custid, acctnum, mtn, acctseqlineid)
-WHERE b.custid IS NULL;
-With the toy data from before, this returns:
-custid
+SET sql_summary = FORMAT("""
+  CREATE OR REPLACE TABLE project.dataset.dq_mismatch_summary AS
+  %s
+""", sql_summary);
 
-acctnum
+EXECUTE IMMEDIATE sql_summary;
 
-mtn
+--------------------------------------------------------------------------------
+-- Step 4: Row-level mismatch details (root cause analysis)
+SET sql_details = (
+  SELECT STRING_AGG(FORMAT("""
+    SELECT
+      CURRENT_DATE() AS run_date,
+      m.cust_id,
+      m.acct_num,
+      m.mtn,
+      '%s' AS column_name,
+      CAST(t.%s AS STRING) AS source_value,
+      CAST(s.%s AS STRING) AS target_value
+    FROM project.dataset.dq_mismatch_rows m
+    JOIN project.dataset.Table_T t USING (cust_id, acct_num, mtn)
+    JOIN project.dataset.Table_S s USING (cust_id, acct_num, mtn)
+    WHERE t.%s <> s.%s
+  """, col, col, col, col, col), " UNION ALL ")
+  FROM UNNEST(col_list) AS col
+);
 
-acctseqlineid
+SET sql_details = FORMAT("""
+  CREATE OR REPLACE TABLE project.dataset.dq_mismatch_details AS
+  %s
+""", sql_details);
 
-C4
-
-A400
-
-M444
-
-L4
-
-
-
-
-Got it. If the batch table has no update/event timestamp, you can still avoid same-day false positives by:
-
-Filtering NRT to exclude today’s rows (use its event/update timestamp), and
-
-Not filtering Batch at all (treat it as the latest snapshot).
-
-
-
-Below are ready BigQuery templates for both levels.
-
-Row 7 — Line level (custid, acctnum, mtn, acctseqlineid)
--- Compare today's Batch snapshot vs NRT as-of yesterday
-WITH nrt_asof_yday AS (
-  SELECT
-    custid, acctnum, mtn, acctseqlineid,
-    TO_HEX(MD5(TO_JSON_STRING(STRUCT(
-      -- put business (non-key) columns here, same list/order as below
-      plan_id, plan_name, plan_status, start_date, end_date, balance_amt, credit_limit
-    )))) AS nrt_hash
-  FROM `project.dataset.nrt_table`
-  WHERE DATE(event_ts) < CURRENT_DATE()           -- exclude today's NRT updates
-),
-batch_latest AS (
-  SELECT
-    custid, acctnum, mtn, acctseqlineid,
-    TO_HEX(MD5(TO_JSON_STRING(STRUCT(
-      -- same business (non-key) columns; same order
-      plan_id, plan_name, plan_status, start_date, end_date, balance_amt, credit_limit
-    )))) AS batch_hash
-  FROM `project.dataset.batch_table`              -- no date filter (no ts in batch)
-)
-SELECT COUNT(*) AS diff_count_line_level
-FROM batch_latest b
-FULL OUTER JOIN nrt_asof_yday n
-USING (custid, acctnum, mtn, acctseqlineid)
-WHERE
-  -- present only in NRT (as-of yesterday) → not in today's batch
-  b.custid IS NULL
-  -- or present in both but content differs
-  OR (n.custid IS NOT NULL AND b.custid IS NOT NULL AND n.nrt_hash <> b.batch_hash);
-Row 8 — Account level (custid, acctnum)
-WITH nrt_asof_yday AS (
-  SELECT
-    custid, acctnum, mtn, acctseqlineid,
-    TO_HEX(MD5(TO_JSON_STRING(STRUCT(
-      plan_id, plan_name, plan_status, start_date, end_date, balance_amt, credit_limit
-    )))) AS nrt_hash
-  FROM `project.dataset.nrt_table`
-  WHERE DATE(event_ts) < CURRENT_DATE()
-),
-batch_latest AS (
-  SELECT
-    custid, acctnum, mtn, acctseqlineid,
-    TO_HEX(MD5(TO_JSON_STRING(STRUCT(
-      plan_id, plan_name, plan_status, start_date, end_date, balance_amt, credit_limit
-    )))) AS batch_hash
-  FROM `project.dataset.batch_table`
-),
-line_diffs AS (
-  SELECT
-    COALESCE(b.custid, n.custid) AS custid,
-    COALESCE(b.acctnum, n.acctnum) AS acctnum
-  FROM batch_latest b
-  FULL OUTER JOIN nrt_asof_yday n
-  USING (custid, acctnum, mtn, acctseqlineid)
-  WHERE b.custid IS NULL
-     OR (n.custid IS NOT NULL AND b.custid IS NOT NULL AND n.nrt_hash <> b.batch_hash)
-)
-SELECT COUNT(DISTINCT FORMAT('%s|%s', custid, acctnum)) AS diff_count_acct_level
-FROM line_diffs;
-If your NRT also lacks a timestamp
-Use partition pseudo column if available: WHERE _PARTITIONDATE < CURRENT_DATE().
-
-If neither table has any date/partition to filter by, you cannot exclude same-day updates. The fix is to add one of:
-
-an ingestion/load date column,
-
-ingestion-time partitioning, or
-
-keep daily snapshot tables (e.g., batch_table_20250825) and compare to the latest.
-
-
-
-If you share your actual column names for the “business” fields, I’ll drop them into the query so you can run it directly.
+EXECUTE IMMEDIATE sql_details;
