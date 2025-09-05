@@ -1,10 +1,66 @@
-.mat-equal-table {
-  table-layout: fixed;
-  width: 100%;
+<!-- app.component.html -->
+<div class="overlay" *ngIf="loading">
+  <mat-progress-spinner
+    mode="indeterminate"
+    diameter="60"
+    strokeWidth="5"
+  ></mat-progress-spinner>
+</div>
+
+<!-- Your mat-table -->
+<table mat-table [dataSource]="data" class="mat-elevation-z8">
+  <tr mat-row *matRowDef="let row; columns: displayedColumns"
+      (click)="onRowClick(row)">
+  </tr>
+</table>
+
+
+// app.component.ts
+import { Component } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+
+@Component({
+  selector: 'app-root',
+  templateUrl: './app.component.html',
+  styleUrls: ['./app.component.css']
+})
+export class AppComponent {
+  data = [{ id: 1, name: 'Item A' }, { id: 2, name: 'Item B' }];
+  displayedColumns = ['id', 'name'];
+  loading = false;
+
+  constructor(private http: HttpClient) {}
+
+  onRowClick(row: any) {
+    this.loading = true; // show spinner + lock screen
+    this.http.get(`https://jsonplaceholder.typicode.com/posts/${row.id}`)
+      .subscribe({
+        next: (res) => {
+          console.log('Response:', res);
+        },
+        error: (err) => {
+          console.error(err);
+        },
+        complete: () => {
+          this.loading = false; // hide spinner
+        }
+      });
+  }
 }
 
-.mat-equal-table th,
-.mat-equal-table td {
-  width: 20%; /* 5 equal columns */
-  text-align: left;
+
+/* app.component.css */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.7); /* semi-transparent lock */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000; /* above everything */
+  pointer-events: all; /* block clicks behind */
 }
+
