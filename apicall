@@ -1,81 +1,31 @@
-table {
-  width: 100%;
-  border-collapse: collapse;
+.table-container {
+  max-width: 100%;      /* 👈 ensures table doesn't overflow container */
+  overflow-x: auto;     /* 👈 adds scroll if too wide */
 }
 
-/* Base row styles */
-tr.example-element-row {
-  cursor: pointer;
-  transition: background-color 0.2s ease;
+.cell-content {
+  white-space: nowrap;      /* 👈 prevents text wrapping */
+  overflow: hidden;         /* 👈 hides overflowed content */
+  text-overflow: ellipsis;  /* 👈 adds "..." if text is too long */
+  display: block;           /* 👈 ensures ellipsis works */
+  max-width: 200px;         /* 👈 adjust per column */
 }
 
-tr.example-element-row:hover {
-  background: #f5f5f5;
-}
 
-tr.example-element-row:active {
-  background: #e0e0e0;
-}
+<div class="table-container">
+  <table mat-table [dataSource]="dataSource" class="mat-elevation-z2 compact-table">
 
-/* Expanded row styling */
-tr.example-detail-row {
-  background: #fafafa;
-}
+    <!-- Example Column -->
+    <ng-container matColumnDef="name">
+      <th mat-header-cell *matHeaderCellDef> Name </th>
+      <td mat-cell *matCellDef="let element">
+        <div class="cell-content">{{element.name}}</div>
+      </td>
+    </ng-container>
 
-td {
-  border-bottom: 1px solid #ddd;
-  padding: 8px;
-}
+    <!-- More columns ... -->
 
-/* Detail wrapper - allow multiple independent expansions */
-.example-element-detail-wrapper {
-  overflow: hidden;
-  display: block;
-  transition: max-height 0.3s ease;
-  max-height: 0;
-}
-
-.example-element-detail-wrapper-expanded {
-  max-height: 500px; /* Adjust based on content size */
-}
-
-/* Detail content box */
-.example-element-detail {
-  display: flex;
-  align-items: flex-start;
-  padding: 16px;
-  background: #ffffff;
-  border-left: 3px solid #3f51b5; /* Material primary color accent */
-  border-radius: 0 4px 4px 0;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-/* Optional inner sections */
-.example-element-diagram {
-  min-width: 80px;
-  border: 2px solid #ccc;
-  padding: 8px;
-  margin-right: 16px;
-  font-weight: lighter;
-  text-align: center;
-}
-
-.example-element-symbol {
-  font-weight: bold;
-  font-size: 36px;
-}
-
-.example-element-description {
-  flex: 1;
-  font-size: 14px;
-  line-height: 1.4;
-}
-
-/* Toggle button icon animation */
-.example-toggle-button {
-  transition: transform 0.25s ease;
-}
-
-.example-toggle-button-expanded {
-  transform: rotate(180deg);
-}
+    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+    <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+  </table>
+</div>
