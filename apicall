@@ -1,31 +1,10 @@
-/* Remove table background and shadow */
-.mat-mdc-table {
-  background: transparent !important;
-  box-shadow: none !important;
-  border-collapse: collapse;
+.mat-equal-table {
+  table-layout: fixed;
   width: 100%;
 }
 
-/* Transparent header */
-.mat-mdc-header-row {
-  background: transparent !important;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.2); /* thin bottom border */
-}
-
-/* Row lines only */
-.mat-mdc-row {
-  background: transparent !important;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-}
-
-/* Remove hover highlight background */
-.mat-mdc-row:hover {
-  background: rgba(0, 0, 0, 0.03); /* subtle hover effect */
-}
-
-/* Transparent cells */
-.mat-mdc-cell, .mat-mdc-header-cell {
-  background: transparent !important;
-  font-size: 12px;   /* 👈 lowest readable font size */
-  padding: 4px 8px;  /* 👈 compact spacing */
+.mat-equal-table th,
+.mat-equal-table td {
+  width: 20%; /* 5 equal columns */
+  text-align: left;
 }
