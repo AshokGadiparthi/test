@@ -1,31 +1,31 @@
-.table-container {
-  max-width: 100%;      /* 👈 ensures table doesn't overflow container */
-  overflow-x: auto;     /* 👈 adds scroll if too wide */
+/* Remove table background and shadow */
+.mat-mdc-table {
+  background: transparent !important;
+  box-shadow: none !important;
+  border-collapse: collapse;
+  width: 100%;
 }
 
-.cell-content {
-  white-space: nowrap;      /* 👈 prevents text wrapping */
-  overflow: hidden;         /* 👈 hides overflowed content */
-  text-overflow: ellipsis;  /* 👈 adds "..." if text is too long */
-  display: block;           /* 👈 ensures ellipsis works */
-  max-width: 200px;         /* 👈 adjust per column */
+/* Transparent header */
+.mat-mdc-header-row {
+  background: transparent !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.2); /* thin bottom border */
 }
 
+/* Row lines only */
+.mat-mdc-row {
+  background: transparent !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
 
-<div class="table-container">
-  <table mat-table [dataSource]="dataSource" class="mat-elevation-z2 compact-table">
+/* Remove hover highlight background */
+.mat-mdc-row:hover {
+  background: rgba(0, 0, 0, 0.03); /* subtle hover effect */
+}
 
-    <!-- Example Column -->
-    <ng-container matColumnDef="name">
-      <th mat-header-cell *matHeaderCellDef> Name </th>
-      <td mat-cell *matCellDef="let element">
-        <div class="cell-content">{{element.name}}</div>
-      </td>
-    </ng-container>
-
-    <!-- More columns ... -->
-
-    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-    <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-  </table>
-</div>
+/* Transparent cells */
+.mat-mdc-cell, .mat-mdc-header-cell {
+  background: transparent !important;
+  font-size: 12px;   /* 👈 lowest readable font size */
+  padding: 4px 8px;  /* 👈 compact spacing */
+}
