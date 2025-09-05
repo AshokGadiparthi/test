@@ -1,41 +1,81 @@
-import com.google.cloud.bigquery.*;
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
 
-import java.util.ArrayList;
-import java.util.List;
+/* Base row styles */
+tr.example-element-row {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
 
-public class BigQueryMapper {
-    private final BigQuery bigquery;
+tr.example-element-row:hover {
+  background: #f5f5f5;
+}
 
-    public BigQueryMapper(BigQuery bigquery) {
-        this.bigquery = bigquery;
-    }
+tr.example-element-row:active {
+  background: #e0e0e0;
+}
 
-    public List<SampleRow> fetchData() {
-        String query = "SELECT id, records FROM `project.dataset.sample_table`";
-        QueryJobConfiguration queryConfig = QueryJobConfiguration.newBuilder(query).build();
+/* Expanded row styling */
+tr.example-detail-row {
+  background: #fafafa;
+}
 
-        TableResult result;
-        try {
-            result = bigquery.query(queryConfig);
-        } catch (Exception e) {
-            throw new RuntimeException("Query failed", e);
-        }
+td {
+  border-bottom: 1px solid #ddd;
+  padding: 8px;
+}
 
-        List<SampleRow> rows = new ArrayList<>();
-        for (FieldValueList row : result.iterateAll()) {
-            String id = row.get("id").getStringValue();
+/* Detail wrapper - allow multiple independent expansions */
+.example-element-detail-wrapper {
+  overflow: hidden;
+  display: block;
+  transition: max-height 0.3s ease;
+  max-height: 0;
+}
 
-            // Read ARRAY<STRUCT>
-            List<RecordItem> recordList = new ArrayList<>();
-            for (FieldValue recordVal : row.get("records").getRepeatedValue()) {
-                FieldValueList struct = recordVal.getRecordValue();
-                String col1 = struct.get("col1").getStringValue();
-                String col2 = struct.get("col2").getStringValue();
-                recordList.add(new RecordItem(col1, col2));
-            }
+.example-element-detail-wrapper-expanded {
+  max-height: 500px; /* Adjust based on content size */
+}
 
-            rows.add(new SampleRow(id, recordList));
-        }
-        return rows;
-    }
+/* Detail content box */
+.example-element-detail {
+  display: flex;
+  align-items: flex-start;
+  padding: 16px;
+  background: #ffffff;
+  border-left: 3px solid #3f51b5; /* Material primary color accent */
+  border-radius: 0 4px 4px 0;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* Optional inner sections */
+.example-element-diagram {
+  min-width: 80px;
+  border: 2px solid #ccc;
+  padding: 8px;
+  margin-right: 16px;
+  font-weight: lighter;
+  text-align: center;
+}
+
+.example-element-symbol {
+  font-weight: bold;
+  font-size: 36px;
+}
+
+.example-element-description {
+  flex: 1;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+/* Toggle button icon animation */
+.example-toggle-button {
+  transition: transform 0.25s ease;
+}
+
+.example-toggle-button-expanded {
+  transform: rotate(180deg);
 }
