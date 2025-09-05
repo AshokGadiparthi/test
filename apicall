@@ -1,28 +1,41 @@
-CREATE OR REPLACE TABLE `project.dataset.dq_column_summary` AS
-SELECT
-  col_name,
-  COUNTIF(t_value IS NULL) AS source_null_count,
-  COUNTIF(s_value IS NULL) AS target_null_count,
-  
-  -- True mismatches after normalization
-  COUNTIF(
-    (t_value IS NULL AND s_value IS NOT NULL)
-    OR (t_value IS NOT NULL AND s_value IS NULL)
-    OR (SAFE_CAST(t_value AS STRING) IS DISTINCT FROM SAFE_CAST(s_value AS STRING))
-  ) AS mismatch_count,
+import com.google.cloud.bigquery.*;
 
-  -- Sample of mismatched records
-  ARRAY_AGG(
-    STRUCT(
-      cust_id,
-      acct_num,
-      mtn,
-      t_value AS source_value,
-      s_value AS target_value
-    ) 
-    LIMIT 10
-  ) AS mismatch_sample
+import java.util.ArrayList;
+import java.util.List;
 
-FROM `project.dataset.dq_unpivoted`
-GROUP BY col_name
-ORDER BY mismatch_count DESC;
+public class BigQueryMapper {
+    private final BigQuery bigquery;
+
+    public BigQueryMapper(BigQuery bigquery) {
+        this.bigquery = bigquery;
+    }
+
+    public List<SampleRow> fetchData() {
+        String query = "SELECT id, records FROM `project.dataset.sample_table`";
+        QueryJobConfiguration queryConfig = QueryJobConfiguration.newBuilder(query).build();
+
+        TableResult result;
+        try {
+            result = bigquery.query(queryConfig);
+        } catch (Exception e) {
+            throw new RuntimeException("Query failed", e);
+        }
+
+        List<SampleRow> rows = new ArrayList<>();
+        for (FieldValueList row : result.iterateAll()) {
+            String id = row.get("id").getStringValue();
+
+            // Read ARRAY<STRUCT>
+            List<RecordItem> recordList = new ArrayList<>();
+            for (FieldValue recordVal : row.get("records").getRepeatedValue()) {
+                FieldValueList struct = recordVal.getRecordValue();
+                String col1 = struct.get("col1").getStringValue();
+                String col2 = struct.get("col2").getStringValue();
+                recordList.add(new RecordItem(col1, col2));
+            }
+
+            rows.add(new SampleRow(id, recordList));
+        }
+        return rows;
+    }
+}
