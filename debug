@@ -1,23 +1,25 @@
-export class LineageGraphComponent implements OnInit {
-  private cy: any;
-  private graphData: any;
+npm install @cytoscape/cytoscape-popper popper.js
 
-  constructor(private http: HttpClient) {}
 
-  ngOnInit() {
-    // Load JSON from assets
-    this.http.get<any>('assets/full_lineage_graph.json').subscribe({
-      next: data => {
-        this.graphData = data;
-        this.initializeGraph();
-      },
-      error: err => console.error('Failed to load lineage JSON', err)
-    });
-  }
+import cytoscape from 'cytoscape';
+import dagre from 'cytoscape-dagre';
+import popper from 'cytoscape-popper';
+import tippy from 'tippy.js';
+import 'tippy.js/dist/tippy.css';
 
-  private initializeGraph() {
-    if (!this.graphData) return;
+cytoscape.use(dagre);
+cytoscape.use(popper); // ✅ register popper plugin
 
-    if (this.cy) this.cy.destroy();
 
-    const elements = this.buildElements(this.graphData);
+this.cy.nodes().forEach((node: any) => {
+  const ref = node.popperRef(); // now this works
+  const tip = tippy(document.createElement('div'), {
+    content: this.renderTooltip(node),
+    trigger: 'manual',
+    placement: 'bottom',
+    hideOnClick: true,
+    interactive: true,
+  });
+  node.on('mouseover', () => tip.show());
+  node.on('mouseout', () => tip.hide());
+});
