@@ -1,11 +1,7 @@
-<app-lineage-graph [graphData]="fullLineageJson"></app-lineage-graph>
-
-
-import { Component, Input, OnInit, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import cytoscape from 'cytoscape';
 import dagre from 'cytoscape-dagre';
-import tippy from 'tippy.js';
-import 'tippy.js/dist/tippy.css';
 
 cytoscape.use(dagre);
 
@@ -14,23 +10,25 @@ cytoscape.use(dagre);
   template: '<div id="lineageGraph" style="width:100%; height:90vh;"></div>',
   styles: []
 })
-export class LineageGraphComponent implements OnInit, OnChanges {
-  @Input() graphData: any;
+export class LineageGraphComponent implements OnInit {
   private cy: any;
+  private graphData: any;
 
-  constructor() {}
+  constructor(private http: HttpClient) {}
 
   ngOnInit() {
-    if (this.graphData) this.initializeGraph();
-  }
-
-  ngOnChanges(changes: SimpleChanges) {
-    if (changes.graphData && !changes.graphData.firstChange) {
-      this.initializeGraph();
-    }
+    // Load JSON from assets
+    this.http.get('/assets/full_lineage_graph.json').subscribe(
+      (data) => {
+        this.graphData = data;
+        this.initializeGraph();
+      },
+      (err) => console.error('Failed to load JSON', err)
+    );
   }
 
   private initializeGraph() {
+    if (!this.graphData) return;
     if (this.cy) this.cy.destroy();
 
     const elements = this.buildElements(this.graphData);
@@ -69,16 +67,16 @@ export class LineageGraphComponent implements OnInit, OnChanges {
       ],
       layout: {
         name: 'dagre',
-        rankDir: 'TB', // top-to-bottom
+        rankDir: 'TB',
         nodeSep: 50,
         edgeSep: 10,
-      } as any, // cast as any to avoid TypeScript errors
+      } as any,
       userZoomingEnabled: true,
       wheelSensitivity: 0.2,
       selectionType: 'single',
     });
 
-    this.setupInteractions();
+    this.cy.nodes().grabify();
   }
 
   private buildElements(data: any) {
@@ -94,17 +92,11 @@ export class LineageGraphComponent implements OnInit, OnChanges {
       unknown: { color: '#7f7f7f', shape: 'rectangle', size: 35 },
     };
 
-    const columnEdges: any[] = [];
-    const bundledColumnEdges = new Map<string, any>();
-
     // Nodes
     data.nodes.forEach((n: any) => {
       const cfg = nodeConfigs[n.type] || nodeConfigs['unknown'];
-      const label = n.meta.label || n.meta.task_id || n.meta.canonical_name || n.id;
-
-      elements.push({
-        data: { id: n.id, label, color: cfg.color, shape: cfg.shape, size: cfg.size, meta: n.meta },
-      });
+      const label = n.meta?.label || n.meta?.task_id || n.meta?.canonical_name || n.id;
+      elements.push({ data: { id: n.id, label, color: cfg.color, shape: cfg.shape, size: cfg.size, meta: n.meta } });
     });
 
     // Edges
@@ -119,42 +111,5 @@ export class LineageGraphComponent implements OnInit, OnChanges {
     });
 
     return elements;
-  }
-
-  private setupInteractions() {
-    // Hover tooltips
-    this.cy.nodes().forEach((node: any) => {
-      const ref = node.popperRef();
-      const tip = tippy(document.createElement('div'), {
-        content: this.renderTooltip(node),
-        trigger: 'manual',
-        placement: 'bottom',
-        hideOnClick: true,
-        interactive: true,
-      });
-      node.on('mouseover', () => tip.show());
-      node.on('mouseout', () => tip.hide());
-    });
-
-    // Drag & expand/collapse
-    this.cy.on('tap', 'node', (evt: any) => {
-      const node = evt.target;
-      const children = node.children();
-      if (children && children.length > 0) {
-        children.toggleClass('hidden');
-        this.cy.layout({ name: 'dagre', rankDir: 'TB', nodeSep: 50, edgeSep: 10 } as any).run();
-      }
-    });
-
-    this.cy.nodes().grabify();
-  }
-
-  private renderTooltip(node: any) {
-    const meta = node.data('meta');
-    return `<b>${node.data('label')}</b><br/><pre style="max-height:200px; overflow:auto;">${JSON.stringify(
-      meta,
-      null,
-      2
-    )}</pre>`;
   }
 }
