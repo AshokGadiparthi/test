@@ -1,300 +1,558 @@
-sqlglot==11.10.0
-jinja2==3.1.2
-google-cloud-storage==2.12.0
-requests==2.31.0
-python-dateutil
-tqdm
-
-import os
-import re
-import json
-import sqlglot
-from google.cloud import storage
-from jinja2 import Template
-from pathlib import Path
-
-# -------------------------
-# CONFIG
-# -------------------------
-CREDENTIALS_JSON = r"C:\path\to\your\gcp-service-key.json"
-GCS_BUCKET = "your-airflow-bucket"
-DAG_PREFIX = "dags/"
-SQL_PREFIX = "sql/"
-
-OUTPUT_FILE = "lineage_output.json"
-
-# -------------------------
-# AUTHENTICATION
-# -------------------------
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = CREDENTIALS_JSON
-storage_client = storage.Client()
-
-
-
-
 #!/usr/bin/env python3
 """
-Production-grade scanner: scans DAGs + .sql files in GCS or local FS, renders Jinja with safe context,
-parses SQL with sqlglot, emits canonical graph JSON and posts to collector.
-"""
+full_lineage_extractor.py
+Comprehensive DAG + SQL lineage extractor that reads DAG and SQL files from a GCS bucket,
+parses DAG AST for tasks and dependencies, extracts SQL (including jinja templated SQL),
+parses SQL with sqlglot to produce table and column lineage, and outputs a node/edge JSON graph.
 
-import os, re, json, argparse, logging, sys, time
+Run:
+  python full_lineage_extractor.py --gcs-bucket my-bucket --dags-prefix airflow/dags/ --sql-prefix airflow/sql/ --creds /path/key.json
+"""
+import os
+import re
+import ast
+import json
+import argparse
+import logging
 from pathlib import Path
-from typing import List, Dict, Any, Set
-import sqlglot
-from jinja2 import Environment, meta
-from google.cloud import storage
-import requests
+from typing import List, Dict, Any, Tuple, Optional
 from datetime import datetime, timezone
+
+from google.cloud import storage
+from jinja2 import Environment, meta
+import sqlglot
 from tqdm import tqdm
 
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("lineage-scanner")
+logger = logging.getLogger("full_lineage")
 
-# ---------- helpers ----------
-SQL_KEYWORDS = re.compile(r"\b(SELECT|INSERT|UPDATE|DELETE|MERGE|WITH|CREATE TABLE)\b", re.IGNORECASE)
-SQL_FILE_EXT = ('.sql',)
-DEFAULT_GCS_PREFIXES = ['dags/', 'sql/']
+# ---------------------------
+# Helpers and heuristics
+# ---------------------------
+SQL_LIKE_RE = re.compile(r"\b(SELECT|INSERT|UPDATE|DELETE|MERGE|WITH|CREATE\s+TABLE)\b", re.IGNORECASE)
+SQL_FILE_READ_RE = re.compile(r"open\(\s*['\"](?P<path>[^'\"]+?\.sql)['\"]\s*\)\.read\(\)", re.IGNORECASE)
+OPERATOR_CLASS_HINTS = [
+    "BigQueryOperator", "BigQueryInsertJobOperator", "BigQueryExecuteQueryOperator",
+    "BigQueryInsertJobOperator", "BigQueryCheckOperator", "DataflowPythonOperator",
+    "DataflowTemplateOperator", "PythonOperator", "BashOperator", "PostgresOperator",
+    "MySqlOperator", "SnowflakeOperator", "JdbcOperator", "SqlOperator", "SnowflakeOperator"
+]
 
-def list_gcs_files(bucket_name: str, prefix: str) -> List[str]:
-    client = storage.Client()
-    bucket = client.bucket(bucket_name)
-    blobs = client.list_blobs(bucket, prefix=prefix)
-    return [blob.name for blob in blobs]
+EXTERNAL_KEYWORDS = {
+    "kafka": "kafka",
+    "pubsub": "pubsub",
+    "spanner": "spanner",
+    "redis": "redis",
+    "gs://": "gcs",
+    ".csv": "file",
+    ".parquet": "file"
+}
 
-def read_gcs_text(bucket_name: str, blob_name: str) -> str:
-    client = storage.Client()
-    bucket = client.bucket(bucket_name)
-    blob = bucket.blob(blob_name)
-    return blob.download_as_text(encoding='utf-8')
+# Node id helper
+def nid(prefix: str, name: str) -> str:
+    # safe ID
+    safe = name.replace("/", "_").replace(" ", "_").replace(":", "_")
+    return f"{prefix}::{safe}"
 
-def render_jinja_safe(sql_text: str, ctx: Dict[str,str]) -> str:
-    if '{{' not in sql_text and '{%' not in sql_text:
-        return sql_text
+# normalize table string
+def normalize_table_name(tbl: str) -> str:
+    return tbl.strip("`\" '")
+
+# basic jinja render with safe placeholders
+def render_jinja_safe(text: str, ctx: Dict[str, str]) -> str:
+    if "{{" not in text and "{%" not in text:
+        return text
     env = Environment()
     try:
-        ast = env.parse(sql_text)
-        vars = meta.find_undeclared_variables(ast)
-        safe_ctx = dict(ctx) if ctx else {}
+        parsed = env.parse(text)
+        vars = meta.find_undeclared_variables(parsed)
+        safe_ctx = dict(ctx or {})
         for v in vars:
             if v not in safe_ctx:
                 safe_ctx[v] = f"__{v}__"
-        return env.from_string(sql_text).render(**safe_ctx)
+        tpl = env.from_string(text)
+        return tpl.render(**safe_ctx)
     except Exception as e:
-        logger.warning("jinja render failed: %s", e)
-        return sql_text
+        logger.debug("jinja render failed: %s", e)
+        return text
 
-def parse_sql(sql_text: str, dialect: str = 'bigquery') -> Dict[str, Any]:
-    """
-    Use sqlglot to parse and extract tables and aliases. Returns:
-    {"tables": [...], "aliases":[{"expr":"...", "alias":"..."}], "ctes": [...], "insert_targets":[...]}
-    """
+# SQL parsing using sqlglot: returns dict with tables, insert targets, aliases (expr->alias)
+def parse_sql_with_sqlglot(sql_text: str, dialect: str = "bigquery") -> Dict[str, Any]:
+    out = {"tables": [], "insert_targets": [], "aliases": [], "ctes": []}
     try:
         parsed = sqlglot.parse_one(sql_text, read=dialect)
     except Exception as e:
         logger.debug("sqlglot parse failed: %s", e)
-        # fallback: find INSERT INTO ... and FROM/JOIN with regex
+        # fallback heuristics
         tables = set(re.findall(r"(?:FROM|JOIN)\s+([A-Za-z0-9_`\.\-]+)", sql_text, re.IGNORECASE))
         inserts = set(re.findall(r"INSERT\s+INTO\s+([A-Za-z0-9_`\.\-]+)", sql_text, re.IGNORECASE))
-        return {"tables": list(tables), "aliases": [], "ctes": [], "insert_targets": list(inserts)}
-    tables = set()
-    aliases = []
-    ctes = set()
-    inserts = set()
+        out["tables"] = [normalize_table_name(t) for t in tables]
+        out["insert_targets"] = [normalize_table_name(t) for t in inserts]
+        return out
     # tables
-    for t in parsed.find_all(sqlglot.expressions.Table):
-        try:
-            tables.add(t.sql(dialect=dialect))
-        except Exception:
-            tables.add(str(t))
-    # aliases (SELECT expr AS alias)
-    for a in parsed.find_all(sqlglot.expressions.Alias):
-        try:
-            aliases.append({"expr": a.this.sql(dialect=dialect) if hasattr(a.this, 'sql') else str(a.this),
-                            "alias": a.alias_or_name})
-        except Exception:
-            continue
-    # ctes
-    for c in parsed.find_all(sqlglot.expressions.CommonTableExpression):
-        try:
-            ctes.add(c.alias_or_name)
-        except Exception:
-            continue
-    # INSERT targets
-    for ins in parsed.find_all(sqlglot.expressions.Insert):
-        try:
-            into = ins.this.sql(dialect=dialect)
-            inserts.add(into)
-        except Exception:
-            continue
-    return {"tables": sorted(tables), "aliases": aliases, "ctes": sorted(ctes), "insert_targets": sorted(inserts)}
-
-# ---------- scanner core ----------
-class LineageScanner:
-    def __init__(self, source: str, collector_url: str=None, jinja_ctx: Dict[str,str]=None, gcs_bucket=None):
-        self.source = source
-        self.collector_url = collector_url
-        self.jinja_ctx = jinja_ctx or {}
-        self.gcs_bucket = gcs_bucket
-        self.graph = {"nodes": {}, "edges": [], "column_mappings": []}
-
-    def add_dataset_node(self, canonical_name: str, dtype: str, schema=None, meta=None):
-        key = f"{dtype}::{canonical_name}"
-        if key not in self.graph["nodes"]:
-            self.graph["nodes"][key] = {"id": key, "type": dtype, "canonical_name": canonical_name,
-                                        "schema": schema or {}, "metadata": meta or {}, "last_seen": datetime.now(timezone.utc).isoformat()}
-        else:
-            # merge schema/metadata
-            if schema:
-                self.graph["nodes"][key"]["schema"] = schema
-        return key
-
-    def add_edge(self, src_key: str, tgt_key: str, etype='reads', transform=None, job_prov=None, confidence=0.9):
-        edge = {"source": src_key, "target": tgt_key, "type": etype, "transform": transform or "unknown", "confidence": confidence, "job_provenance": job_prov or []}
-        self.graph["edges"].append(edge)
-
-    def add_column_mapping(self, src_ds_key, src_col, tgt_ds_key, tgt_col, confidence=0.8, provenance=None):
-        cm = {"source_dataset": src_ds_key, "source_column": src_col, "target_dataset": tgt_ds_key, "target_column": tgt_col, "confidence": confidence, "provenance": provenance or {}}
-        self.graph["column_mappings"].append(cm)
-
-    def scan_local_folder(self, root_path: str):
-        root = Path(root_path)
-        files = list(root.rglob("*.py")) + list(root.rglob("*.sql"))
-        for p in tqdm(files, desc="Scanning files"):
+    try:
+        for t in parsed.find_all(sqlglot.expressions.Table):
             try:
-                text = p.read_text(encoding='utf-8', errors='ignore')
+                out["tables"].append(normalize_table_name(t.sql(dialect=dialect)))
             except Exception:
+                out["tables"].append(normalize_table_name(str(t)))
+    except Exception:
+        pass
+    # insert targets
+    try:
+        for ins in parsed.find_all(sqlglot.expressions.Insert):
+            try:
+                out["insert_targets"].append(normalize_table_name(ins.this.sql(dialect=dialect)))
+            except Exception:
+                pass
+    except Exception:
+        pass
+    # aliases (SELECT expr AS alias)
+    try:
+        for a in parsed.find_all(sqlglot.expressions.Alias):
+            try:
+                alias_name = a.alias_or_name
+                expr = a.this.sql(dialect=dialect) if hasattr(a.this, "sql") else str(a.this)
+                out["aliases"].append({"expr": expr, "alias": alias_name})
+            except Exception:
+                pass
+    except Exception:
+        pass
+    # ctes
+    try:
+        for c in parsed.find_all(sqlglot.expressions.CommonTableExpression):
+            try:
+                out["ctes"].append(c.alias_or_name)
+            except Exception:
+                pass
+    except Exception:
+        pass
+    # dedupe lists
+    out["tables"] = sorted(list(dict.fromkeys(out["tables"])))
+    out["insert_targets"] = sorted(list(dict.fromkeys(out["insert_targets"])))
+    return out
+
+# detect type of dataset by heuristics
+def detect_dataset_type(name: str) -> str:
+    n = name.lower()
+    for k, t in EXTERNAL_KEYWORDS.items():
+        if k in n:
+            return t
+    if n.count(".") >= 2:
+        return "bigquery"
+    if "spanner" in n:
+        return "spanner"
+    return "unknown"
+
+# ---------------------------
+# GCS helpers
+# ---------------------------
+class GCSReader:
+    def __init__(self, creds_json: Optional[str] = None):
+        if creds_json:
+            os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = creds_json
+        self.client = storage.Client()
+
+    def list_files(self, bucket: str, prefix: str) -> List[str]:
+        b = self.client.bucket(bucket)
+        blobs = self.client.list_blobs(b, prefix=prefix)
+        return [b.name for b in blobs]
+
+    def read_text(self, bucket: str, path: str) -> str:
+        b = self.client.bucket(bucket)
+        blob = b.blob(path)
+        return blob.download_as_text()
+
+# ---------------------------
+# AST-based DAG scanner
+# ---------------------------
+class DagAstScanner(ast.NodeVisitor):
+    """
+    Walk Python AST to find:
+      - DAG instantiations (dag_id)
+      - Task/operator instantiations (capture variable name, class name, keywords like task_id, sql, bash_command, python_callable)
+      - Upstream/downstream relations via BinOp (>> / <<)
+      - Calls to set_upstream / set_downstream
+    """
+    def __init__(self, source_text: str, filename: str):
+        self.filename = filename
+        self.text = source_text
+        self.dags: Dict[str, Dict] = {}      # dag_id -> info
+        self.tasks: Dict[str, Dict] = {}     # var_name or task key -> info: {task_id, operator, sql, kwargs, lineno}
+        self.task_edges: List[Tuple[str, str]] = []  # (src_var, tgt_var)
+        super().__init__()
+
+    def visit_Call(self, node: ast.Call):
+        # detect DAG(...) calls
+        try:
+            func_name = self._get_name(node.func)
+            if func_name and func_name.endswith("DAG"):
+                dag_id = None
+                for kw in node.keywords:
+                    if kw.arg == "dag_id":
+                        dag_id = self._const_value(kw.value)
+                if (not dag_id) and node.args:
+                    dag_id = self._const_value(node.args[0])
+                if dag_id:
+                    self.dags[dag_id] = {"dag_id": dag_id, "lineno": node.lineno}
+            # detect operator instantiation
+            if func_name and any(hint.lower() in func_name.lower() for hint in OPERATOR_CLASS_HINTS):
+                # get assigned variable if any by checking parent Assign in source (we will fill in visit_Assign)
+                op = func_name.split(".")[-1]
+                # find task_id/sql kwargs
+                task_id = None
+                sql_text = None
+                bash_cmd = None
+                py_callable = None
+                extra = {}
+                for kw in node.keywords:
+                    if kw.arg == "task_id":
+                        task_id = self._const_value(kw.value)
+                    if kw.arg in ("sql", "sql_query", "sql_stmt", "query"):
+                        # if it's a string constant capture it; if it's Name or Call keep code snippet
+                        if isinstance(kw.value, ast.Constant):
+                            sql_text = kw.value.value
+                        else:
+                            # attempt to extract source snippet
+                            start = getattr(kw.value, "lineno", None)
+                            sql_text = self._source_segment(kw.value) or None
+                    if kw.arg == "bash_command":
+                        bash_cmd = self._const_value(kw.value)
+                    if kw.arg == "python_callable":
+                        if isinstance(kw.value, ast.Name):
+                            py_callable = kw.value.id
+                        else:
+                            py_callable = self._source_segment(kw.value)
+                # create a task key (lineno-based if variable not yet known)
+                var_candidate = f"{self.filename}@{node.lineno}"
+                self.tasks.setdefault(var_candidate, {
+                    "task_id": task_id or var_candidate,
+                    "operator": op,
+                    "sql": sql_text,
+                    "bash_command": bash_cmd,
+                    "python_callable": py_callable,
+                    "kwargs": extra,
+                    "lineno": node.lineno,
+                    "file": self.filename
+                })
+        except Exception:
+            logger.debug("visit_Call trouble", exc_info=True)
+        self.generic_visit(node)
+
+    def visit_Assign(self, node: ast.Assign):
+        # capture if value is a Call and left is a Name -> assign that var name to the last discovered Call task
+        try:
+            if isinstance(node.value, ast.Call):
+                # left name
+                left = node.targets[0]
+                if isinstance(left, ast.Name):
+                    varname = left.id
+                    # find the call we just processed at that lineno
+                    lineno = getattr(node.value, "lineno", None)
+                    key = f"{self.filename}@{lineno}"
+                    if key in self.tasks:
+                        # rename task entry to include varname
+                        entry = self.tasks.pop(key)
+                        newkey = f"{self.filename}::{varname}"
+                        entry["var_name"] = varname
+                        entry["task_id"] = entry.get("task_id") or varname
+                        self.tasks[newkey] = entry
+        except Exception:
+            pass
+        self.generic_visit(node)
+
+    def visit_Expr(self, node: ast.Expr):
+        # detect chain operations t1 >> t2 as BinOp with RShift or LShift
+        try:
+            val = node.value
+            if isinstance(val, ast.BinOp) and isinstance(val.op, (ast.RShift, ast.LShift)):
+                left = self._get_name(val.left) or self._const_value(val.left) or getattr(val.left, "id", None)
+                right = self._get_name(val.right) or self._const_value(val.right) or getattr(val.right, "id", None)
+                if left and right:
+                    if isinstance(val.op, ast.RShift):
+                        # left >> right => left upstream of right (left -> right)
+                        self.task_edges.append((left, right))
+                    else:
+                        # left << right => right upstream of left (right -> left)
+                        self.task_edges.append((right, left))
+            # detect method calls .set_upstream/.set_downstream
+            if isinstance(val, ast.Call) and isinstance(val.func, ast.Attribute):
+                attr = val.func.attr
+                if attr in ("set_upstream", "set_downstream"):
+                    # get owner (the function object), and arg as target
+                    owner = self._get_name(val.func.value)
+                    if val.args:
+                        arg0 = self._get_name(val.args[0]) or self._const_value(val.args[0])
+                        if owner and arg0:
+                            if attr == "set_upstream":
+                                self.task_edges.append((arg0, owner))
+                            else:
+                                self.task_edges.append((owner, arg0))
+        except Exception:
+            pass
+        self.generic_visit(node)
+
+    # helpers
+    def _get_name(self, node):
+        if isinstance(node, ast.Name):
+            return node.id
+        if isinstance(node, ast.Attribute):
+            left = self._get_name(node.value)
+            return f"{left}.{node.attr}" if left else node.attr
+        if isinstance(node, ast.Call):
+            return self._get_name(node.func)
+        return None
+
+    def _const_value(self, node):
+        if isinstance(node, ast.Constant):
+            return node.value
+        if isinstance(node, ast.Str):  # py<3.8
+            return node.s
+        return None
+
+    def _source_segment(self, node):
+        # best effort: return source substring around lineno if available
+        try:
+            lines = self.text.splitlines()
+            ln = getattr(node, "lineno", None)
+            if ln:
+                # return up to 5 lines around lineno
+                start = max(0, ln-3)
+                end = min(len(lines), ln+2)
+                return "\n".join(lines[start:end])
+        except Exception:
+            pass
+        return None
+
+# ---------------------------
+# High-level orchestrator
+# ---------------------------
+class FullLineageExtractor:
+    def __init__(self, gcs_bucket: str, dags_prefix: str, sql_prefix: str, creds: Optional[str], jinja_ctx: Optional[Dict[str,str]]):
+        self.gcs = GCSReader(creds)
+        self.bucket = gcs_bucket
+        self.dags_prefix = dags_prefix
+        self.sql_prefix = sql_prefix
+        self.jinja_ctx = jinja_ctx or {}
+        self.nodes: Dict[str, Dict] = {}
+        self.edges: List[Dict] = []
+        self.column_mappings: List[Dict] = []
+        self.jobs_index: Dict[str, Dict] = {}  # job_id -> meta
+
+    def add_node(self, node_id: str, ntype: str, meta: Dict):
+        if node_id not in self.nodes:
+            self.nodes[node_id] = {"id": node_id, "type": ntype, "meta": meta}
+        else:
+            # merge some metadata - update last_seen
+            self.nodes[node_id]["meta"].update(meta)
+
+    def add_edge(self, src: str, tgt: str, etype: str, meta: Dict, confidence: float = 0.9):
+        self.edges.append({"source": src, "target": tgt, "type": etype, "meta": meta, "confidence": confidence})
+
+    def add_column_map(self, src_ds: str, src_col: str, tgt_ds: str, tgt_col: str, confidence: float, prov: Dict):
+        self.column_mappings.append({
+            "source_dataset": src_ds, "source_column": src_col,
+            "target_dataset": tgt_ds, "target_column": tgt_col,
+            "confidence": confidence, "provenance": prov
+        })
+
+    def scan(self):
+        # 1) list all DAG files and SQL files from GCS
+        dag_files = self.gcs.list_files(self.bucket, self.dags_prefix)
+        sql_files = self.gcs.list_files(self.bucket, self.sql_prefix)
+        logger.info("Found %d DAG files, %d SQL files", len(dag_files), len(sql_files))
+
+        # load all SQL files into a dict for quick lookup
+        sql_by_name = {}
+        for s in tqdm(sql_files, desc="Reading SQL files"):
+            if not s.lower().endswith(".sql"):
                 continue
-            # if .sql, parse directly
-            if p.suffix.lower() == '.sql':
-                rendered = render_jinja_safe(text, self.jinja_ctx)
-                parsed = parse_sql(rendered)
-                self._handle_parsed(parsed, source_file=str(p))
-            else:
-                # .py file: extract SQL strings and file reads
-                sql_candidates = self._extract_sql_candidates_from_py(text, p)
-                for sql_text, ctx in sql_candidates:
-                    rendered = render_jinja_safe(sql_text, self.jinja_ctx)
-                    parsed = parse_sql(rendered)
-                    self._handle_parsed(parsed, source_file=str(p), ctx=ctx)
+            try:
+                content = self.gcs.read_text(self.bucket, s)
+                sql_by_name[Path(s).name] = content
+            except Exception as e:
+                logger.warning("Failed reading sql %s: %s", s, e)
 
-    def scan_gcs_prefix(self, bucket_name: str, prefix: str):
-        blobs = list_gcs_files(bucket_name, prefix)
-        for bname in tqdm(blobs, desc=f"Scanning gcs://{bucket_name}/{prefix}"):
-            if bname.endswith('.sql'):
-                text = read_gcs_text(bucket_name, bname)
-                rendered = render_jinja_safe(text, self.jinja_ctx)
-                parsed = parse_sql(rendered)
-                self._handle_parsed(parsed, source_file=bname)
+        # 2) scan DAGs
+        for df in tqdm(dag_files, desc="Scanning DAGs"):
+            if not df.lower().endswith(".py"):
+                continue
+            try:
+                content = self.gcs.read_text(self.bucket, df)
+            except Exception as e:
+                logger.warning("Failed read %s: %s", df, e)
+                continue
+            scanner = DagAstScanner(content, df)
+            try:
+                scanner.visit(ast.parse(content))
+            except Exception as e:
+                logger.debug("AST parse failed for %s: %s", df, e)
+                # fallback: still try to collect long literal strings
+                pass
 
-    def _extract_sql_candidates_from_py(self, text: str, path: Path):
-        candidates = []
-        # .sql file reads: open('x.sql').read()
-        for m in re.finditer(r"open\(\s*['\"](?P<path>[^'\"]+?\.sql)['\"]\s*\)\.read\(\)", text):
-            sql_path = (path.parent / m.group('path')).resolve()
-            if sql_path.exists():
-                candidates.append((sql_path.read_text(encoding='utf-8', errors='ignore'), {"source":"sql_file", "origin":str(sql_path)}))
-        # triple-quoted or long strings
-        for m in re.finditer(r"(['\"]{3})(?P<body>.+?)(\1)", text, re.DOTALL):
-            body = m.group('body')
-            if SQL_KEYWORDS.search(body) and len(body) > 40:
-                candidates.append((body, {"source":"string_literal"}))
-        # look for operator kw arg sql= "..."
-        for m in re.finditer(r"\bsql\s*=\s*(?P<expr>r?['\"].+?['\"])", text, re.IGNORECASE | re.DOTALL):
-            expr = m.group('expr').strip()
-            # crude strip quotes
-            if expr.startswith(('r"', "r'", '"', "'")):
-                expr_s = expr.strip("r").strip('"\'')
-                if SQL_KEYWORDS.search(expr_s):
-                    candidates.append((expr_s, {"source":"sql_kwarg"}))
-        return candidates
+            # create DAG node(s)
+            for dag_id, info in scanner.dags.items():
+                dnid = nid("dag", dag_id)
+                self.add_node(dnid, "dag", {"dag_id": dag_id, "file": df, "lineno": info.get("lineno")})
+            # create task nodes
+            for tkey, tinfo in scanner.tasks.items():
+                task_node_id = nid("task", f"{tinfo.get('task_id') or tinfo.get('var_name') or tkey}")
+                # metadata include operator, file, lineno, raw sql snippet if exists
+                meta = {
+                    "operator": tinfo.get("operator"),
+                    "file": df,
+                    "lineno": tinfo.get("lineno"),
+                    "task_id": tinfo.get("task_id"),
+                    "var_name": tinfo.get("var_name")
+                }
+                # if sql present inline capture and render
+                raw_sql = tinfo.get("sql")
+                resolved_sqls = []
+                if raw_sql:
+                    rendered = render_jinja_safe(raw_sql, self.jinja_ctx)
+                    resolved_sqls.append({"sql": rendered, "source": "inline", "lineno": tinfo.get("lineno")})
+                # detect references to .sql files inside the DAG (open(...).read())
+                for m in SQL_FILE_READ_RE.finditer(content):
+                    ref = m.group("path")
+                    # build absolute: if DF path is "folder/a.py" and ref is "./queries/q.sql"
+                    try:
+                        # try to resolve name
+                        fname = Path(ref).name
+                        if fname in sql_by_name:
+                            rendered = render_jinja_safe(sql_by_name[fname], self.jinja_ctx)
+                            resolved_sqls.append({"sql": rendered, "source": f"sql_file:{fname}", "file_ref": fname})
+                    except Exception:
+                        pass
+                meta["resolved_sqls"] = resolved_sqls
+                self.add_node(task_node_id, "task", meta)
 
-    def _handle_parsed(self, parsed: Dict[str,Any], source_file: str=None, ctx: Dict=None):
-        tables = parsed.get('tables', []) or []
-        inserts = parsed.get('insert_targets', []) or []
-        aliases = parsed.get('aliases', []) or []
-        ctes = parsed.get('ctes', []) or []
-        # normalize table names and types: if looks like project.dataset.table -> bigquery
-        for t in tables + inserts:
-            dtype = self._detect_type_for_table(t)
-            ds_key = self.add_dataset_node(canonical_name=t, dtype=dtype)
-            # for a parsed SQL, a snippet is typically read from many tables to write to insert targets
-        # build edges: every insert target is target, other tables are inputs
-        inputs = [self._detect_type_for_table(t) or t for t in tables if t not in inserts]
-        for ins in inserts or []:
-            tgt_dtype = self._detect_type_for_table(ins)
-            tgt_key = self.add_dataset_node(ins, tgt_dtype)
-            for t in tables:
-                if t == ins: 
-                    continue
-                src_dtype = self._detect_type_for_table(t)
-                src_key = self.add_dataset_node(t, src_dtype)
-                prov = {"source_file": source_file}
-                self.add_edge(src_key, tgt_key, etype='transform', transform='sql', job_prov=[prov], confidence=0.9)
-        # column aliases -> attempted column mapping (best-effort)
-        if aliases:
-            # if one insert target exists, map from inputs to that target
-            tgt = inserts[0] if inserts else None
+                # link dag -> task
+                for dag_id in scanner.dags:
+                    self.add_edge(nid("dag", dag_id), task_node_id, "dag_contains", {"file": df, "task": meta["task_id"]}, confidence=1.0)
+
+                # parse SQLs for this task to detect read/write datasets
+                for rs in resolved_sqls:
+                    sql_text = rs["sql"]
+                    parsed = parse_sql_with_sqlglot(sql_text)
+                    tables = parsed.get("tables", [])
+                    inserts = parsed.get("insert_targets", [])
+                    aliases = parsed.get("aliases", [])
+                    # add dataset nodes
+                    for t in tables + inserts:
+                        ds_type = detect_dataset_type(t)
+                        dsnode = nid("dataset", t)
+                        self.add_node(dsnode, ds_type, {"canonical_name": t})
+                    # add edges: reads from tables -> task
+                    for t in tables:
+                        dsnode = nid("dataset", t)
+                        self.add_edge(dsnode, task_node_id, "task_reads", {"sql_snippet": sql_text[:2000], "file": df}, confidence=0.9)
+                    # add edges: task -> writes to inserts
+                    for t in inserts:
+                        dsnode = nid("dataset", t)
+                        self.add_edge(task_node_id, dsnode, "task_writes", {"sql_snippet": sql_text[:2000], "file": df}, confidence=0.95)
+                    # column alias maps if single input -> single output
+                    for a in aliases:
+                        src_col = a.get("expr")
+                        tgt_col = a.get("alias")
+                        if src_col and tgt_col:
+                            # best-effort: pick first input and first insert target if available
+                            src_ds = tables[0] if tables else None
+                            tgt_ds = inserts[0] if inserts else None
+                            if src_ds and tgt_ds:
+                                self.add_column_map(nid("dataset", src_ds), src_col.split(".")[-1], nid("dataset", tgt_ds), tgt_col, 0.85,
+                                                    {"file": df, "task": task_node_id, "sql_snippet": sql_text[:300]})
+
+            # task-to-task edges from scanner
+            for a, b in scanner.task_edges:
+                # try find matching task node ids
+                # a or b might be var names; attempt match suffix
+                def find_task_node(name):
+                    # exact var match
+                    for k, v in list(self.nodes.items()):
+                        if k.startswith("task::") and (name in k or name == v["meta"].get("task_id") or v["meta"].get("var_name") == name):
+                            return k
+                    return None
+                src = find_task_node(a)
+                tgt = find_task_node(b)
+                if not src:
+                    src = nid("task", a)
+                    self.add_node(src, "task", {"task_id": a, "inferred": True, "file": df})
+                if not tgt:
+                    tgt = nid("task", b)
+                    self.add_node(tgt, "task", {"task_id": b, "inferred": True, "file": df})
+                self.add_edge(src, tgt, "task_to_task", {"file": df}, confidence=1.0)
+
+        # 3) process standalone SQL files too (in case DAGs reference them)
+        for sname, scontent in sql_by_name.items():
+            sql = scontent
+            rendered = render_jinja_safe(sql, self.jinja_ctx)
+            parsed = parse_sql_with_sqlglot(rendered)
+            tables = parsed.get("tables", [])
+            inserts = parsed.get("insert_targets", [])
+            aliases = parsed.get("aliases", [])
+            # add dataset nodes and dataset->dataset inferred edges
+            for t in tables + inserts:
+                dsnode = nid("dataset", t)
+                self.add_node(dsnode, detect_dataset_type(t), {"canonical_name": t, "file": sname})
+            # inferred table->table if inserts exist
+            if inserts and tables:
+                for src in tables:
+                    for tgt in inserts:
+                        self.add_edge(nid("dataset", src), nid("dataset", tgt), "dataset_to_dataset",
+                                      {"file": sname, "sql_file": sname}, confidence=0.85)
             for a in aliases:
-                expr = a.get('expr'); alias = a.get('alias')
-                # if expr is of form t.col or col, try to map
-                src_col = expr.split('.')[-1]
-                tgt_col = alias
-                # naive mapping to first input dataset
-                src_ds = tables[0] if tables else None
-                if src_ds and tgt:
-                    src_key = self.add_dataset_node(src_ds, self._detect_type_for_table(src_ds))
-                    tgt_key = self.add_dataset_node(tgt, self._detect_type_for_table(tgt))
-                    self.add_column_mapping(src_key, src_col, tgt_key, tgt_col, confidence=0.85, provenance={"source_file": source_file})
+                src_col = a.get("expr"); tgt_col = a.get("alias")
+                if src_col and tgt_col and tables and inserts:
+                    self.add_column_map(nid("dataset", tables[0]), src_col.split(".")[-1],
+                                        nid("dataset", inserts[0]), tgt_col, 0.8, {"file": sname})
 
-    def _detect_type_for_table(self, table_name: str) -> str:
-        # heuristics: project.dataset.table -> bigquery
-        if table_name.count('.') >= 2:
-            return 'bigquery'
-        if table_name.startswith('spanner.') or 'spanner' in table_name.lower():
-            return 'spanner'
-        if table_name.startswith('kafka://') or 'topic' in table_name.lower():
-            return 'kafka'
-        if table_name.startswith('gs://') or table_name.endswith('.csv'):
-            return 'gcs'
-        # default
-        return 'unknown'
+    def result(self) -> Dict[str, Any]:
+        # convert nodes dict to list
+        return {
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "nodes": list(self.nodes.values()),
+            "edges": self.edges,
+            "column_mappings": self.column_mappings
+        }
 
-    def post_to_collector(self):
-        if not self.collector_url:
-            logger.info("No collector configured, not posting.")
-            return
-        payload = {"graph": {"nodes": list(self.graph["nodes"].values()), "edges": self.graph["edges"], "column_mappings": self.graph["column_mappings"]}, "scanned_at": datetime.now(timezone.utc).isoformat()}
-        logger.info("Posting graph to collector: %s", self.collector_url)
-        r = requests.post(self.collector_url, json=payload, timeout=60)
-        logger.info("Collector responded: %s %s", r.status_code, r.text)
-
-# ---------- CLI ----------
+# ---------------------------
+# CLI entry
+# ---------------------------
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("--local-path", help="Local DAGs/SQL path")
-    p.add_argument("--gcs-bucket", help="GCS bucket containing DAGs/SQL")
-    p.add_argument("--gcs-prefix", default='dags/')
-    p.add_argument("--collector", help="Collector URL to POST graph to")
-    p.add_argument("--jinja", action='append', help="jinja vars KEY=VAL")
+    p.add_argument("--gcs-bucket", required=True)
+    p.add_argument("--dags-prefix", default="dags/")
+    p.add_argument("--sql-prefix", default="sql/")
+    p.add_argument("--creds", help="service account json path")
+    p.add_argument("--jinja", action="append", help="jinja var in key=value form", default=[])
+    p.add_argument("--out", default="full_lineage_graph.json")
     args = p.parse_args()
-    jctx = {}
-    if args.jinja:
-        for kv in args.jinja:
-            k,v = kv.split('=',1)
-            jctx[k]=v
-    scanner = LineageScanner(source=args.local_path or args.gcs_bucket, collector_url=args.collector, jinja_ctx=jctx, gcs_bucket=args.gcs_bucket)
-    if args.gcs_bucket:
-        scanner.scan_gcs_prefix(args.gcs_bucket, args.gcs_prefix)
-    else:
-        scanner.scan_local_folder(args.local_path)
-    # write file
-    out = "graph_output.json"
-    with open(out, "w", encoding='utf-8') as f:
-        json.dump({"graph": {"nodes": list(scanner.graph["nodes"].values()), "edges": scanner.graph["edges"], "column_mappings": scanner.graph["column_mappings"]}}, f, indent=2)
-    logger.info("Wrote %s", out)
-    if args.collector:
-        scanner.post_to_collector()
+
+    # parse jinja vars
+    jinja_ctx = {}
+    for kv in args.jinja:
+        if "=" in kv:
+            k, v = kv.split("=", 1)
+            jinja_ctx[k] = v
+
+    logger.info("Starting full lineage extraction for bucket=%s", args.gcs_bucket)
+    extractor = FullLineageExtractor(args.gcs_bucket, args.dags_prefix, args.sql_prefix, args.creds, jinja_ctx)
+    extractor.scan()
+    out = extractor.result()
+    with open(args.out, "w", encoding="utf-8") as f:
+        json.dump(out, f, indent=2)
+    logger.info("Wrote output to %s (nodes=%d edges=%d mappings=%d)", args.out, len(out["nodes"]), len(out["edges"]), len(out["column_mappings"]))
 
 if __name__ == "__main__":
     main()
+
+
+
+
+python full_lineage_extractor.py \
+  --gcs-bucket my-airflow-bucket \
+  --dags-prefix airflow/dags/ \
+  --sql-prefix airflow/sql/ \
+  --creds "C:\Users\ashok\Downloads\gcp-key.json" \
+  --jinja env=prod --jinja project=myproj \
+  --out full_lineage_graph.json
