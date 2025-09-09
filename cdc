@@ -1,3 +1,6 @@
+<app-lineage-graph [graphData]="fullLineageJson"></app-lineage-graph>
+
+
 npm install cytoscape cytoscape-dagre cytoscape-qtip tippy.js
 npm install @types/cytoscape --save-dev
 npm install @types/tippy.js --save-dev
