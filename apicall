@@ -1,66 +1,276 @@
-<!-- app.component.html -->
-<div class="overlay" *ngIf="loading">
-  <mat-progress-spinner
-    mode="indeterminate"
-    diameter="60"
-    strokeWidth="5"
-  ></mat-progress-spinner>
-</div>
-
-<!-- Your mat-table -->
-<table mat-table [dataSource]="data" class="mat-elevation-z8">
-  <tr mat-row *matRowDef="let row; columns: displayedColumns"
-      (click)="onRowClick(row)">
-  </tr>
-</table>
+sqlglot==11.10.0
+jinja2==3.1.2
+google-cloud-storage==2.12.0
+requests==2.31.0
+python-dateutil
+tqdm
 
 
-// app.component.ts
-import { Component } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-
-@Component({
-  selector: 'app-root',
-  templateUrl: './app.component.html',
-  styleUrls: ['./app.component.css']
-})
-export class AppComponent {
-  data = [{ id: 1, name: 'Item A' }, { id: 2, name: 'Item B' }];
-  displayedColumns = ['id', 'name'];
-  loading = false;
-
-  constructor(private http: HttpClient) {}
-
-  onRowClick(row: any) {
-    this.loading = true; // show spinner + lock screen
-    this.http.get(`https://jsonplaceholder.typicode.com/posts/${row.id}`)
-      .subscribe({
-        next: (res) => {
-          console.log('Response:', res);
-        },
-        error: (err) => {
-          console.error(err);
-        },
-        complete: () => {
-          this.loading = false; // hide spinner
-        }
-      });
-  }
-}
 
 
-/* app.component.css */
-.overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(255, 255, 255, 0.7); /* semi-transparent lock */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2000; /* above everything */
-  pointer-events: all; /* block clicks behind */
-}
+#!/usr/bin/env python3
+"""
+Production-grade scanner: scans DAGs + .sql files in GCS or local FS, renders Jinja with safe context,
+parses SQL with sqlglot, emits canonical graph JSON and posts to collector.
+"""
 
+import os, re, json, argparse, logging, sys, time
+from pathlib import Path
+from typing import List, Dict, Any, Set
+import sqlglot
+from jinja2 import Environment, meta
+from google.cloud import storage
+import requests
+from datetime import datetime, timezone
+from tqdm import tqdm
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("lineage-scanner")
+
+# ---------- helpers ----------
+SQL_KEYWORDS = re.compile(r"\b(SELECT|INSERT|UPDATE|DELETE|MERGE|WITH|CREATE TABLE)\b", re.IGNORECASE)
+SQL_FILE_EXT = ('.sql',)
+DEFAULT_GCS_PREFIXES = ['dags/', 'sql/']
+
+def list_gcs_files(bucket_name: str, prefix: str) -> List[str]:
+    client = storage.Client()
+    bucket = client.bucket(bucket_name)
+    blobs = client.list_blobs(bucket, prefix=prefix)
+    return [blob.name for blob in blobs]
+
+def read_gcs_text(bucket_name: str, blob_name: str) -> str:
+    client = storage.Client()
+    bucket = client.bucket(bucket_name)
+    blob = bucket.blob(blob_name)
+    return blob.download_as_text(encoding='utf-8')
+
+def render_jinja_safe(sql_text: str, ctx: Dict[str,str]) -> str:
+    if '{{' not in sql_text and '{%' not in sql_text:
+        return sql_text
+    env = Environment()
+    try:
+        ast = env.parse(sql_text)
+        vars = meta.find_undeclared_variables(ast)
+        safe_ctx = dict(ctx) if ctx else {}
+        for v in vars:
+            if v not in safe_ctx:
+                safe_ctx[v] = f"__{v}__"
+        return env.from_string(sql_text).render(**safe_ctx)
+    except Exception as e:
+        logger.warning("jinja render failed: %s", e)
+        return sql_text
+
+def parse_sql(sql_text: str, dialect: str = 'bigquery') -> Dict[str, Any]:
+    """
+    Use sqlglot to parse and extract tables and aliases. Returns:
+    {"tables": [...], "aliases":[{"expr":"...", "alias":"..."}], "ctes": [...], "insert_targets":[...]}
+    """
+    try:
+        parsed = sqlglot.parse_one(sql_text, read=dialect)
+    except Exception as e:
+        logger.debug("sqlglot parse failed: %s", e)
+        # fallback: find INSERT INTO ... and FROM/JOIN with regex
+        tables = set(re.findall(r"(?:FROM|JOIN)\s+([A-Za-z0-9_`\.\-]+)", sql_text, re.IGNORECASE))
+        inserts = set(re.findall(r"INSERT\s+INTO\s+([A-Za-z0-9_`\.\-]+)", sql_text, re.IGNORECASE))
+        return {"tables": list(tables), "aliases": [], "ctes": [], "insert_targets": list(inserts)}
+    tables = set()
+    aliases = []
+    ctes = set()
+    inserts = set()
+    # tables
+    for t in parsed.find_all(sqlglot.expressions.Table):
+        try:
+            tables.add(t.sql(dialect=dialect))
+        except Exception:
+            tables.add(str(t))
+    # aliases (SELECT expr AS alias)
+    for a in parsed.find_all(sqlglot.expressions.Alias):
+        try:
+            aliases.append({"expr": a.this.sql(dialect=dialect) if hasattr(a.this, 'sql') else str(a.this),
+                            "alias": a.alias_or_name})
+        except Exception:
+            continue
+    # ctes
+    for c in parsed.find_all(sqlglot.expressions.CommonTableExpression):
+        try:
+            ctes.add(c.alias_or_name)
+        except Exception:
+            continue
+    # INSERT targets
+    for ins in parsed.find_all(sqlglot.expressions.Insert):
+        try:
+            into = ins.this.sql(dialect=dialect)
+            inserts.add(into)
+        except Exception:
+            continue
+    return {"tables": sorted(tables), "aliases": aliases, "ctes": sorted(ctes), "insert_targets": sorted(inserts)}
+
+# ---------- scanner core ----------
+class LineageScanner:
+    def __init__(self, source: str, collector_url: str=None, jinja_ctx: Dict[str,str]=None, gcs_bucket=None):
+        self.source = source
+        self.collector_url = collector_url
+        self.jinja_ctx = jinja_ctx or {}
+        self.gcs_bucket = gcs_bucket
+        self.graph = {"nodes": {}, "edges": [], "column_mappings": []}
+
+    def add_dataset_node(self, canonical_name: str, dtype: str, schema=None, meta=None):
+        key = f"{dtype}::{canonical_name}"
+        if key not in self.graph["nodes"]:
+            self.graph["nodes"][key] = {"id": key, "type": dtype, "canonical_name": canonical_name,
+                                        "schema": schema or {}, "metadata": meta or {}, "last_seen": datetime.now(timezone.utc).isoformat()}
+        else:
+            # merge schema/metadata
+            if schema:
+                self.graph["nodes"][key"]["schema"] = schema
+        return key
+
+    def add_edge(self, src_key: str, tgt_key: str, etype='reads', transform=None, job_prov=None, confidence=0.9):
+        edge = {"source": src_key, "target": tgt_key, "type": etype, "transform": transform or "unknown", "confidence": confidence, "job_provenance": job_prov or []}
+        self.graph["edges"].append(edge)
+
+    def add_column_mapping(self, src_ds_key, src_col, tgt_ds_key, tgt_col, confidence=0.8, provenance=None):
+        cm = {"source_dataset": src_ds_key, "source_column": src_col, "target_dataset": tgt_ds_key, "target_column": tgt_col, "confidence": confidence, "provenance": provenance or {}}
+        self.graph["column_mappings"].append(cm)
+
+    def scan_local_folder(self, root_path: str):
+        root = Path(root_path)
+        files = list(root.rglob("*.py")) + list(root.rglob("*.sql"))
+        for p in tqdm(files, desc="Scanning files"):
+            try:
+                text = p.read_text(encoding='utf-8', errors='ignore')
+            except Exception:
+                continue
+            # if .sql, parse directly
+            if p.suffix.lower() == '.sql':
+                rendered = render_jinja_safe(text, self.jinja_ctx)
+                parsed = parse_sql(rendered)
+                self._handle_parsed(parsed, source_file=str(p))
+            else:
+                # .py file: extract SQL strings and file reads
+                sql_candidates = self._extract_sql_candidates_from_py(text, p)
+                for sql_text, ctx in sql_candidates:
+                    rendered = render_jinja_safe(sql_text, self.jinja_ctx)
+                    parsed = parse_sql(rendered)
+                    self._handle_parsed(parsed, source_file=str(p), ctx=ctx)
+
+    def scan_gcs_prefix(self, bucket_name: str, prefix: str):
+        blobs = list_gcs_files(bucket_name, prefix)
+        for bname in tqdm(blobs, desc=f"Scanning gcs://{bucket_name}/{prefix}"):
+            if bname.endswith('.sql'):
+                text = read_gcs_text(bucket_name, bname)
+                rendered = render_jinja_safe(text, self.jinja_ctx)
+                parsed = parse_sql(rendered)
+                self._handle_parsed(parsed, source_file=bname)
+
+    def _extract_sql_candidates_from_py(self, text: str, path: Path):
+        candidates = []
+        # .sql file reads: open('x.sql').read()
+        for m in re.finditer(r"open\(\s*['\"](?P<path>[^'\"]+?\.sql)['\"]\s*\)\.read\(\)", text):
+            sql_path = (path.parent / m.group('path')).resolve()
+            if sql_path.exists():
+                candidates.append((sql_path.read_text(encoding='utf-8', errors='ignore'), {"source":"sql_file", "origin":str(sql_path)}))
+        # triple-quoted or long strings
+        for m in re.finditer(r"(['\"]{3})(?P<body>.+?)(\1)", text, re.DOTALL):
+            body = m.group('body')
+            if SQL_KEYWORDS.search(body) and len(body) > 40:
+                candidates.append((body, {"source":"string_literal"}))
+        # look for operator kw arg sql= "..."
+        for m in re.finditer(r"\bsql\s*=\s*(?P<expr>r?['\"].+?['\"])", text, re.IGNORECASE | re.DOTALL):
+            expr = m.group('expr').strip()
+            # crude strip quotes
+            if expr.startswith(('r"', "r'", '"', "'")):
+                expr_s = expr.strip("r").strip('"\'')
+                if SQL_KEYWORDS.search(expr_s):
+                    candidates.append((expr_s, {"source":"sql_kwarg"}))
+        return candidates
+
+    def _handle_parsed(self, parsed: Dict[str,Any], source_file: str=None, ctx: Dict=None):
+        tables = parsed.get('tables', []) or []
+        inserts = parsed.get('insert_targets', []) or []
+        aliases = parsed.get('aliases', []) or []
+        ctes = parsed.get('ctes', []) or []
+        # normalize table names and types: if looks like project.dataset.table -> bigquery
+        for t in tables + inserts:
+            dtype = self._detect_type_for_table(t)
+            ds_key = self.add_dataset_node(canonical_name=t, dtype=dtype)
+            # for a parsed SQL, a snippet is typically read from many tables to write to insert targets
+        # build edges: every insert target is target, other tables are inputs
+        inputs = [self._detect_type_for_table(t) or t for t in tables if t not in inserts]
+        for ins in inserts or []:
+            tgt_dtype = self._detect_type_for_table(ins)
+            tgt_key = self.add_dataset_node(ins, tgt_dtype)
+            for t in tables:
+                if t == ins: 
+                    continue
+                src_dtype = self._detect_type_for_table(t)
+                src_key = self.add_dataset_node(t, src_dtype)
+                prov = {"source_file": source_file}
+                self.add_edge(src_key, tgt_key, etype='transform', transform='sql', job_prov=[prov], confidence=0.9)
+        # column aliases -> attempted column mapping (best-effort)
+        if aliases:
+            # if one insert target exists, map from inputs to that target
+            tgt = inserts[0] if inserts else None
+            for a in aliases:
+                expr = a.get('expr'); alias = a.get('alias')
+                # if expr is of form t.col or col, try to map
+                src_col = expr.split('.')[-1]
+                tgt_col = alias
+                # naive mapping to first input dataset
+                src_ds = tables[0] if tables else None
+                if src_ds and tgt:
+                    src_key = self.add_dataset_node(src_ds, self._detect_type_for_table(src_ds))
+                    tgt_key = self.add_dataset_node(tgt, self._detect_type_for_table(tgt))
+                    self.add_column_mapping(src_key, src_col, tgt_key, tgt_col, confidence=0.85, provenance={"source_file": source_file})
+
+    def _detect_type_for_table(self, table_name: str) -> str:
+        # heuristics: project.dataset.table -> bigquery
+        if table_name.count('.') >= 2:
+            return 'bigquery'
+        if table_name.startswith('spanner.') or 'spanner' in table_name.lower():
+            return 'spanner'
+        if table_name.startswith('kafka://') or 'topic' in table_name.lower():
+            return 'kafka'
+        if table_name.startswith('gs://') or table_name.endswith('.csv'):
+            return 'gcs'
+        # default
+        return 'unknown'
+
+    def post_to_collector(self):
+        if not self.collector_url:
+            logger.info("No collector configured, not posting.")
+            return
+        payload = {"graph": {"nodes": list(self.graph["nodes"].values()), "edges": self.graph["edges"], "column_mappings": self.graph["column_mappings"]}, "scanned_at": datetime.now(timezone.utc).isoformat()}
+        logger.info("Posting graph to collector: %s", self.collector_url)
+        r = requests.post(self.collector_url, json=payload, timeout=60)
+        logger.info("Collector responded: %s %s", r.status_code, r.text)
+
+# ---------- CLI ----------
+def main():
+    p = argparse.ArgumentParser()
+    p.add_argument("--local-path", help="Local DAGs/SQL path")
+    p.add_argument("--gcs-bucket", help="GCS bucket containing DAGs/SQL")
+    p.add_argument("--gcs-prefix", default='dags/')
+    p.add_argument("--collector", help="Collector URL to POST graph to")
+    p.add_argument("--jinja", action='append', help="jinja vars KEY=VAL")
+    args = p.parse_args()
+    jctx = {}
+    if args.jinja:
+        for kv in args.jinja:
+            k,v = kv.split('=',1)
+            jctx[k]=v
+    scanner = LineageScanner(source=args.local_path or args.gcs_bucket, collector_url=args.collector, jinja_ctx=jctx, gcs_bucket=args.gcs_bucket)
+    if args.gcs_bucket:
+        scanner.scan_gcs_prefix(args.gcs_bucket, args.gcs_prefix)
+    else:
+        scanner.scan_local_folder(args.local_path)
+    # write file
+    out = "graph_output.json"
+    with open(out, "w", encoding='utf-8') as f:
+        json.dump({"graph": {"nodes": list(scanner.graph["nodes"].values()), "edges": scanner.graph["edges"], "column_mappings": scanner.graph["column_mappings"]}}, f, indent=2)
+    logger.info("Wrote %s", out)
+    if args.collector:
+        scanner.post_to_collector()
+
+if __name__ == "__main__":
+    main()
