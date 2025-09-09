@@ -1,3 +1,6 @@
+<app-lineage-graph [graphData]="fullLineageJson"></app-lineage-graph>
+
+
 import { Component, Input, OnInit, OnChanges, SimpleChanges } from '@angular/core';
 import cytoscape from 'cytoscape';
 import dagre from 'cytoscape-dagre';
