@@ -5,6 +5,30 @@ requests==2.31.0
 python-dateutil
 tqdm
 
+import os
+import re
+import json
+import sqlglot
+from google.cloud import storage
+from jinja2 import Template
+from pathlib import Path
+
+# -------------------------
+# CONFIG
+# -------------------------
+CREDENTIALS_JSON = r"C:\path\to\your\gcp-service-key.json"
+GCS_BUCKET = "your-airflow-bucket"
+DAG_PREFIX = "dags/"
+SQL_PREFIX = "sql/"
+
+OUTPUT_FILE = "lineage_output.json"
+
+# -------------------------
+# AUTHENTICATION
+# -------------------------
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = CREDENTIALS_JSON
+storage_client = storage.Client()
+
 
 
 
