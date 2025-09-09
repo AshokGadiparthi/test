@@ -1,6 +1,17 @@
 npm install @cytoscape/cytoscape-popper popper.js
 
+npm install cytoscape-popper popper.js
 
+import cytoscape from 'cytoscape';
+import dagre from 'cytoscape-dagre';
+import popper from 'cytoscape-popper';
+import tippy from 'tippy.js';
+import 'tippy.js/dist/tippy.css';
+
+cytoscape.use(dagre);
+cytoscape.use(popper); // register plugin
+
+=============
 import cytoscape from 'cytoscape';
 import dagre from 'cytoscape-dagre';
 import popper from 'cytoscape-popper';
