@@ -1,3 +1,19 @@
+def normalize_table_name(tbl: str) -> str:
+    # handle `backticks`, "double quotes", 'single quotes' and schema.table patterns
+    return tbl.strip("`\" '").lower()
+
+
+def parse_sql_with_sqlglot(sql_text: str, dialects: List[str] = ["bigquery", "mysql", "postgres"]) -> Dict[str, Any]:
+    for dialect in dialects:
+        try:
+            parsed = sqlglot.parse_one(sql_text, read=dialect)
+            return process_parsed_sql(parsed, dialect)
+        except Exception:
+            continue
+    # fallback regex if all dialects fail
+    return fallback_regex_parse(sql_text)
+
+
 #!/usr/bin/env python3
 """
 full_lineage_extractor.py
