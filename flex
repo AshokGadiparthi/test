@@ -10,23 +10,21 @@ tables = [c for c in df.columns if c != "DesiredColumns"]
 # Get all unique DesiredColumns
 desired_cols = df["DesiredColumns"].unique()
 
-# 1️⃣ Build SQL-friendly matrix
+# Build SQL-friendly matrix with commas and no quotes
 sql_matrix = []
 
 for col in desired_cols:
-    row = {"DesiredColumn": col}  # First column stays as-is
+    row = {"DesiredColumn": f"{col},"}  # First column as-is + comma
     for table in tables:
         if col in df[table].values:
-            # Existing column: CAST as STRING
-            row[table] = f"CAST('{col}' AS STRING) AS {col}"
+            row[table] = f"CAST({col} AS STRING) AS {col},"
         else:
-            # Missing column: NULL AS col_name
-            row[table] = f"NULL AS {col}"
+            row[table] = f"NULL AS {col},"
     sql_matrix.append(row)
 
 sql_matrix_df = pd.DataFrame(sql_matrix)
 
-# Save to CSV (or you can directly export to SQL generation)
+# Save to CSV
 sql_matrix_df.to_csv("sql_matrix_output.csv", index=False)
 
 print("✅ SQL matrix generated: sql_matrix_output.csv")
