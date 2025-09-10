@@ -10,28 +10,23 @@ tables = [c for c in df.columns if c != "DesiredColumns"]
 # Get all unique DesiredColumns
 desired_cols = df["DesiredColumns"].unique()
 
-# 1️⃣ Build the matrix
-matrix_rows = []
+# 1️⃣ Build SQL-friendly matrix
+sql_matrix = []
+
 for col in desired_cols:
-    row = {"DesiredColumn": col}
+    row = {"DesiredColumn": col}  # First column stays as-is
     for table in tables:
-        # Check if col exists in any row for this table
         if col in df[table].values:
-            row[table] = col
+            # Existing column: CAST as STRING
+            row[table] = f"CAST('{col}' AS STRING) AS {col}"
         else:
-            row[table] = ""
-    matrix_rows.append(row)
+            # Missing column: NULL AS col_name
+            row[table] = f"NULL AS {col}"
+    sql_matrix.append(row)
 
-matrix_df = pd.DataFrame(matrix_rows)
-matrix_df.to_csv("matrix_output.csv", index=False)
+sql_matrix_df = pd.DataFrame(sql_matrix)
 
-# 2️⃣ Find common columns across all tables
-common_cols = []
-for col in desired_cols:
-    if all(col in df[table].values for table in tables):
-        common_cols.append(col)
+# Save to CSV (or you can directly export to SQL generation)
+sql_matrix_df.to_csv("sql_matrix_output.csv", index=False)
 
-common_df = pd.DataFrame(common_cols, columns=["CommonColumns"])
-common_df.to_csv("common_columns.csv", index=False)
-
-print("✅ Outputs generated: matrix_output.csv, common_columns.csv")
+print("✅ SQL matrix generated: sql_matrix_output.csv")
