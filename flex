@@ -1,30 +1,37 @@
-import pandas as pd
+import java.util.*;
+import java.util.stream.Collectors;
 
-# Load input CSV
-input_file = "input.csv"
-df = pd.read_csv(input_file)
+public class SqlColumnBuilder {
 
-# List of table columns (all except DesiredColumns)
-tables = [c for c in df.columns if c != "DesiredColumns"]
+    public static void main(String[] args) {
+        // Example input: table -> set of available columns
+        Map<String, Set<String>> tableColumns = new HashMap<>();
+        tableColumns.put("TABLE1", new HashSet<>(Arrays.asList("AA")));
+        tableColumns.put("TABLE2", new HashSet<>(Arrays.asList("AA")));
+        tableColumns.put("TABLE3", new HashSet<>(Arrays.asList("BB")));
+        tableColumns.put("TABLE4", new HashSet<>(Arrays.asList("AA")));
+        tableColumns.put("TABLE5", new HashSet<>(Arrays.asList("BB")));
+        tableColumns.put("TABLE6", new HashSet<>(Arrays.asList("AA")));
 
-# Get all unique DesiredColumns
-desired_cols = df["DesiredColumns"].unique()
+        // Desired columns
+        List<String> desiredCols = Arrays.asList("AA", "BB", "CC");
 
-# Build SQL-friendly matrix with commas and no quotes
-sql_matrix = []
+        // Generate SQL for each desired column
+        for (String col : desiredCols) {
+            List<String> expressions = new ArrayList<>();
+            for (String table : tableColumns.keySet()) {
+                if (tableColumns.get(table).contains(col)) {
+                    expressions.add("CAST(" + col + " AS STRING) AS " + col);
+                } else {
+                    expressions.add("NULL AS " + col);
+                }
+            }
 
-for col in desired_cols:
-    row = {"DesiredColumn": f"{col},"}  # First column as-is + comma
-    for table in tables:
-        if col in df[table].values:
-            row[table] = f"CAST({col} AS STRING) AS {col},"
-        else:
-            row[table] = f"NULL AS {col},"
-    sql_matrix.append(row)
-
-sql_matrix_df = pd.DataFrame(sql_matrix)
-
-# Save to CSV
-sql_matrix_df.to_csv("sql_matrix_output.csv", index=False)
-
-print("✅ SQL matrix generated: sql_matrix_output.csv")
+            // Join with commas, no trailing comma
+            String sqlLine = expressions.stream().collect(Collectors.joining(", "));
+            System.out.println("-- For column: " + col);
+            System.out.println(sqlLine);
+            System.out.println();
+        }
+    }
+}
