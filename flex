@@ -1,46 +1,59 @@
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.*;
-import java.util.stream.Collectors;
 
-public class DataTransformer {
+public class CustomRowBuilder {
 
-    public static List<CustomRow> transform(List<ParentData> rows) {
-        // Group by composite key custId|acctNum|custLineSeqId
-        Map<String, List<ParentData>> grouped = rows.stream()
-                .collect(Collectors.groupingBy(r -> r.getCustId() + "|" + r.getAcctNum() + "|" + r.getCustLineSeqId()));
+    public static List<CustomRow> buildFromResultSet(ResultSet rs) throws SQLException {
+        List<CustomRow> customRows = new ArrayList<>();
+        Map<String, List<ParentData>> grouped = new HashMap<>();
 
-        List<CustomRow> result = new ArrayList<>();
+        // 1️⃣ Read ResultSet and group ParentData
+        while (rs.next()) {
+            String custId = rs.getString("cust_id");
+            int acctNum = rs.getInt("acct_num");
+            int custLineSeqId = rs.getInt("cust_line_seq_id");
+            String colName = rs.getString("col_name");
+            String sourceTable = rs.getString("source_table");
 
-        // Iterate grouped entries
-        for (List<ParentData> group : grouped.values()) {
+            ParentData pd = new ParentData(custId, acctNum, custLineSeqId, colName, sourceTable);
 
-            String custId = group.get(0).getCustId();
-            int acctNum = group.get(0).getAcctNum();
-            int custLineSeqId = group.get(0).getCustLineSeqId();
+            String key = custId + "|" + acctNum + "|" + custLineSeqId;
+            grouped.computeIfAbsent(key, k -> new ArrayList<>()).add(pd);
+        }
 
-            // Extract cust_line_profile and mtz_adobe
-            String profileVal = getColValue(group, "cust_line_profile");
-            String mtzVal = getColValue(group, "mtz_adobe");
-            String batchVal = getColValue(group, "batch_line_vzw");
-            String realVal = getColValue(group, "real_line_nrt");
+        // 2️⃣ Iterate grouped data and build CustomRows
+        for (Map.Entry<String, List<ParentData>> entry : grouped.entrySet()) {
+            List<ParentData> children = entry.getValue();
+
+            String custId = children.get(0).getCustId();
+            int acctNum = children.get(0).getAcctNum();
+            int custLineSeqId = children.get(0).getCustLineSeqId();
+
+            // Extract relevant column values
+            String custLineProfile = getColumnValue(children, "cust_line_profile");
+            String mtzAdobe = getColumnValue(children, "mtz_adobe");
+            String batchVal = getColumnValue(children, "batch_line_vzw");
+            String realVal = getColumnValue(children, "real_line_nrt");
 
             // Determine highlight
             String highlight = "none";
-            if (Objects.equals(batchVal, profileVal) && !Objects.equals(batchVal, mtzVal)) {
+            if (Objects.equals(batchVal, custLineProfile) && !Objects.equals(batchVal, mtzAdobe)) {
                 highlight = (realVal == null) ? "light-red" : "light-yellow";
             }
 
-            // Add to result
-            result.add(new CustomRow(custId, acctNum, custLineSeqId, profileVal, mtzVal, highlight, group));
+            customRows.add(new CustomRow(custId, acctNum, custLineSeqId, custLineProfile, mtzAdobe, highlight, children));
         }
 
-        return result;
+        return customRows;
     }
 
-    private static String getColValue(List<ParentData> group, String colName) {
-        return group.stream()
-                .filter(d -> colName.equalsIgnoreCase(d.getColName()))
-                .map(ParentData::getColName) // using colName itself as "value"
-                .findFirst()
-                .orElse(null);
+    private static String getColumnValue(List<ParentData> list, String colName) {
+        for (ParentData pd : list) {
+            if (colName.equalsIgnoreCase(pd.getColName())) {
+                return pd.getColName(); // Using colName as "value"
+            }
+        }
+        return null;
     }
 }
