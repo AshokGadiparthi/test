@@ -1,38 +1,3 @@
-import java.util.List;
-
-public class CustomRow {
-    private String custId;
-    private int acctNum;
-    private int custLineSeqId;
-    private String custLineProfile;
-    private String mtzAdobe;
-    private String highlight;
-    private List<ParentData> children;
-
-    public CustomRow(String custId, int acctNum, int custLineSeqId,
-                     String custLineProfile, String mtzAdobe,
-                     String highlight, List<ParentData> children) {
-        this.custId = custId;
-        this.acctNum = acctNum;
-        this.custLineSeqId = custLineSeqId;
-        this.custLineProfile = custLineProfile;
-        this.mtzAdobe = mtzAdobe;
-        this.highlight = highlight;
-        this.children = children;
-    }
-
-    @Override
-    public String toString() {
-        return custId + "|" + acctNum + "|" + custLineSeqId +
-                " cust_line_profile=" + custLineProfile +
-                " mtz_adobe=" + mtzAdobe +
-                " highlight=" + highlight +
-                " children=" + children;
-    }
-}
-
-
-
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -73,8 +38,72 @@ public class DataTransformer {
     private static String getValue(List<ParentData> group, String colName) {
         return group.stream()
                 .filter(d -> colName.equalsIgnoreCase(d.getColName()))
-                .map(ParentData::getValue)
+                .map(ParentData::getColName) // Using colName itself as "value"
                 .findFirst()
                 .orElse(null);
+    }
+}
+
+
+
+import java.util.List;
+
+public class CustomRow {
+    private String custId;
+    private int acctNum;
+    private int custLineSeqId;
+    private String custLineProfile;
+    private String mtzAdobe;
+    private String highlight;
+    private List<ParentData> children;
+
+    public CustomRow(String custId, int acctNum, int custLineSeqId,
+                     String custLineProfile, String mtzAdobe,
+                     String highlight, List<ParentData> children) {
+        this.custId = custId;
+        this.acctNum = acctNum;
+        this.custLineSeqId = custLineSeqId;
+        this.custLineProfile = custLineProfile;
+        this.mtzAdobe = mtzAdobe;
+        this.highlight = highlight;
+        this.children = children;
+    }
+
+    @Override
+    public String toString() {
+        return custId + "|" + acctNum + "|" + custLineSeqId +
+                " cust_line_profile=" + custLineProfile +
+                " mtz_adobe=" + mtzAdobe +
+                " highlight=" + highlight +
+                " children=" + children;
+    }
+}
+
+
+
+public class ParentData {
+    private String custId;
+    private int acctNum;
+    private int custLineSeqId;
+    private String colName;
+    private String sourceTable;
+
+    public ParentData(String custId, int acctNum, int custLineSeqId, String colName, String sourceTable) {
+        this.custId = custId;
+        this.acctNum = acctNum;
+        this.custLineSeqId = custLineSeqId;
+        this.colName = colName;
+        this.sourceTable = sourceTable;
+    }
+
+    public String getCustId() { return custId; }
+    public int getAcctNum() { return acctNum; }
+    public int getCustLineSeqId() { return custLineSeqId; }
+    public String getColName() { return colName; }
+    public String getSourceTable() { return sourceTable; }
+
+    @Override
+    public String toString() {
+        return colName + "@" + sourceTable;
     }
 }
