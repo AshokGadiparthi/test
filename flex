@@ -1,3 +1,14 @@
+
+Map<String, List<ParentData>> groupedBQ = new HashMap<>();
+
+for (ParentData pd : bqResults) {
+    String key = pd.getCustId() + "|" + pd.getAcctNum() + "|" +
+            (pd.getCustLineSeqId() == null ? "NULL" : pd.getCustLineSeqId());
+
+    groupedBQ.computeIfAbsent(key, k -> new ArrayList<>()).add(pd);
+}
+
+
 import java.util.*;
 import java.util.stream.Collectors;
 
