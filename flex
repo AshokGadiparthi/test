@@ -1,3 +1,14 @@
+list.forEach(m => {
+  if (
+    String(m.cust_id) === String(cust_id) &&
+    String(m.acct_num) === String(acct_num) &&
+    String(m.custlineseq) === String(custlineseq)
+  ) {
+    console.log("Children:", m.children);
+  }
+});
+
+
 console.log("list is:", list);
 console.log("isArray?", Array.isArray(list), "length:", list?.length);
 
