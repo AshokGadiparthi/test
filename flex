@@ -1,3 +1,14 @@
+<tr mat-row 
+    *matRowDef="let row; columns: displayedColumns;"
+    [ngStyle]="{'background-color': 
+        row.status === 'red' ? '#f87171' : 
+        row.status === 'yellow' ? '#facc15' : 
+        '#34d399'
+    }">
+</tr>
+
+
+
 <ng-container matColumnDef="status">
   <th mat-header-cell *matHeaderCellDef> Status </th>
   <td mat-cell *matCellDef="let element" class="flex justify-center items-center">
