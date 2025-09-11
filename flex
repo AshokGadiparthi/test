@@ -1,26 +1,19 @@
-<tr mat-row 
-    *matRowDef="let row; columns: displayedColumns;"
-    [ngStyle]="{'background-color': 
-        row.status === 'red' ? '#f87171' : 
-        row.status === 'yellow' ? '#facc15' : 
-        '#34d399'
-    }">
-</tr>
+function getChildren(
+  list: Master[],
+  cust_id: string,
+  acct_num: string,
+  custlineseq: number
+): Child[] {
+  const master = list.find(
+    m =>
+      m.cust_id === cust_id &&
+      m.acct_num === acct_num &&
+      m.custlineseq === custlineseq
+  );
+  return master ? master.children : [];
+}
 
-
-
-<ng-container matColumnDef="status">
-  <th mat-header-cell *matHeaderCellDef> Status </th>
-  <td mat-cell *matCellDef="let element" class="flex justify-center items-center">
-    <span
-      [style.width.px]="16"
-      [style.height.px]="16"
-      style="border-radius:50%; display:inline-block;"
-      [style.background-color]="
-        element.status === 'red' ? '#f87171' :
-        element.status === 'yellow' ? '#facc15' :
-        '#34d399'
-      ">
-    </span>
-  </td>
-</ng-container>
+// Example usage
+const result = getChildren(masterList, "C001", "A100", 1);
+console.log(result);
+// → [ { childId: 101, value: 'x' }, { childId: 102, value: 'y' } ]
