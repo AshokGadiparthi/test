@@ -1,3 +1,7 @@
+console.log("list is:", list);
+console.log("isArray?", Array.isArray(list), "length:", list?.length);
+
+
 console.log("looking for:", cust_id, acct_num, custlineseq);
 list.forEach(m =>
   console.log("candidate:", m.cust_id, m.acct_num, m.custlineseq)
