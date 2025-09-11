@@ -1,3 +1,8 @@
+console.log("looking for:", cust_id, acct_num, custlineseq);
+list.forEach(m =>
+  console.log("candidate:", m.cust_id, m.acct_num, m.custlineseq)
+);
+
 function getChildren(
   list: Master[],
   cust_id: string,
