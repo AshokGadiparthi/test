@@ -1,574 +1,164 @@
-def normalize_table_name(tbl: str) -> str:
-    # handle `backticks`, "double quotes", 'single quotes' and schema.table patterns
-    return tbl.strip("`\" '").lower()
+Perfect! I’ll give you a single BigQuery script that is fully ready to run for 50 columns, handling both mismatch counts and 10 sample mismatches per column, all in one pass without repetitive joins. I’ll use generic column names col1 to col50. You just need to replace table names if needed.
 
+-- =====================================
+-- Full mismatch comparison for 50 columns
+-- Tables: table1, table2, table3
+-- =====================================
 
-def parse_sql_with_sqlglot(sql_text: str, dialects: List[str] = ["bigquery", "mysql", "postgres"]) -> Dict[str, Any]:
-    for dialect in dialects:
-        try:
-            parsed = sqlglot.parse_one(sql_text, read=dialect)
-            return process_parsed_sql(parsed, dialect)
-        except Exception:
-            continue
-    # fallback regex if all dialects fail
-    return fallback_regex_parse(sql_text)
+WITH joined AS (
+  SELECT
+    t1.id,
+    t1.col1 AS col1_t1, t2.col1 AS col1_t2, t3.col1 AS col1_t3,
+    t1.col2 AS col2_t1, t2.col2 AS col2_t2, t3.col2 AS col2_t3,
+    t1.col3 AS col3_t1, t2.col3 AS col3_t2, t3.col3 AS col3_t3,
+    t1.col4 AS col4_t1, t2.col4 AS col4_t2, t3.col4 AS col4_t3,
+    t1.col5 AS col5_t1, t2.col5 AS col5_t2, t3.col5 AS col5_t3,
+    t1.col6 AS col6_t1, t2.col6 AS col6_t2, t3.col6 AS col6_t3,
+    t1.col7 AS col7_t1, t2.col7 AS col7_t2, t3.col7 AS col7_t3,
+    t1.col8 AS col8_t1, t2.col8 AS col8_t2, t3.col8 AS col8_t3,
+    t1.col9 AS col9_t1, t2.col9 AS col9_t2, t3.col9 AS col9_t3,
+    t1.col10 AS col10_t1, t2.col10 AS col10_t2, t3.col10 AS col10_t3,
+    t1.col11 AS col11_t1, t2.col11 AS col11_t2, t3.col11 AS col11_t3,
+    t1.col12 AS col12_t1, t2.col12 AS col12_t2, t3.col12 AS col12_t3,
+    t1.col13 AS col13_t1, t2.col13 AS col13_t2, t3.col13 AS col13_t3,
+    t1.col14 AS col14_t1, t2.col14 AS col14_t2, t3.col14 AS col14_t3,
+    t1.col15 AS col15_t1, t2.col15 AS col15_t2, t3.col15 AS col15_t3,
+    t1.col16 AS col16_t1, t2.col16 AS col16_t2, t3.col16 AS col16_t3,
+    t1.col17 AS col17_t1, t2.col17 AS col17_t2, t3.col17 AS col17_t3,
+    t1.col18 AS col18_t1, t2.col18 AS col18_t2, t3.col18 AS col18_t3,
+    t1.col19 AS col19_t1, t2.col19 AS col19_t2, t3.col19 AS col19_t3,
+    t1.col20 AS col20_t1, t2.col20 AS col20_t2, t3.col20 AS col20_t3,
+    t1.col21 AS col21_t1, t2.col21 AS col21_t2, t3.col21 AS col21_t3,
+    t1.col22 AS col22_t1, t2.col22 AS col22_t2, t3.col22 AS col22_t3,
+    t1.col23 AS col23_t1, t2.col23 AS col23_t2, t3.col23 AS col23_t3,
+    t1.col24 AS col24_t1, t2.col24 AS col24_t2, t3.col24 AS col24_t3,
+    t1.col25 AS col25_t1, t2.col25 AS col25_t2, t3.col25 AS col25_t3,
+    t1.col26 AS col26_t1, t2.col26 AS col26_t2, t3.col26 AS col26_t3,
+    t1.col27 AS col27_t1, t2.col27 AS col27_t2, t3.col27 AS col27_t3,
+    t1.col28 AS col28_t1, t2.col28 AS col28_t2, t3.col28 AS col28_t3,
+    t1.col29 AS col29_t1, t2.col29 AS col29_t2, t3.col29 AS col29_t3,
+    t1.col30 AS col30_t1, t2.col30 AS col30_t2, t3.col30 AS col30_t3,
+    t1.col31 AS col31_t1, t2.col31 AS col31_t2, t3.col31 AS col31_t3,
+    t1.col32 AS col32_t1, t2.col32 AS col32_t2, t3.col32 AS col32_t3,
+    t1.col33 AS col33_t1, t2.col33 AS col33_t2, t3.col33 AS col33_t3,
+    t1.col34 AS col34_t1, t2.col34 AS col34_t2, t3.col34 AS col34_t3,
+    t1.col35 AS col35_t1, t2.col35 AS col35_t2, t3.col35 AS col35_t3,
+    t1.col36 AS col36_t1, t2.col36 AS col36_t2, t3.col36 AS col36_t3,
+    t1.col37 AS col37_t1, t2.col37 AS col37_t2, t3.col37 AS col37_t3,
+    t1.col38 AS col38_t1, t2.col38 AS col38_t2, t3.col38 AS col38_t3,
+    t1.col39 AS col39_t1, t2.col39 AS col39_t2, t3.col39 AS col39_t3,
+    t1.col40 AS col40_t1, t2.col40 AS col40_t2, t3.col40 AS col40_t3,
+    t1.col41 AS col41_t1, t2.col41 AS col41_t2, t3.col41 AS col41_t3,
+    t1.col42 AS col42_t1, t2.col42 AS col42_t2, t3.col42 AS col42_t3,
+    t1.col43 AS col43_t1, t2.col43 AS col43_t2, t3.col43 AS col43_t3,
+    t1.col44 AS col44_t1, t2.col44 AS col44_t2, t3.col44 AS col44_t3,
+    t1.col45 AS col45_t1, t2.col45 AS col45_t2, t3.col45 AS col45_t3,
+    t1.col46 AS col46_t1, t2.col46 AS col46_t2, t3.col46 AS col46_t3,
+    t1.col47 AS col47_t1, t2.col47 AS col47_t2, t3.col47 AS col47_t3,
+    t1.col48 AS col48_t1, t2.col48 AS col48_t2, t3.col48 AS col48_t3,
+    t1.col49 AS col49_t1, t2.col49 AS col49_t2, t3.col49 AS col49_t3,
+    t1.col50 AS col50_t1, t2.col50 AS col50_t2, t3.col50 AS col50_t3
+  FROM table1 t1
+  JOIN table2 t2 USING (id)
+  JOIN table3 t3 USING (id)
+),
 
+-- Unpivot all columns into rows
+unpivoted AS (
+  SELECT id, 'col1' AS column_name, col1_t1 AS t1_val, col1_t2 AS t2_val, col1_t3 AS t3_val FROM joined
+  UNION ALL SELECT id, 'col2', col2_t1, col2_t2, col2_t3 FROM joined
+  UNION ALL SELECT id, 'col3', col3_t1, col3_t2, col3_t3 FROM joined
+  UNION ALL SELECT id, 'col4', col4_t1, col4_t2, col4_t3 FROM joined
+  UNION ALL SELECT id, 'col5', col5_t1, col5_t2, col5_t3 FROM joined
+  UNION ALL SELECT id, 'col6', col6_t1, col6_t2, col6_t3 FROM joined
+  UNION ALL SELECT id, 'col7', col7_t1, col7_t2, col7_t3 FROM joined
+  UNION ALL SELECT id, 'col8', col8_t1, col8_t2, col8_t3 FROM joined
+  UNION ALL SELECT id, 'col9', col9_t1, col9_t2, col9_t3 FROM joined
+  UNION ALL SELECT id, 'col10', col10_t1, col10_t2, col10_t3 FROM joined
+  UNION ALL SELECT id, 'col11', col11_t1, col11_t2, col11_t3 FROM joined
+  UNION ALL SELECT id, 'col12', col12_t1, col12_t2, col12_t3 FROM joined
+  UNION ALL SELECT id, 'col13', col13_t1, col13_t2, col13_t3 FROM joined
+  UNION ALL SELECT id, 'col14', col14_t1, col14_t2, col14_t3 FROM joined
+  UNION ALL SELECT id, 'col15', col15_t1, col15_t2, col15_t3 FROM joined
+  UNION ALL SELECT id, 'col16', col16_t1, col16_t2, col16_t3 FROM joined
+  UNION ALL SELECT id, 'col17', col17_t1, col17_t2, col17_t3 FROM joined
+  UNION ALL SELECT id, 'col18', col18_t1, col18_t2, col18_t3 FROM joined
+  UNION ALL SELECT id, 'col19', col19_t1, col19_t2, col19_t3 FROM joined
+  UNION ALL SELECT id, 'col20', col20_t1, col20_t2, col20_t3 FROM joined
+  UNION ALL SELECT id, 'col21', col21_t1, col21_t2, col21_t3 FROM joined
+  UNION ALL SELECT id, 'col22', col22_t1, col22_t2, col22_t3 FROM joined
+  UNION ALL SELECT id, 'col23', col23_t1, col23_t2, col23_t3 FROM joined
+  UNION ALL SELECT id, 'col24', col24_t1, col24_t2, col24_t3 FROM joined
+  UNION ALL SELECT id, 'col25', col25_t1, col25_t2, col25_t3 FROM joined
+  UNION ALL SELECT id, 'col26', col26_t1, col26_t2, col26_t3 FROM joined
+  UNION ALL SELECT id, 'col27', col27_t1, col27_t2, col27_t3 FROM joined
+  UNION ALL SELECT id, 'col28', col28_t1, col28_t2, col28_t3 FROM joined
+  UNION ALL SELECT id, 'col29', col29_t1, col29_t2, col29_t3 FROM joined
+  UNION ALL SELECT id, 'col30', col30_t1, col30_t2, col30_t3 FROM joined
+  UNION ALL SELECT id, 'col31', col31_t1, col31_t2, col31_t3 FROM joined
+  UNION ALL SELECT id, 'col32', col32_t1, col32_t2, col32_t3 FROM joined
+  UNION ALL SELECT id, 'col33', col33_t1, col33_t2, col33_t3 FROM joined
+  UNION ALL SELECT id, 'col34', col34_t1, col34_t2, col34_t3 FROM joined
+  UNION ALL SELECT id, 'col35', col35_t1, col35_t2, col35_t3 FROM joined
+  UNION ALL SELECT id, 'col36', col36_t1, col36_t2, col36_t3 FROM joined
+  UNION ALL SELECT id, 'col37', col37_t1, col37_t2, col37_t3 FROM joined
+  UNION ALL SELECT id, 'col38', col38_t1, col38_t2, col38_t3 FROM joined
+  UNION ALL SELECT id, 'col39', col39_t1, col39_t2, col39_t3 FROM joined
+  UNION ALL SELECT id, 'col40', col40_t1, col40_t2, col40_t3 FROM joined
+  UNION ALL SELECT id, 'col41', col41_t1, col41_t2, col41_t3 FROM joined
+  UNION ALL SELECT id, 'col42', col42_t1, col42_t2, col42_t3 FROM joined
+  UNION ALL SELECT id, 'col43', col43_t1, col43_t2, col43_t3 FROM joined
+  UNION ALL SELECT id, 'col44', col44_t1, col44_t2, col44_t3 FROM joined
+  UNION ALL SELECT id, 'col45', col45_t1, col45_t2, col45_t3 FROM joined
+  UNION ALL SELECT id, 'col46', col46_t1, col46_t2, col46_t3 FROM joined
+  UNION ALL SELECT id, 'col47', col47_t1, col47_t2, col47_t3 FROM joined
+  UNION ALL SELECT id, 'col48', col48_t1, col48_t2, col48_t3 FROM joined
+  UNION ALL SELECT id, 'col49', col49_t1, col49_t2, col49_t3 FROM joined
+  UNION ALL SELECT id, 'col50', col50_t1, col50_t2, col50_t3 FROM joined
+),
 
-#!/usr/bin/env python3
-"""
-full_lineage_extractor.py
-Comprehensive DAG + SQL lineage extractor that reads DAG and SQL files from a GCS bucket,
-parses DAG AST for tasks and dependencies, extracts SQL (including jinja templated SQL),
-parses SQL with sqlglot to produce table and column lineage, and outputs a node/edge JSON graph.
+-- Get mismatch counts
+mismatch_counts AS (
+  SELECT
+    column_name,
+    COUNTIF(t1_val != t2_val AND t1_val != t3_val) AS mismatch_count
+  FROM unpivoted
+  GROUP BY column_name
+),
 
-Run:
-  python full_lineage_extractor.py --gcs-bucket my-bucket --dags-prefix airflow/dags/ --sql-prefix airflow/sql/ --creds /path/key.json
-"""
-import os
-import re
-import ast
-import json
-import argparse
-import logging
-from pathlib import Path
-from typing import List, Dict, Any, Tuple, Optional
-from datetime import datetime, timezone
+-- Get 10 sample mismatches per column
+mismatch_samples AS (
+  SELECT *
+  FROM (
+    SELECT *,
+           ROW_NUMBER() OVER (PARTITION BY column_name ORDER BY id) AS rn
+    FROM unpivoted
+    WHERE t1_val != t2_val AND t1_val != t3_val
+  )
+  WHERE rn <= 10
+)
 
-from google.cloud import storage
-from jinja2 import Environment, meta
-import sqlglot
-from tqdm import tqdm
+-- Combine counts + samples
+SELECT
+  mc.column_name,
+  mc.mismatch_count,
+  ARRAY_AGG(STRUCT(ms.id, ms.t1_val, ms.t2_val, ms.t3_val)) AS sample_mismatches
+FROM mismatch_counts mc
+LEFT JOIN mismatch_samples ms
+ON mc.column_name = ms.column_name
+GROUP BY mc.column_name, mc.mismatch_count
+ORDER BY mc.column_name;
+✅ Key Notes
+Replace table1, table2, table3 and column names if your schema is different.
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("full_lineage")
+Uses single join, unpivot, COUNTIF, and ROW_NUMBER for efficiency.
 
-# ---------------------------
-# Helpers and heuristics
-# ---------------------------
-SQL_LIKE_RE = re.compile(r"\b(SELECT|INSERT|UPDATE|DELETE|MERGE|WITH|CREATE\s+TABLE)\b", re.IGNORECASE)
-SQL_FILE_READ_RE = re.compile(r"open\(\s*['\"](?P<path>[^'\"]+?\.sql)['\"]\s*\)\.read\(\)", re.IGNORECASE)
-OPERATOR_CLASS_HINTS = [
-    "BigQueryOperator", "BigQueryInsertJobOperator", "BigQueryExecuteQueryOperator",
-    "BigQueryInsertJobOperator", "BigQueryCheckOperator", "DataflowPythonOperator",
-    "DataflowTemplateOperator", "PythonOperator", "BashOperator", "PostgresOperator",
-    "MySqlOperator", "SnowflakeOperator", "JdbcOperator", "SqlOperator", "SnowflakeOperator"
-]
+Returns:
 
-EXTERNAL_KEYWORDS = {
-    "kafka": "kafka",
-    "pubsub": "pubsub",
-    "spanner": "spanner",
-    "redis": "redis",
-    "gs://": "gcs",
-    ".csv": "file",
-    ".parquet": "file"
-}
+column_name
 
-# Node id helper
-def nid(prefix: str, name: str) -> str:
-    # safe ID
-    safe = name.replace("/", "_").replace(" ", "_").replace(":", "_")
-    return f"{prefix}::{safe}"
+mismatch_count
 
-# normalize table string
-def normalize_table_name(tbl: str) -> str:
-    return tbl.strip("`\" '")
+sample_mismatches → array of up to 10 mismatch rows per column.
 
-# basic jinja render with safe placeholders
-def render_jinja_safe(text: str, ctx: Dict[str, str]) -> str:
-    if "{{" not in text and "{%" not in text:
-        return text
-    env = Environment()
-    try:
-        parsed = env.parse(text)
-        vars = meta.find_undeclared_variables(parsed)
-        safe_ctx = dict(ctx or {})
-        for v in vars:
-            if v not in safe_ctx:
-                safe_ctx[v] = f"__{v}__"
-        tpl = env.from_string(text)
-        return tpl.render(**safe_ctx)
-    except Exception as e:
-        logger.debug("jinja render failed: %s", e)
-        return text
-
-# SQL parsing using sqlglot: returns dict with tables, insert targets, aliases (expr->alias)
-def parse_sql_with_sqlglot(sql_text: str, dialect: str = "bigquery") -> Dict[str, Any]:
-    out = {"tables": [], "insert_targets": [], "aliases": [], "ctes": []}
-    try:
-        parsed = sqlglot.parse_one(sql_text, read=dialect)
-    except Exception as e:
-        logger.debug("sqlglot parse failed: %s", e)
-        # fallback heuristics
-        tables = set(re.findall(r"(?:FROM|JOIN)\s+([A-Za-z0-9_`\.\-]+)", sql_text, re.IGNORECASE))
-        inserts = set(re.findall(r"INSERT\s+INTO\s+([A-Za-z0-9_`\.\-]+)", sql_text, re.IGNORECASE))
-        out["tables"] = [normalize_table_name(t) for t in tables]
-        out["insert_targets"] = [normalize_table_name(t) for t in inserts]
-        return out
-    # tables
-    try:
-        for t in parsed.find_all(sqlglot.expressions.Table):
-            try:
-                out["tables"].append(normalize_table_name(t.sql(dialect=dialect)))
-            except Exception:
-                out["tables"].append(normalize_table_name(str(t)))
-    except Exception:
-        pass
-    # insert targets
-    try:
-        for ins in parsed.find_all(sqlglot.expressions.Insert):
-            try:
-                out["insert_targets"].append(normalize_table_name(ins.this.sql(dialect=dialect)))
-            except Exception:
-                pass
-    except Exception:
-        pass
-    # aliases (SELECT expr AS alias)
-    try:
-        for a in parsed.find_all(sqlglot.expressions.Alias):
-            try:
-                alias_name = a.alias_or_name
-                expr = a.this.sql(dialect=dialect) if hasattr(a.this, "sql") else str(a.this)
-                out["aliases"].append({"expr": expr, "alias": alias_name})
-            except Exception:
-                pass
-    except Exception:
-        pass
-    # ctes
-    try:
-        for c in parsed.find_all(sqlglot.expressions.CommonTableExpression):
-            try:
-                out["ctes"].append(c.alias_or_name)
-            except Exception:
-                pass
-    except Exception:
-        pass
-    # dedupe lists
-    out["tables"] = sorted(list(dict.fromkeys(out["tables"])))
-    out["insert_targets"] = sorted(list(dict.fromkeys(out["insert_targets"])))
-    return out
-
-# detect type of dataset by heuristics
-def detect_dataset_type(name: str) -> str:
-    n = name.lower()
-    for k, t in EXTERNAL_KEYWORDS.items():
-        if k in n:
-            return t
-    if n.count(".") >= 2:
-        return "bigquery"
-    if "spanner" in n:
-        return "spanner"
-    return "unknown"
-
-# ---------------------------
-# GCS helpers
-# ---------------------------
-class GCSReader:
-    def __init__(self, creds_json: Optional[str] = None):
-        if creds_json:
-            os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = creds_json
-        self.client = storage.Client()
-
-    def list_files(self, bucket: str, prefix: str) -> List[str]:
-        b = self.client.bucket(bucket)
-        blobs = self.client.list_blobs(b, prefix=prefix)
-        return [b.name for b in blobs]
-
-    def read_text(self, bucket: str, path: str) -> str:
-        b = self.client.bucket(bucket)
-        blob = b.blob(path)
-        return blob.download_as_text()
-
-# ---------------------------
-# AST-based DAG scanner
-# ---------------------------
-class DagAstScanner(ast.NodeVisitor):
-    """
-    Walk Python AST to find:
-      - DAG instantiations (dag_id)
-      - Task/operator instantiations (capture variable name, class name, keywords like task_id, sql, bash_command, python_callable)
-      - Upstream/downstream relations via BinOp (>> / <<)
-      - Calls to set_upstream / set_downstream
-    """
-    def __init__(self, source_text: str, filename: str):
-        self.filename = filename
-        self.text = source_text
-        self.dags: Dict[str, Dict] = {}      # dag_id -> info
-        self.tasks: Dict[str, Dict] = {}     # var_name or task key -> info: {task_id, operator, sql, kwargs, lineno}
-        self.task_edges: List[Tuple[str, str]] = []  # (src_var, tgt_var)
-        super().__init__()
-
-    def visit_Call(self, node: ast.Call):
-        # detect DAG(...) calls
-        try:
-            func_name = self._get_name(node.func)
-            if func_name and func_name.endswith("DAG"):
-                dag_id = None
-                for kw in node.keywords:
-                    if kw.arg == "dag_id":
-                        dag_id = self._const_value(kw.value)
-                if (not dag_id) and node.args:
-                    dag_id = self._const_value(node.args[0])
-                if dag_id:
-                    self.dags[dag_id] = {"dag_id": dag_id, "lineno": node.lineno}
-            # detect operator instantiation
-            if func_name and any(hint.lower() in func_name.lower() for hint in OPERATOR_CLASS_HINTS):
-                # get assigned variable if any by checking parent Assign in source (we will fill in visit_Assign)
-                op = func_name.split(".")[-1]
-                # find task_id/sql kwargs
-                task_id = None
-                sql_text = None
-                bash_cmd = None
-                py_callable = None
-                extra = {}
-                for kw in node.keywords:
-                    if kw.arg == "task_id":
-                        task_id = self._const_value(kw.value)
-                    if kw.arg in ("sql", "sql_query", "sql_stmt", "query"):
-                        # if it's a string constant capture it; if it's Name or Call keep code snippet
-                        if isinstance(kw.value, ast.Constant):
-                            sql_text = kw.value.value
-                        else:
-                            # attempt to extract source snippet
-                            start = getattr(kw.value, "lineno", None)
-                            sql_text = self._source_segment(kw.value) or None
-                    if kw.arg == "bash_command":
-                        bash_cmd = self._const_value(kw.value)
-                    if kw.arg == "python_callable":
-                        if isinstance(kw.value, ast.Name):
-                            py_callable = kw.value.id
-                        else:
-                            py_callable = self._source_segment(kw.value)
-                # create a task key (lineno-based if variable not yet known)
-                var_candidate = f"{self.filename}@{node.lineno}"
-                self.tasks.setdefault(var_candidate, {
-                    "task_id": task_id or var_candidate,
-                    "operator": op,
-                    "sql": sql_text,
-                    "bash_command": bash_cmd,
-                    "python_callable": py_callable,
-                    "kwargs": extra,
-                    "lineno": node.lineno,
-                    "file": self.filename
-                })
-        except Exception:
-            logger.debug("visit_Call trouble", exc_info=True)
-        self.generic_visit(node)
-
-    def visit_Assign(self, node: ast.Assign):
-        # capture if value is a Call and left is a Name -> assign that var name to the last discovered Call task
-        try:
-            if isinstance(node.value, ast.Call):
-                # left name
-                left = node.targets[0]
-                if isinstance(left, ast.Name):
-                    varname = left.id
-                    # find the call we just processed at that lineno
-                    lineno = getattr(node.value, "lineno", None)
-                    key = f"{self.filename}@{lineno}"
-                    if key in self.tasks:
-                        # rename task entry to include varname
-                        entry = self.tasks.pop(key)
-                        newkey = f"{self.filename}::{varname}"
-                        entry["var_name"] = varname
-                        entry["task_id"] = entry.get("task_id") or varname
-                        self.tasks[newkey] = entry
-        except Exception:
-            pass
-        self.generic_visit(node)
-
-    def visit_Expr(self, node: ast.Expr):
-        # detect chain operations t1 >> t2 as BinOp with RShift or LShift
-        try:
-            val = node.value
-            if isinstance(val, ast.BinOp) and isinstance(val.op, (ast.RShift, ast.LShift)):
-                left = self._get_name(val.left) or self._const_value(val.left) or getattr(val.left, "id", None)
-                right = self._get_name(val.right) or self._const_value(val.right) or getattr(val.right, "id", None)
-                if left and right:
-                    if isinstance(val.op, ast.RShift):
-                        # left >> right => left upstream of right (left -> right)
-                        self.task_edges.append((left, right))
-                    else:
-                        # left << right => right upstream of left (right -> left)
-                        self.task_edges.append((right, left))
-            # detect method calls .set_upstream/.set_downstream
-            if isinstance(val, ast.Call) and isinstance(val.func, ast.Attribute):
-                attr = val.func.attr
-                if attr in ("set_upstream", "set_downstream"):
-                    # get owner (the function object), and arg as target
-                    owner = self._get_name(val.func.value)
-                    if val.args:
-                        arg0 = self._get_name(val.args[0]) or self._const_value(val.args[0])
-                        if owner and arg0:
-                            if attr == "set_upstream":
-                                self.task_edges.append((arg0, owner))
-                            else:
-                                self.task_edges.append((owner, arg0))
-        except Exception:
-            pass
-        self.generic_visit(node)
-
-    # helpers
-    def _get_name(self, node):
-        if isinstance(node, ast.Name):
-            return node.id
-        if isinstance(node, ast.Attribute):
-            left = self._get_name(node.value)
-            return f"{left}.{node.attr}" if left else node.attr
-        if isinstance(node, ast.Call):
-            return self._get_name(node.func)
-        return None
-
-    def _const_value(self, node):
-        if isinstance(node, ast.Constant):
-            return node.value
-        if isinstance(node, ast.Str):  # py<3.8
-            return node.s
-        return None
-
-    def _source_segment(self, node):
-        # best effort: return source substring around lineno if available
-        try:
-            lines = self.text.splitlines()
-            ln = getattr(node, "lineno", None)
-            if ln:
-                # return up to 5 lines around lineno
-                start = max(0, ln-3)
-                end = min(len(lines), ln+2)
-                return "\n".join(lines[start:end])
-        except Exception:
-            pass
-        return None
-
-# ---------------------------
-# High-level orchestrator
-# ---------------------------
-class FullLineageExtractor:
-    def __init__(self, gcs_bucket: str, dags_prefix: str, sql_prefix: str, creds: Optional[str], jinja_ctx: Optional[Dict[str,str]]):
-        self.gcs = GCSReader(creds)
-        self.bucket = gcs_bucket
-        self.dags_prefix = dags_prefix
-        self.sql_prefix = sql_prefix
-        self.jinja_ctx = jinja_ctx or {}
-        self.nodes: Dict[str, Dict] = {}
-        self.edges: List[Dict] = []
-        self.column_mappings: List[Dict] = []
-        self.jobs_index: Dict[str, Dict] = {}  # job_id -> meta
-
-    def add_node(self, node_id: str, ntype: str, meta: Dict):
-        if node_id not in self.nodes:
-            self.nodes[node_id] = {"id": node_id, "type": ntype, "meta": meta}
-        else:
-            # merge some metadata - update last_seen
-            self.nodes[node_id]["meta"].update(meta)
-
-    def add_edge(self, src: str, tgt: str, etype: str, meta: Dict, confidence: float = 0.9):
-        self.edges.append({"source": src, "target": tgt, "type": etype, "meta": meta, "confidence": confidence})
-
-    def add_column_map(self, src_ds: str, src_col: str, tgt_ds: str, tgt_col: str, confidence: float, prov: Dict):
-        self.column_mappings.append({
-            "source_dataset": src_ds, "source_column": src_col,
-            "target_dataset": tgt_ds, "target_column": tgt_col,
-            "confidence": confidence, "provenance": prov
-        })
-
-    def scan(self):
-        # 1) list all DAG files and SQL files from GCS
-        dag_files = self.gcs.list_files(self.bucket, self.dags_prefix)
-        sql_files = self.gcs.list_files(self.bucket, self.sql_prefix)
-        logger.info("Found %d DAG files, %d SQL files", len(dag_files), len(sql_files))
-
-        # load all SQL files into a dict for quick lookup
-        sql_by_name = {}
-        for s in tqdm(sql_files, desc="Reading SQL files"):
-            if not s.lower().endswith(".sql"):
-                continue
-            try:
-                content = self.gcs.read_text(self.bucket, s)
-                sql_by_name[Path(s).name] = content
-            except Exception as e:
-                logger.warning("Failed reading sql %s: %s", s, e)
-
-        # 2) scan DAGs
-        for df in tqdm(dag_files, desc="Scanning DAGs"):
-            if not df.lower().endswith(".py"):
-                continue
-            try:
-                content = self.gcs.read_text(self.bucket, df)
-            except Exception as e:
-                logger.warning("Failed read %s: %s", df, e)
-                continue
-            scanner = DagAstScanner(content, df)
-            try:
-                scanner.visit(ast.parse(content))
-            except Exception as e:
-                logger.debug("AST parse failed for %s: %s", df, e)
-                # fallback: still try to collect long literal strings
-                pass
-
-            # create DAG node(s)
-            for dag_id, info in scanner.dags.items():
-                dnid = nid("dag", dag_id)
-                self.add_node(dnid, "dag", {"dag_id": dag_id, "file": df, "lineno": info.get("lineno")})
-            # create task nodes
-            for tkey, tinfo in scanner.tasks.items():
-                task_node_id = nid("task", f"{tinfo.get('task_id') or tinfo.get('var_name') or tkey}")
-                # metadata include operator, file, lineno, raw sql snippet if exists
-                meta = {
-                    "operator": tinfo.get("operator"),
-                    "file": df,
-                    "lineno": tinfo.get("lineno"),
-                    "task_id": tinfo.get("task_id"),
-                    "var_name": tinfo.get("var_name")
-                }
-                # if sql present inline capture and render
-                raw_sql = tinfo.get("sql")
-                resolved_sqls = []
-                if raw_sql:
-                    rendered = render_jinja_safe(raw_sql, self.jinja_ctx)
-                    resolved_sqls.append({"sql": rendered, "source": "inline", "lineno": tinfo.get("lineno")})
-                # detect references to .sql files inside the DAG (open(...).read())
-                for m in SQL_FILE_READ_RE.finditer(content):
-                    ref = m.group("path")
-                    # build absolute: if DF path is "folder/a.py" and ref is "./queries/q.sql"
-                    try:
-                        # try to resolve name
-                        fname = Path(ref).name
-                        if fname in sql_by_name:
-                            rendered = render_jinja_safe(sql_by_name[fname], self.jinja_ctx)
-                            resolved_sqls.append({"sql": rendered, "source": f"sql_file:{fname}", "file_ref": fname})
-                    except Exception:
-                        pass
-                meta["resolved_sqls"] = resolved_sqls
-                self.add_node(task_node_id, "task", meta)
-
-                # link dag -> task
-                for dag_id in scanner.dags:
-                    self.add_edge(nid("dag", dag_id), task_node_id, "dag_contains", {"file": df, "task": meta["task_id"]}, confidence=1.0)
-
-                # parse SQLs for this task to detect read/write datasets
-                for rs in resolved_sqls:
-                    sql_text = rs["sql"]
-                    parsed = parse_sql_with_sqlglot(sql_text)
-                    tables = parsed.get("tables", [])
-                    inserts = parsed.get("insert_targets", [])
-                    aliases = parsed.get("aliases", [])
-                    # add dataset nodes
-                    for t in tables + inserts:
-                        ds_type = detect_dataset_type(t)
-                        dsnode = nid("dataset", t)
-                        self.add_node(dsnode, ds_type, {"canonical_name": t})
-                    # add edges: reads from tables -> task
-                    for t in tables:
-                        dsnode = nid("dataset", t)
-                        self.add_edge(dsnode, task_node_id, "task_reads", {"sql_snippet": sql_text[:2000], "file": df}, confidence=0.9)
-                    # add edges: task -> writes to inserts
-                    for t in inserts:
-                        dsnode = nid("dataset", t)
-                        self.add_edge(task_node_id, dsnode, "task_writes", {"sql_snippet": sql_text[:2000], "file": df}, confidence=0.95)
-                    # column alias maps if single input -> single output
-                    for a in aliases:
-                        src_col = a.get("expr")
-                        tgt_col = a.get("alias")
-                        if src_col and tgt_col:
-                            # best-effort: pick first input and first insert target if available
-                            src_ds = tables[0] if tables else None
-                            tgt_ds = inserts[0] if inserts else None
-                            if src_ds and tgt_ds:
-                                self.add_column_map(nid("dataset", src_ds), src_col.split(".")[-1], nid("dataset", tgt_ds), tgt_col, 0.85,
-                                                    {"file": df, "task": task_node_id, "sql_snippet": sql_text[:300]})
-
-            # task-to-task edges from scanner
-            for a, b in scanner.task_edges:
-                # try find matching task node ids
-                # a or b might be var names; attempt match suffix
-                def find_task_node(name):
-                    # exact var match
-                    for k, v in list(self.nodes.items()):
-                        if k.startswith("task::") and (name in k or name == v["meta"].get("task_id") or v["meta"].get("var_name") == name):
-                            return k
-                    return None
-                src = find_task_node(a)
-                tgt = find_task_node(b)
-                if not src:
-                    src = nid("task", a)
-                    self.add_node(src, "task", {"task_id": a, "inferred": True, "file": df})
-                if not tgt:
-                    tgt = nid("task", b)
-                    self.add_node(tgt, "task", {"task_id": b, "inferred": True, "file": df})
-                self.add_edge(src, tgt, "task_to_task", {"file": df}, confidence=1.0)
-
-        # 3) process standalone SQL files too (in case DAGs reference them)
-        for sname, scontent in sql_by_name.items():
-            sql = scontent
-            rendered = render_jinja_safe(sql, self.jinja_ctx)
-            parsed = parse_sql_with_sqlglot(rendered)
-            tables = parsed.get("tables", [])
-            inserts = parsed.get("insert_targets", [])
-            aliases = parsed.get("aliases", [])
-            # add dataset nodes and dataset->dataset inferred edges
-            for t in tables + inserts:
-                dsnode = nid("dataset", t)
-                self.add_node(dsnode, detect_dataset_type(t), {"canonical_name": t, "file": sname})
-            # inferred table->table if inserts exist
-            if inserts and tables:
-                for src in tables:
-                    for tgt in inserts:
-                        self.add_edge(nid("dataset", src), nid("dataset", tgt), "dataset_to_dataset",
-                                      {"file": sname, "sql_file": sname}, confidence=0.85)
-            for a in aliases:
-                src_col = a.get("expr"); tgt_col = a.get("alias")
-                if src_col and tgt_col and tables and inserts:
-                    self.add_column_map(nid("dataset", tables[0]), src_col.split(".")[-1],
-                                        nid("dataset", inserts[0]), tgt_col, 0.8, {"file": sname})
-
-    def result(self) -> Dict[str, Any]:
-        # convert nodes dict to list
-        return {
-            "generated_at": datetime.now(timezone.utc).isoformat(),
-            "nodes": list(self.nodes.values()),
-            "edges": self.edges,
-            "column_mappings": self.column_mappings
-        }
-
-# ---------------------------
-# CLI entry
-# ---------------------------
-def main():
-    p = argparse.ArgumentParser()
-    p.add_argument("--gcs-bucket", required=True)
-    p.add_argument("--dags-prefix", default="dags/")
-    p.add_argument("--sql-prefix", default="sql/")
-    p.add_argument("--creds", help="service account json path")
-    p.add_argument("--jinja", action="append", help="jinja var in key=value form", default=[])
-    p.add_argument("--out", default="full_lineage_graph.json")
-    args = p.parse_args()
-
-    # parse jinja vars
-    jinja_ctx = {}
-    for kv in args.jinja:
-        if "=" in kv:
-            k, v = kv.split("=", 1)
-            jinja_ctx[k] = v
-
-    logger.info("Starting full lineage extraction for bucket=%s", args.gcs_bucket)
-    extractor = FullLineageExtractor(args.gcs_bucket, args.dags_prefix, args.sql_prefix, args.creds, jinja_ctx)
-    extractor.scan()
-    out = extractor.result()
-    with open(args.out, "w", encoding="utf-8") as f:
-        json.dump(out, f, indent=2)
-    logger.info("Wrote output to %s (nodes=%d edges=%d mappings=%d)", args.out, len(out["nodes"]), len(out["edges"]), len(out["column_mappings"]))
-
-if __name__ == "__main__":
-    main()
-
-
-
-
-python full_lineage_extractor.py \
-  --gcs-bucket my-airflow-bucket \
-  --dags-prefix airflow/dags/ \
-  --sql-prefix airflow/sql/ \
-  --creds "C:\Users\ashok\Downloads\gcp-key.json" \
-  --jinja env=prod --jinja project=myproj \
-  --out full_lineage_graph.json
+If you want, I can also make a version that auto-generates the UNPIVOT part dynamically in SQL or Python, so you don’t have to manually type all 50 UNION ALL lines.
