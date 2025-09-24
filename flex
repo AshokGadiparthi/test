@@ -1,208 +1,129 @@
-Got it 👍 You want a **Spring Boot service** that:
+Table: airflow_monitor.task_runs
 
-1. Creates a **professional PDF report** with a 4-column table.
-2. Emails the PDF as an attachment to your team.
+Column Name
 
-We’ll use:
+Type
 
-* `iText 7` (or OpenPDF) for PDF generation.
-* `Spring Boot Starter Mail` for sending email with attachment.
+Description
 
-Here’s a **working example**:
+run_id
 
----
+STRING
 
-### 1. Add Dependencies (`pom.xml`)
+DAG run ID
 
-```xml
-<dependencies>
-    <!-- PDF generation with OpenPDF -->
-    <dependency>
-        <groupId>com.github.librepdf</groupId>
-        <artifactId>openpdf</artifactId>
-        <version>1.3.39</version>
-    </dependency>
+dag_id
 
-    <!-- Spring Boot Mail -->
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-mail</artifactId>
-    </dependency>
-</dependencies>
-```
+STRING
 
----
+DAG name
 
-### 2. `application.properties`
+task_id
 
-```properties
-spring.mail.host=smtp.gmail.com
-spring.mail.port=587
-spring.mail.username=your_email@gmail.com
-spring.mail.password=your_app_password
-spring.mail.properties.mail.smtp.auth=true
-spring.mail.properties.mail.smtp.starttls.enable=true
-```
+STRING
 
-*(use Gmail app password or SMTP creds for your org)*
+Task ID
 
----
+execution_date
 
-### 3. PDF Utility (`PdfReportService.java`)
+TIMESTAMP
 
-```java
-package com.example.demo.service;
+Scheduled DAG execution
 
-import com.lowagie.text.*;
-import com.lowagie.text.pdf.PdfPCell;
-import com.lowagie.text.pdf.PdfPTable;
-import com.lowagie.text.pdf.PdfWriter;
-import org.springframework.stereotype.Service;
+start_time
 
-import java.io.ByteArrayOutputStream;
+TIMESTAMP
 
-@Service
-public class PdfReportService {
+Task start time
 
-    public byte[] generateReport() {
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
+end_time
 
-        Document document = new Document(PageSize.A4);
-        PdfWriter.getInstance(document, out);
-        document.open();
+TIMESTAMP
 
-        // Title
-        Font titleFont = new Font(Font.HELVETICA, 16, Font.BOLD);
-        Paragraph title = new Paragraph("Team Report", titleFont);
-        title.setAlignment(Element.ALIGN_CENTER);
-        document.add(title);
-        document.add(Chunk.NEWLINE);
+Task end time
 
-        // Table with 4 columns
-        PdfPTable table = new PdfPTable(4);
-        table.setWidthPercentage(100);
-        table.setSpacingBefore(10f);
-        table.setSpacingAfter(10f);
-        table.setWidths(new float[]{2f, 3f, 3f, 2f});
+duration_seconds
 
-        // Header row
-        String[] headers = {"ID", "Name", "Role", "Status"};
-        for (String h : headers) {
-            PdfPCell cell = new PdfPCell(new Phrase(h, new Font(Font.HELVETICA, 12, Font.BOLD, Color.WHITE)));
-            cell.setBackgroundColor(new Color(63, 81, 181)); // Professional blue
-            cell.setHorizontalAlignment(Element.ALIGN_CENTER);
-            table.addCell(cell);
-        }
+FLOAT
 
-        // Sample rows
-        table.addCell("1");
-        table.addCell("Alice Johnson");
-        table.addCell("GCP Engineer");
-        table.addCell("Active");
+Task runtime
 
-        table.addCell("2");
-        table.addCell("Bob Smith");
-        table.addCell("Data Engineer");
-        table.addCell("Onboarding");
+status
 
-        table.addCell("3");
-        table.addCell("Charlie Lee");
-        table.addCell("Cloud Architect");
-        table.addCell("Active");
+STRING
 
-        document.add(table);
-        document.close();
+running / success / failed / skipped / upstream_failed
 
-        return out.toByteArray();
-    }
-}
-```
+try_number
 
----
+INT
 
-### 4. Email Service (`EmailService.java`)
+Current attempt number
 
-```java
-package com.example.demo.service;
+retries
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
-import org.springframework.stereotype.Service;
+INT
 
-import javax.mail.internet.MimeMessage;
+Max retries for task
 
-@Service
-public class EmailService {
+owner
 
-    @Autowired
-    private JavaMailSender mailSender;
+STRING
 
-    public void sendReport(byte[] pdfBytes, String[] recipients) throws Exception {
-        MimeMessage message = mailSender.createMimeMessage();
-        MimeMessageHelper helper = new MimeMessageHelper(message, true);
+DAG/task owner
 
-        helper.setTo(recipients);
-        helper.setSubject("Team Report PDF");
-        helper.setText("Hi Team,\n\nPlease find attached the latest team report.\n\nRegards,\nYour System");
+environment
 
-        helper.addAttachment("team-report.pdf", new ByteArrayResource(pdfBytes));
+STRING
 
-        mailSender.send(message);
-    }
-}
-```
+dev/prod
 
----
+upstream_task_ids
 
-### 5. Controller (`ReportController.java`)
+STRING
 
-```java
-package com.example.demo.controller;
+JSON list of upstream task_ids
 
-import com.example.demo.service.EmailService;
-import com.example.demo.service.PdfReportService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
+downstream_task_ids
 
-@RestController
-@RequestMapping("/report")
-public class ReportController {
+STRING
 
-    @Autowired
-    private PdfReportService pdfReportService;
+JSON list of downstream task_ids
 
-    @Autowired
-    private EmailService emailService;
+failure_reason
 
-    @PostMapping("/send")
-    public String sendReport(@RequestParam String[] to) {
-        try {
-            byte[] pdf = pdfReportService.generateReport();
-            emailService.sendReport(pdf, to);
-            return "Report sent successfully!";
-        } catch (Exception e) {
-            return "Error sending report: " + e.getMessage();
-        }
-    }
-}
-```
+STRING
 
----
+Exception message or failure reason
 
-✅ Now, if you hit:
+root_cause_task_id
 
-```
-POST http://localhost:8080/report/send?to=someone@example.com&to=team@example.com
-```
+STRING
 
-it will:
+If failed due to upstream, the parent/root failing task
 
-1. Generate a **professional PDF report with 4 columns**
-2. Attach it to the email
-3. Send it to the given team members
+inputs
 
----
+STRING
 
-Do you want me to also make the **PDF table dynamic (from DB or API data)** instead of static rows, so it’s fully reusable?
+JSON list of input datasets/files
+
+outputs
+
+STRING
+
+JSON list of output datasets/files
+
+inserted_at
+
+TIMESTAMP
+
+Metadata insert timestamp
+
+Key points:
+
+root_cause_task_id allows failure traceability. If a task fails because an upstream task failed, you can store the failing parent task.
+
+failure_reason gives user-readable error message.
+
+Upstream/downstream lists allow reconstructing DAG dependencies.
