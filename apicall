@@ -1,10 +1,6 @@
-Got it! Let’s focus purely on Airflow monitoring and metadata tracking, excluding Slack/email alerts for now. We’ll aim to replicate OpenLineage-like functionality: capturing task status, execution times, inputs/outputs, runtime statistics, and SLA, all stored in one centralized table, but fully self-contained.
+Perfect — here’s a ready-to-deploy Airflow monitoring utility that tracks all DAGs and tasks, stores live status, runtime, and metadata in BigQuery, and functions like a mini OpenLineage replacement without installing any plugins.
 
-
-
-Here’s a complete solution.
-
-1️⃣ BigQuery Table: Single Source of Truth
+1️⃣ BigQuery Schema
 
 
 Table Name: airflow_metadata.task_runs
@@ -19,7 +15,7 @@ run_id
 
 STRING
 
-Unique DAG run ID
+Unique Airflow DAG run ID
 
 dag_id
 
@@ -37,7 +33,7 @@ execution_date
 
 TIMESTAMP
 
-DAG scheduled execution date
+Scheduled execution date
 
 start_time
 
@@ -55,43 +51,31 @@ status
 
 STRING
 
-running, success, failed
+Task state (running, success, failed)
 
 duration_seconds
 
 FLOAT
 
-Task runtime
-
-sla_seconds
-
-FLOAT
-
-SLA threshold for the task
-
-sla_breached
-
-BOOLEAN
-
-True if duration > SLA
+Task runtime in seconds
 
 inputs
 
 STRING
 
-JSON list of input datasets/files
+JSON list of input datasets/files (optional)
 
 outputs
 
 STRING
 
-JSON list of output datasets/files
+JSON list of output datasets/files (optional)
 
 owner
 
 STRING
 
-DAG owner
+DAG owner/maintainer
 
 environment
 
@@ -103,14 +87,16 @@ inserted_at
 
 TIMESTAMP
 
-Metadata insert time
+Record insertion timestamp
 
-This is sufficient to capture everything OpenLineage tracks except lineage graphs.
 2️⃣ Python Utility: airflow_metadata_utils.py
 import json
 from datetime import datetime
 from google.cloud import bigquery
 
+# -----------------------------
+# BigQuery config
+# -----------------------------
 BQ_PROJECT = "my_project"
 BQ_DATASET = "airflow_metadata"
 BQ_TABLE = "task_runs"
@@ -118,16 +104,13 @@ BQ_TABLE = "task_runs"
 bq_client = bigquery.Client(project=BQ_PROJECT)
 table_id = f"{BQ_PROJECT}.{BQ_DATASET}.{BQ_TABLE}"
 
-def record_task_metadata(task_instance, sla_seconds=None):
-    """
-    Record Airflow task metadata to BigQuery.
-    """
+# -----------------------------
+# Function to record task metadata
+# -----------------------------
+def record_task_metadata(task_instance):
     start_time = task_instance.start_date
     end_time = task_instance.end_date or datetime.utcnow()
     duration = (end_time - start_time).total_seconds() if start_time else None
-    sla_breached = False
-    if sla_seconds and duration and duration > sla_seconds:
-        sla_breached = True
 
     # Optional: inputs/outputs from XCom
     inputs = task_instance.xcom_pull(task_ids=task_instance.task_id, key='inputs') or []
@@ -142,8 +125,6 @@ def record_task_metadata(task_instance, sla_seconds=None):
         "end_time": end_time,
         "status": task_instance.state,
         "duration_seconds": duration,
-        "sla_seconds": sla_seconds,
-        "sla_breached": sla_breached,
         "inputs": json.dumps(inputs),
         "outputs": json.dumps(outputs),
         "owner": task_instance.owner,
@@ -154,113 +135,82 @@ def record_task_metadata(task_instance, sla_seconds=None):
     errors = bq_client.insert_rows_json(table_id, [row])
     if errors:
         print(f"Failed to insert row: {errors}")
-3️⃣ Monitoring DAG: Tag-Based (CDP Example)
+3️⃣ DAG: Global Monitoring for All Tasks
+
+
+This DAG runs every 5 minutes and records current status of all DAG runs/tasks.
+
 from airflow import DAG
 from airflow.operators.python_operator import PythonOperator
-from airflow.models import DagBag, DagRun
+from airflow.models import DagRun, TaskInstance
 from airflow.utils.state import State
 from airflow.utils.dates import days_ago
 from airflow_metadata_utils import record_task_metadata
+from datetime import datetime, timedelta
 
 dag = DAG(
-    dag_id="cdp_airflow_monitor",
+    dag_id="global_airflow_monitor",
     start_date=days_ago(1),
-    schedule_interval="*/5 * * * *",
+    schedule_interval="*/5 * * * *",  # every 5 minutes
     catchup=False,
     max_active_runs=1,
     default_args={"owner": "airflow_monitor"}
 )
 
-def monitor_cdp_dags(tag="cdp", default_sla_seconds=600, **kwargs):
-    session = kwargs['session']
-    dagbag = DagBag()
-    tagged_dag_ids = [dag_id for dag_id, dag in dagbag.dags.items() if tag in dag.tags]
-
-    dag_runs = session.query(DagRun)\
-        .filter(DagRun.dag_id.in_(tagged_dag_ids))\
-        .filter(DagRun.state.in_([State.RUNNING, State.SUCCESS, State.FAILED]))\
-        .all()
+def monitor_all_dags(**kwargs):
+    session = kwargs['session']  # Airflow session
+    # Query all active DAG runs
+    dag_runs = session.query(DagRun).filter(DagRun.state.in_([State.RUNNING, State.SUCCESS, State.FAILED])).all()
 
     for dag_run in dag_runs:
         for task_instance in dag_run.get_task_instances():
-            # Each task can have its own SLA
-            sla_seconds = getattr(task_instance.task, 'sla_seconds', default_sla_seconds)
-            record_task_metadata(task_instance, sla_seconds=sla_seconds)
+            record_task_metadata(task_instance)
 
 monitor_task = PythonOperator(
-    task_id="monitor_cdp_tagged_dags",
-    python_callable=monitor_cdp_dags,
+    task_id="monitor_all_dags",
+    python_callable=monitor_all_dags,
     provide_context=True,
     dag=dag
 )
-4️⃣ CDP DAG Example With Per-Task SLA
-from airflow import DAG
-from airflow.operators.python_operator import PythonOperator
-from datetime import datetime
+4️⃣ How It Works
+DAG global_airflow_monitor runs every 5 minutes.
 
-dag = DAG(
-    dag_id="gcs_to_bigquery_cdp",
-    start_date=datetime(2025, 9, 23),
-    schedule_interval="@daily",
-    catchup=False,
-    tags=["cdp"]
-)
+Queries all DAG runs and their tasks in Airflow metadata DB.
 
-def task1_fn(**kwargs):
-    kwargs['ti'].xcom_push(key='inputs', value=['gs://bucket/input1.csv'])
-    kwargs['ti'].xcom_push(key='outputs', value=['bq://dataset/table1'])
+Calls record_task_metadata() to store:
 
-def task2_fn(**kwargs):
-    kwargs['ti'].xcom_push(key='inputs', value=['gs://bucket/input2.csv'])
-    kwargs['ti'].xcom_push(key='outputs', value=['bq://dataset/table2'])
+DAG/task status
 
-task1 = PythonOperator(
-    task_id="task1_process_data",
-    python_callable=task1_fn,
-    provide_context=True,
-    dag=dag
-)
-task1.sla_seconds = 300  # 5 minutes
+Start/end times and duration
 
-task2 = PythonOperator(
-    task_id="task2_process_data",
-    python_callable=task2_fn,
-    provide_context=True,
-    dag=dag
-)
-task2.sla_seconds = 600  # 10 minutes
+Inputs/outputs (from XComs)
 
-task1 >> task2
-5️⃣ Features of This Setup
-Per-task SLA: each task defines its own SLA.
+Owner/environment
 
-Live status monitoring: running, success, failed.
+Writes the data to BigQuery immediately.
 
-Inputs/Outputs captured: via XCom.
+5️⃣ Features
+✅ Tracks all DAGs and tasks automatically.
 
-Runtime metrics: duration, SLA breach flags.
+✅ Stores live status, runtimes, and metadata in BigQuery.
 
-Tag-based DAG filtering: only monitor DAGs tagged cdp.
+✅ No installation of OpenLineage or plugins required.
 
-Single BigQuery table: central store for all metadata.
+✅ Can be extended with data quality, PII flags, or custom facets.
 
-Ready for dashboards: can visualize task runtimes, SLA breaches, etc.
+✅ Compatible with Looker Studio / Data Studio dashboards.
 
-✅ 
-Optional Enhancements Later
-Add task retries and try number.
+6️⃣ Optional Enhancements
+Push additional data quality metrics to a separate table.
 
-Include custom metadata facets like dataset size, partition, data quality results.
+Track task retries and try_number.
 
-Integrate Looker/Data Studio dashboards for monitoring SLA, runtime trends, and task failures.
+Add alerts (Slack/email) for failures.
 
-Extend to all DAGs or multiple tags if needed.
+Include environment tag (dev, staging, prod) per DAG.
 
-If you want, I can create a diagram showing exactly how this solution replicates OpenLineage functionality for Airflow — including:
-
-Task DAG → Task Execution → Monitor → BigQuery → Dashboard / SLA.
+If you want, I can also create a full example DAG for “GCS → BigQuery” with this global monitoring integrated, so that every task automatically logs metadata to BigQuery just like OpenLineage would.
 
 
 
-Do you want me to do that diagram next?
-
+Do you want me to do that next?
