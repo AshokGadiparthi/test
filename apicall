@@ -1,164 +1,266 @@
-Perfect! I’ll give you a single BigQuery script that is fully ready to run for 50 columns, handling both mismatch counts and 10 sample mismatches per column, all in one pass without repetitive joins. I’ll use generic column names col1 to col50. You just need to replace table names if needed.
+Got it! Let’s focus purely on Airflow monitoring and metadata tracking, excluding Slack/email alerts for now. We’ll aim to replicate OpenLineage-like functionality: capturing task status, execution times, inputs/outputs, runtime statistics, and SLA, all stored in one centralized table, but fully self-contained.
 
--- =====================================
--- Full mismatch comparison for 50 columns
--- Tables: table1, table2, table3
--- =====================================
 
-WITH joined AS (
-  SELECT
-    t1.id,
-    t1.col1 AS col1_t1, t2.col1 AS col1_t2, t3.col1 AS col1_t3,
-    t1.col2 AS col2_t1, t2.col2 AS col2_t2, t3.col2 AS col2_t3,
-    t1.col3 AS col3_t1, t2.col3 AS col3_t2, t3.col3 AS col3_t3,
-    t1.col4 AS col4_t1, t2.col4 AS col4_t2, t3.col4 AS col4_t3,
-    t1.col5 AS col5_t1, t2.col5 AS col5_t2, t3.col5 AS col5_t3,
-    t1.col6 AS col6_t1, t2.col6 AS col6_t2, t3.col6 AS col6_t3,
-    t1.col7 AS col7_t1, t2.col7 AS col7_t2, t3.col7 AS col7_t3,
-    t1.col8 AS col8_t1, t2.col8 AS col8_t2, t3.col8 AS col8_t3,
-    t1.col9 AS col9_t1, t2.col9 AS col9_t2, t3.col9 AS col9_t3,
-    t1.col10 AS col10_t1, t2.col10 AS col10_t2, t3.col10 AS col10_t3,
-    t1.col11 AS col11_t1, t2.col11 AS col11_t2, t3.col11 AS col11_t3,
-    t1.col12 AS col12_t1, t2.col12 AS col12_t2, t3.col12 AS col12_t3,
-    t1.col13 AS col13_t1, t2.col13 AS col13_t2, t3.col13 AS col13_t3,
-    t1.col14 AS col14_t1, t2.col14 AS col14_t2, t3.col14 AS col14_t3,
-    t1.col15 AS col15_t1, t2.col15 AS col15_t2, t3.col15 AS col15_t3,
-    t1.col16 AS col16_t1, t2.col16 AS col16_t2, t3.col16 AS col16_t3,
-    t1.col17 AS col17_t1, t2.col17 AS col17_t2, t3.col17 AS col17_t3,
-    t1.col18 AS col18_t1, t2.col18 AS col18_t2, t3.col18 AS col18_t3,
-    t1.col19 AS col19_t1, t2.col19 AS col19_t2, t3.col19 AS col19_t3,
-    t1.col20 AS col20_t1, t2.col20 AS col20_t2, t3.col20 AS col20_t3,
-    t1.col21 AS col21_t1, t2.col21 AS col21_t2, t3.col21 AS col21_t3,
-    t1.col22 AS col22_t1, t2.col22 AS col22_t2, t3.col22 AS col22_t3,
-    t1.col23 AS col23_t1, t2.col23 AS col23_t2, t3.col23 AS col23_t3,
-    t1.col24 AS col24_t1, t2.col24 AS col24_t2, t3.col24 AS col24_t3,
-    t1.col25 AS col25_t1, t2.col25 AS col25_t2, t3.col25 AS col25_t3,
-    t1.col26 AS col26_t1, t2.col26 AS col26_t2, t3.col26 AS col26_t3,
-    t1.col27 AS col27_t1, t2.col27 AS col27_t2, t3.col27 AS col27_t3,
-    t1.col28 AS col28_t1, t2.col28 AS col28_t2, t3.col28 AS col28_t3,
-    t1.col29 AS col29_t1, t2.col29 AS col29_t2, t3.col29 AS col29_t3,
-    t1.col30 AS col30_t1, t2.col30 AS col30_t2, t3.col30 AS col30_t3,
-    t1.col31 AS col31_t1, t2.col31 AS col31_t2, t3.col31 AS col31_t3,
-    t1.col32 AS col32_t1, t2.col32 AS col32_t2, t3.col32 AS col32_t3,
-    t1.col33 AS col33_t1, t2.col33 AS col33_t2, t3.col33 AS col33_t3,
-    t1.col34 AS col34_t1, t2.col34 AS col34_t2, t3.col34 AS col34_t3,
-    t1.col35 AS col35_t1, t2.col35 AS col35_t2, t3.col35 AS col35_t3,
-    t1.col36 AS col36_t1, t2.col36 AS col36_t2, t3.col36 AS col36_t3,
-    t1.col37 AS col37_t1, t2.col37 AS col37_t2, t3.col37 AS col37_t3,
-    t1.col38 AS col38_t1, t2.col38 AS col38_t2, t3.col38 AS col38_t3,
-    t1.col39 AS col39_t1, t2.col39 AS col39_t2, t3.col39 AS col39_t3,
-    t1.col40 AS col40_t1, t2.col40 AS col40_t2, t3.col40 AS col40_t3,
-    t1.col41 AS col41_t1, t2.col41 AS col41_t2, t3.col41 AS col41_t3,
-    t1.col42 AS col42_t1, t2.col42 AS col42_t2, t3.col42 AS col42_t3,
-    t1.col43 AS col43_t1, t2.col43 AS col43_t2, t3.col43 AS col43_t3,
-    t1.col44 AS col44_t1, t2.col44 AS col44_t2, t3.col44 AS col44_t3,
-    t1.col45 AS col45_t1, t2.col45 AS col45_t2, t3.col45 AS col45_t3,
-    t1.col46 AS col46_t1, t2.col46 AS col46_t2, t3.col46 AS col46_t3,
-    t1.col47 AS col47_t1, t2.col47 AS col47_t2, t3.col47 AS col47_t3,
-    t1.col48 AS col48_t1, t2.col48 AS col48_t2, t3.col48 AS col48_t3,
-    t1.col49 AS col49_t1, t2.col49 AS col49_t2, t3.col49 AS col49_t3,
-    t1.col50 AS col50_t1, t2.col50 AS col50_t2, t3.col50 AS col50_t3
-  FROM table1 t1
-  JOIN table2 t2 USING (id)
-  JOIN table3 t3 USING (id)
-),
 
--- Unpivot all columns into rows
-unpivoted AS (
-  SELECT id, 'col1' AS column_name, col1_t1 AS t1_val, col1_t2 AS t2_val, col1_t3 AS t3_val FROM joined
-  UNION ALL SELECT id, 'col2', col2_t1, col2_t2, col2_t3 FROM joined
-  UNION ALL SELECT id, 'col3', col3_t1, col3_t2, col3_t3 FROM joined
-  UNION ALL SELECT id, 'col4', col4_t1, col4_t2, col4_t3 FROM joined
-  UNION ALL SELECT id, 'col5', col5_t1, col5_t2, col5_t3 FROM joined
-  UNION ALL SELECT id, 'col6', col6_t1, col6_t2, col6_t3 FROM joined
-  UNION ALL SELECT id, 'col7', col7_t1, col7_t2, col7_t3 FROM joined
-  UNION ALL SELECT id, 'col8', col8_t1, col8_t2, col8_t3 FROM joined
-  UNION ALL SELECT id, 'col9', col9_t1, col9_t2, col9_t3 FROM joined
-  UNION ALL SELECT id, 'col10', col10_t1, col10_t2, col10_t3 FROM joined
-  UNION ALL SELECT id, 'col11', col11_t1, col11_t2, col11_t3 FROM joined
-  UNION ALL SELECT id, 'col12', col12_t1, col12_t2, col12_t3 FROM joined
-  UNION ALL SELECT id, 'col13', col13_t1, col13_t2, col13_t3 FROM joined
-  UNION ALL SELECT id, 'col14', col14_t1, col14_t2, col14_t3 FROM joined
-  UNION ALL SELECT id, 'col15', col15_t1, col15_t2, col15_t3 FROM joined
-  UNION ALL SELECT id, 'col16', col16_t1, col16_t2, col16_t3 FROM joined
-  UNION ALL SELECT id, 'col17', col17_t1, col17_t2, col17_t3 FROM joined
-  UNION ALL SELECT id, 'col18', col18_t1, col18_t2, col18_t3 FROM joined
-  UNION ALL SELECT id, 'col19', col19_t1, col19_t2, col19_t3 FROM joined
-  UNION ALL SELECT id, 'col20', col20_t1, col20_t2, col20_t3 FROM joined
-  UNION ALL SELECT id, 'col21', col21_t1, col21_t2, col21_t3 FROM joined
-  UNION ALL SELECT id, 'col22', col22_t1, col22_t2, col22_t3 FROM joined
-  UNION ALL SELECT id, 'col23', col23_t1, col23_t2, col23_t3 FROM joined
-  UNION ALL SELECT id, 'col24', col24_t1, col24_t2, col24_t3 FROM joined
-  UNION ALL SELECT id, 'col25', col25_t1, col25_t2, col25_t3 FROM joined
-  UNION ALL SELECT id, 'col26', col26_t1, col26_t2, col26_t3 FROM joined
-  UNION ALL SELECT id, 'col27', col27_t1, col27_t2, col27_t3 FROM joined
-  UNION ALL SELECT id, 'col28', col28_t1, col28_t2, col28_t3 FROM joined
-  UNION ALL SELECT id, 'col29', col29_t1, col29_t2, col29_t3 FROM joined
-  UNION ALL SELECT id, 'col30', col30_t1, col30_t2, col30_t3 FROM joined
-  UNION ALL SELECT id, 'col31', col31_t1, col31_t2, col31_t3 FROM joined
-  UNION ALL SELECT id, 'col32', col32_t1, col32_t2, col32_t3 FROM joined
-  UNION ALL SELECT id, 'col33', col33_t1, col33_t2, col33_t3 FROM joined
-  UNION ALL SELECT id, 'col34', col34_t1, col34_t2, col34_t3 FROM joined
-  UNION ALL SELECT id, 'col35', col35_t1, col35_t2, col35_t3 FROM joined
-  UNION ALL SELECT id, 'col36', col36_t1, col36_t2, col36_t3 FROM joined
-  UNION ALL SELECT id, 'col37', col37_t1, col37_t2, col37_t3 FROM joined
-  UNION ALL SELECT id, 'col38', col38_t1, col38_t2, col38_t3 FROM joined
-  UNION ALL SELECT id, 'col39', col39_t1, col39_t2, col39_t3 FROM joined
-  UNION ALL SELECT id, 'col40', col40_t1, col40_t2, col40_t3 FROM joined
-  UNION ALL SELECT id, 'col41', col41_t1, col41_t2, col41_t3 FROM joined
-  UNION ALL SELECT id, 'col42', col42_t1, col42_t2, col42_t3 FROM joined
-  UNION ALL SELECT id, 'col43', col43_t1, col43_t2, col43_t3 FROM joined
-  UNION ALL SELECT id, 'col44', col44_t1, col44_t2, col44_t3 FROM joined
-  UNION ALL SELECT id, 'col45', col45_t1, col45_t2, col45_t3 FROM joined
-  UNION ALL SELECT id, 'col46', col46_t1, col46_t2, col46_t3 FROM joined
-  UNION ALL SELECT id, 'col47', col47_t1, col47_t2, col47_t3 FROM joined
-  UNION ALL SELECT id, 'col48', col48_t1, col48_t2, col48_t3 FROM joined
-  UNION ALL SELECT id, 'col49', col49_t1, col49_t2, col49_t3 FROM joined
-  UNION ALL SELECT id, 'col50', col50_t1, col50_t2, col50_t3 FROM joined
-),
+Here’s a complete solution.
 
--- Get mismatch counts
-mismatch_counts AS (
-  SELECT
-    column_name,
-    COUNTIF(t1_val != t2_val AND t1_val != t3_val) AS mismatch_count
-  FROM unpivoted
-  GROUP BY column_name
-),
+1️⃣ BigQuery Table: Single Source of Truth
 
--- Get 10 sample mismatches per column
-mismatch_samples AS (
-  SELECT *
-  FROM (
-    SELECT *,
-           ROW_NUMBER() OVER (PARTITION BY column_name ORDER BY id) AS rn
-    FROM unpivoted
-    WHERE t1_val != t2_val AND t1_val != t3_val
-  )
-  WHERE rn <= 10
+
+Table Name: airflow_metadata.task_runs
+
+Column Name
+
+Type
+
+Description
+
+run_id
+
+STRING
+
+Unique DAG run ID
+
+dag_id
+
+STRING
+
+DAG name
+
+task_id
+
+STRING
+
+Task name
+
+execution_date
+
+TIMESTAMP
+
+DAG scheduled execution date
+
+start_time
+
+TIMESTAMP
+
+Task start time
+
+end_time
+
+TIMESTAMP
+
+Task end time
+
+status
+
+STRING
+
+running, success, failed
+
+duration_seconds
+
+FLOAT
+
+Task runtime
+
+sla_seconds
+
+FLOAT
+
+SLA threshold for the task
+
+sla_breached
+
+BOOLEAN
+
+True if duration > SLA
+
+inputs
+
+STRING
+
+JSON list of input datasets/files
+
+outputs
+
+STRING
+
+JSON list of output datasets/files
+
+owner
+
+STRING
+
+DAG owner
+
+environment
+
+STRING
+
+dev/prod
+
+inserted_at
+
+TIMESTAMP
+
+Metadata insert time
+
+This is sufficient to capture everything OpenLineage tracks except lineage graphs.
+2️⃣ Python Utility: airflow_metadata_utils.py
+import json
+from datetime import datetime
+from google.cloud import bigquery
+
+BQ_PROJECT = "my_project"
+BQ_DATASET = "airflow_metadata"
+BQ_TABLE = "task_runs"
+
+bq_client = bigquery.Client(project=BQ_PROJECT)
+table_id = f"{BQ_PROJECT}.{BQ_DATASET}.{BQ_TABLE}"
+
+def record_task_metadata(task_instance, sla_seconds=None):
+    """
+    Record Airflow task metadata to BigQuery.
+    """
+    start_time = task_instance.start_date
+    end_time = task_instance.end_date or datetime.utcnow()
+    duration = (end_time - start_time).total_seconds() if start_time else None
+    sla_breached = False
+    if sla_seconds and duration and duration > sla_seconds:
+        sla_breached = True
+
+    # Optional: inputs/outputs from XCom
+    inputs = task_instance.xcom_pull(task_ids=task_instance.task_id, key='inputs') or []
+    outputs = task_instance.xcom_pull(task_ids=task_instance.task_id, key='outputs') or []
+
+    row = {
+        "run_id": task_instance.run_id,
+        "dag_id": task_instance.dag_id,
+        "task_id": task_instance.task_id,
+        "execution_date": task_instance.execution_date,
+        "start_time": start_time,
+        "end_time": end_time,
+        "status": task_instance.state,
+        "duration_seconds": duration,
+        "sla_seconds": sla_seconds,
+        "sla_breached": sla_breached,
+        "inputs": json.dumps(inputs),
+        "outputs": json.dumps(outputs),
+        "owner": task_instance.owner,
+        "environment": "prod",
+        "inserted_at": datetime.utcnow()
+    }
+
+    errors = bq_client.insert_rows_json(table_id, [row])
+    if errors:
+        print(f"Failed to insert row: {errors}")
+3️⃣ Monitoring DAG: Tag-Based (CDP Example)
+from airflow import DAG
+from airflow.operators.python_operator import PythonOperator
+from airflow.models import DagBag, DagRun
+from airflow.utils.state import State
+from airflow.utils.dates import days_ago
+from airflow_metadata_utils import record_task_metadata
+
+dag = DAG(
+    dag_id="cdp_airflow_monitor",
+    start_date=days_ago(1),
+    schedule_interval="*/5 * * * *",
+    catchup=False,
+    max_active_runs=1,
+    default_args={"owner": "airflow_monitor"}
 )
 
--- Combine counts + samples
-SELECT
-  mc.column_name,
-  mc.mismatch_count,
-  ARRAY_AGG(STRUCT(ms.id, ms.t1_val, ms.t2_val, ms.t3_val)) AS sample_mismatches
-FROM mismatch_counts mc
-LEFT JOIN mismatch_samples ms
-ON mc.column_name = ms.column_name
-GROUP BY mc.column_name, mc.mismatch_count
-ORDER BY mc.column_name;
-✅ Key Notes
-Replace table1, table2, table3 and column names if your schema is different.
+def monitor_cdp_dags(tag="cdp", default_sla_seconds=600, **kwargs):
+    session = kwargs['session']
+    dagbag = DagBag()
+    tagged_dag_ids = [dag_id for dag_id, dag in dagbag.dags.items() if tag in dag.tags]
 
-Uses single join, unpivot, COUNTIF, and ROW_NUMBER for efficiency.
+    dag_runs = session.query(DagRun)\
+        .filter(DagRun.dag_id.in_(tagged_dag_ids))\
+        .filter(DagRun.state.in_([State.RUNNING, State.SUCCESS, State.FAILED]))\
+        .all()
 
-Returns:
+    for dag_run in dag_runs:
+        for task_instance in dag_run.get_task_instances():
+            # Each task can have its own SLA
+            sla_seconds = getattr(task_instance.task, 'sla_seconds', default_sla_seconds)
+            record_task_metadata(task_instance, sla_seconds=sla_seconds)
 
-column_name
+monitor_task = PythonOperator(
+    task_id="monitor_cdp_tagged_dags",
+    python_callable=monitor_cdp_dags,
+    provide_context=True,
+    dag=dag
+)
+4️⃣ CDP DAG Example With Per-Task SLA
+from airflow import DAG
+from airflow.operators.python_operator import PythonOperator
+from datetime import datetime
 
-mismatch_count
+dag = DAG(
+    dag_id="gcs_to_bigquery_cdp",
+    start_date=datetime(2025, 9, 23),
+    schedule_interval="@daily",
+    catchup=False,
+    tags=["cdp"]
+)
 
-sample_mismatches → array of up to 10 mismatch rows per column.
+def task1_fn(**kwargs):
+    kwargs['ti'].xcom_push(key='inputs', value=['gs://bucket/input1.csv'])
+    kwargs['ti'].xcom_push(key='outputs', value=['bq://dataset/table1'])
 
-If you want, I can also make a version that auto-generates the UNPIVOT part dynamically in SQL or Python, so you don’t have to manually type all 50 UNION ALL lines.
+def task2_fn(**kwargs):
+    kwargs['ti'].xcom_push(key='inputs', value=['gs://bucket/input2.csv'])
+    kwargs['ti'].xcom_push(key='outputs', value=['bq://dataset/table2'])
+
+task1 = PythonOperator(
+    task_id="task1_process_data",
+    python_callable=task1_fn,
+    provide_context=True,
+    dag=dag
+)
+task1.sla_seconds = 300  # 5 minutes
+
+task2 = PythonOperator(
+    task_id="task2_process_data",
+    python_callable=task2_fn,
+    provide_context=True,
+    dag=dag
+)
+task2.sla_seconds = 600  # 10 minutes
+
+task1 >> task2
+5️⃣ Features of This Setup
+Per-task SLA: each task defines its own SLA.
+
+Live status monitoring: running, success, failed.
+
+Inputs/Outputs captured: via XCom.
+
+Runtime metrics: duration, SLA breach flags.
+
+Tag-based DAG filtering: only monitor DAGs tagged cdp.
+
+Single BigQuery table: central store for all metadata.
+
+Ready for dashboards: can visualize task runtimes, SLA breaches, etc.
+
+✅ 
+Optional Enhancements Later
+Add task retries and try number.
+
+Include custom metadata facets like dataset size, partition, data quality results.
+
+Integrate Looker/Data Studio dashboards for monitoring SLA, runtime trends, and task failures.
+
+Extend to all DAGs or multiple tags if needed.
+
+If you want, I can create a diagram showing exactly how this solution replicates OpenLineage functionality for Airflow — including:
+
+Task DAG → Task Execution → Monitor → BigQuery → Dashboard / SLA.
+
+
+
+Do you want me to do that diagram next?
+
