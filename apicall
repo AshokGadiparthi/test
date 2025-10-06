@@ -1,5 +1,417 @@
-TO_JSON_STRING(ARRAY(
-    SELECT AS STRUCT d
-    FROM UNNEST(dns_info) d
-    ORDER BY d.dns_type_cd, d.dns_orig_dt
-  )) AS dns_info_normalized
+"""
+DAG: Airflow Metadata Extraction for GCP Composer
+Description: Extracts comprehensive metadata from Airflow database for the last 2 days
+Schedule: Daily at 2 AM
+"""
+
+from datetime import datetime, timedelta
+from airflow import DAG
+from airflow.operators.python import PythonOperator
+from airflow.providers.postgres.hooks.postgres import PostgresHook
+from airflow.providers.google.cloud.hooks.gcs import GCSHook
+from airflow.models import Variable
+import pandas as pd
+import json
+import logging
+import os
+
+# Configuration
+DEFAULT_ARGS = {
+    'owner': 'data_engineering',
+    'depends_on_past': False,
+    'email': ['ashok.gadiparthi@gmail.com'],
+    'email_on_failure': True,
+    'email_on_retry': False,
+    'retries': 2,
+    'retry_delay': timedelta(minutes=5),
+    'execution_timeout': timedelta(minutes=30),
+}
+
+# SQL Query
+METADATA_QUERY = """
+-- Consolidated Airflow Metadata Query - Last 2 Days
+-- Complete DAG runs, tasks, lineage, status, and performance metrics
+
+SELECT 
+    -- DAG Run Information
+    dr.dag_id,
+    dr.run_id,
+    dr.execution_date,
+    dr.start_date AS dag_start_date,
+    dr.end_date AS dag_end_date,
+    dr.state AS dag_state,
+    dr.run_type,
+    dr.external_trigger,
+    EXTRACT(EPOCH FROM (dr.end_date - dr.start_date)) AS dag_duration_seconds,
+    
+    -- Task Instance Details
+    ti.task_id,
+    ti.start_date AS task_start_date,
+    ti.end_date AS task_end_date,
+    ti.state AS task_state,
+    ti.try_number,
+    ti.max_tries,
+    ti.operator,
+    ti.pool,
+    ti.queue,
+    ti.priority_weight,
+    ti.hostname,
+    ti.pid,
+    ti.executor_config,
+    
+    -- Task Timing Metrics
+    EXTRACT(EPOCH FROM (ti.end_date - ti.start_date)) AS task_duration_seconds,
+    EXTRACT(EPOCH FROM (ti.start_date - ti.queued_dttm)) AS queue_wait_seconds,
+    ti.queued_dttm AS task_queued_time,
+    
+    -- Task Dependencies (Lineage)
+    COALESCE(
+        array_agg(DISTINCT tui.upstream_task_id) FILTER (WHERE tui.upstream_task_id IS NOT NULL), 
+        ARRAY[]::text[]
+    ) AS upstream_tasks,
+    COALESCE(
+        array_agg(DISTINCT tdi.downstream_task_id) FILTER (WHERE tdi.downstream_task_id IS NOT NULL), 
+        ARRAY[]::text[]
+    ) AS downstream_tasks,
+    
+    -- Job Information
+    j.state AS job_state,
+    j.latest_heartbeat AS job_heartbeat,
+    
+    -- Status Flags
+    CASE 
+        WHEN ti.state = 'success' THEN TRUE
+        WHEN ti.state IN ('failed', 'upstream_failed') THEN FALSE
+        ELSE NULL
+    END AS is_successful,
+    
+    CASE 
+        WHEN ti.state IN ('failed', 'upstream_failed') THEN TRUE
+        ELSE FALSE
+    END AS is_failed,
+    
+    CASE 
+        WHEN ti.try_number > 1 THEN TRUE
+        ELSE FALSE
+    END AS has_retried,
+    
+    CASE 
+        WHEN ti.state IN ('running', 'queued', 'scheduled') THEN TRUE
+        ELSE FALSE
+    END AS is_active,
+    
+    CASE 
+        WHEN ti.state = 'up_for_retry' THEN TRUE
+        ELSE FALSE
+    END AS is_retry_pending,
+    
+    -- Additional Context
+    dr.conf AS dag_config,
+    ti.unixname AS task_unix_user,
+    ti.job_id,
+    
+    -- Metadata
+    CURRENT_TIMESTAMP AS extracted_at
+
+FROM dag_run dr
+
+-- Join task instances
+INNER JOIN task_instance ti
+    ON dr.dag_id = ti.dag_id 
+    AND dr.run_id = ti.run_id
+
+-- Upstream task dependencies
+LEFT JOIN task_dependency tui
+    ON tui.dag_id = ti.dag_id 
+    AND tui.downstream_task_id = ti.task_id
+
+-- Downstream task dependencies  
+LEFT JOIN task_dependency tdi
+    ON tdi.dag_id = ti.dag_id 
+    AND tdi.upstream_task_id = ti.task_id
+
+-- Job details
+LEFT JOIN job j
+    ON ti.job_id = j.id
+
+-- Filter: Last 2 days
+WHERE dr.execution_date >= CURRENT_DATE - INTERVAL '2 days'
+
+GROUP BY 
+    dr.dag_id,
+    dr.run_id,
+    dr.execution_date,
+    dr.start_date,
+    dr.end_date,
+    dr.state,
+    dr.run_type,
+    dr.external_trigger,
+    dr.conf,
+    ti.task_id,
+    ti.start_date,
+    ti.end_date,
+    ti.state,
+    ti.try_number,
+    ti.max_tries,
+    ti.operator,
+    ti.pool,
+    ti.queue,
+    ti.priority_weight,
+    ti.hostname,
+    ti.pid,
+    ti.executor_config,
+    ti.queued_dttm,
+    ti.unixname,
+    ti.job_id,
+    j.state,
+    j.latest_heartbeat
+
+ORDER BY 
+    dr.execution_date DESC,
+    dr.dag_id,
+    ti.task_id;
+"""
+
+
+def extract_metadata_to_csv(**context):
+    """
+    Extract metadata using PostgresHook and save to CSV
+    For GCP Composer, uses 'airflow_db' connection
+    """
+    try:
+        # Get execution date for filename
+        execution_date = context['execution_date'].strftime('%Y%m%d_%H%M%S')
+        
+        # Connect to Airflow metadata database
+        # In Composer, 'airflow_db' is automatically configured
+        pg_hook = PostgresHook(postgres_conn_id='airflow_db')
+        
+        # Execute query and fetch results
+        logging.info("Executing metadata extraction query...")
+        connection = pg_hook.get_conn()
+        
+        # Use pandas for easier CSV export
+        df = pd.read_sql(METADATA_QUERY, connection)
+        
+        logging.info(f"Query returned {len(df)} rows")
+        
+        # Define output path - use /tmp for temporary storage
+        output_path = f'/tmp/airflow_metadata_{execution_date}.csv'
+        
+        # Save to CSV
+        df.to_csv(output_path, index=False)
+        logging.info(f"Metadata saved to {output_path}")
+        
+        # Push file path to XCom for downstream tasks
+        context['task_instance'].xcom_push(key='csv_file_path', value=output_path)
+        context['task_instance'].xcom_push(key='row_count', value=len(df))
+        
+        # Print summary statistics
+        logging.info("\n=== Metadata Summary ===")
+        logging.info(f"Total Records: {len(df)}")
+        logging.info(f"Unique DAGs: {df['dag_id'].nunique()}")
+        logging.info(f"Unique Tasks: {df['task_id'].nunique()}")
+        
+        if 'task_state' in df.columns:
+            logging.info("\nTask State Distribution:")
+            logging.info(df['task_state'].value_counts().to_string())
+        
+        connection.close()
+        
+        return output_path
+        
+    except Exception as e:
+        logging.error(f"Error extracting metadata: {str(e)}")
+        raise
+
+
+def extract_metadata_to_json(**context):
+    """
+    Extract metadata and save to JSON format
+    """
+    try:
+        execution_date = context['execution_date'].strftime('%Y%m%d_%H%M%S')
+        
+        pg_hook = PostgresHook(postgres_conn_id='airflow_db')
+        connection = pg_hook.get_conn()
+        
+        df = pd.read_sql(METADATA_QUERY, connection)
+        
+        # Convert to JSON
+        output_path = f'/tmp/airflow_metadata_{execution_date}.json'
+        
+        # Handle datetime serialization
+        df_json = df.to_json(orient='records', date_format='iso', default_handler=str)
+        
+        with open(output_path, 'w') as f:
+            f.write(df_json)
+        
+        logging.info(f"Metadata saved to {output_path}")
+        
+        context['task_instance'].xcom_push(key='json_file_path', value=output_path)
+        
+        connection.close()
+        
+        return output_path
+        
+    except Exception as e:
+        logging.error(f"Error extracting metadata to JSON: {str(e)}")
+        raise
+
+
+def upload_to_gcs(**context):
+    """
+    Upload extracted metadata to Google Cloud Storage
+    """
+    try:
+        # Get file path from XCom
+        csv_file_path = context['task_instance'].xcom_pull(
+            task_ids='extract_to_csv', 
+            key='csv_file_path'
+        )
+        
+        json_file_path = context['task_instance'].xcom_pull(
+            task_ids='extract_to_json', 
+            key='json_file_path'
+        )
+        
+        if not csv_file_path:
+            raise ValueError("No CSV file path found in XCom")
+        
+        # Get GCS bucket from Airflow variable or use Composer bucket
+        # In Composer, COMPOSER_BUCKET is an environment variable
+        composer_bucket = os.environ.get('GCS_BUCKET', os.environ.get('COMPOSER_BUCKET'))
+        
+        # You can also set a custom bucket via Airflow variable
+        gcs_bucket = Variable.get('airflow_metadata_gcs_bucket', composer_bucket)
+        
+        # Remove 'gs://' prefix if present
+        if gcs_bucket.startswith('gs://'):
+            gcs_bucket = gcs_bucket.replace('gs://', '')
+        
+        # GCS paths
+        execution_date = context['ds']
+        csv_gcs_path = f"airflow_metadata/{execution_date}/metadata.csv"
+        json_gcs_path = f"airflow_metadata/{execution_date}/metadata.json"
+        
+        # Upload to GCS using GCSHook
+        gcs_hook = GCSHook(gcp_conn_id='google_cloud_default')
+        
+        # Upload CSV
+        gcs_hook.upload(
+            bucket_name=gcs_bucket,
+            object_name=csv_gcs_path,
+            filename=csv_file_path,
+        )
+        logging.info(f"CSV uploaded to gs://{gcs_bucket}/{csv_gcs_path}")
+        
+        # Upload JSON if available
+        if json_file_path and os.path.exists(json_file_path):
+            gcs_hook.upload(
+                bucket_name=gcs_bucket,
+                object_name=json_gcs_path,
+                filename=json_file_path,
+            )
+            logging.info(f"JSON uploaded to gs://{gcs_bucket}/{json_gcs_path}")
+        
+        # Store GCS paths in XCom
+        context['task_instance'].xcom_push(key='gcs_csv_path', value=f"gs://{gcs_bucket}/{csv_gcs_path}")
+        context['task_instance'].xcom_push(key='gcs_json_path', value=f"gs://{gcs_bucket}/{json_gcs_path}")
+        
+        return f"gs://{gcs_bucket}/{csv_gcs_path}"
+        
+    except Exception as e:
+        logging.error(f"Error uploading to GCS: {str(e)}")
+        raise
+
+
+def send_summary_notification(**context):
+    """
+    Send summary notification with key metrics
+    """
+    try:
+        row_count = context['task_instance'].xcom_pull(
+            task_ids='extract_to_csv', 
+            key='row_count'
+        )
+        
+        gcs_csv_path = context['task_instance'].xcom_pull(
+            task_ids='upload_to_gcs', 
+            key='gcs_csv_path'
+        )
+        
+        gcs_json_path = context['task_instance'].xcom_pull(
+            task_ids='upload_to_gcs', 
+            key='gcs_json_path'
+        )
+        
+        execution_date = context['execution_date'].strftime('%Y-%m-%d %H:%M:%S')
+        
+        summary = f"""
+        Airflow Metadata Extraction Complete (GCP Composer)
+        ====================================================
+        Execution Date: {execution_date}
+        Total Records: {row_count}
+        
+        GCS Locations:
+        - CSV: {gcs_csv_path}
+        - JSON: {gcs_json_path}
+        
+        The metadata extraction has completed successfully.
+        """
+        
+        logging.info(summary)
+        
+        # Optional: Send to Cloud Logging
+        # Or integrate with Slack/Email
+        
+        return summary
+        
+    except Exception as e:
+        logging.error(f"Error sending notification: {str(e)}")
+        raise
+
+
+# Create DAG
+with DAG(
+    dag_id='airflow_metadata_extraction_gcp',
+    default_args=DEFAULT_ARGS,
+    description='Extract comprehensive Airflow metadata for last 2 days (GCP Composer)',
+    schedule_interval='0 2 * * *',  # Daily at 2 AM
+    start_date=datetime(2025, 1, 1),
+    catchup=False,
+    tags=['metadata', 'monitoring', 'operations', 'gcp', 'composer'],
+    max_active_runs=1,
+) as dag:
+
+    # Task 1: Extract metadata to CSV
+    extract_to_csv = PythonOperator(
+        task_id='extract_to_csv',
+        python_callable=extract_metadata_to_csv,
+        provide_context=True,
+    )
+
+    # Task 2: Extract metadata to JSON (parallel with CSV)
+    extract_to_json = PythonOperator(
+        task_id='extract_to_json',
+        python_callable=extract_metadata_to_json,
+        provide_context=True,
+    )
+
+    # Task 3: Upload to GCS
+    upload_to_gcs_task = PythonOperator(
+        task_id='upload_to_gcs',
+        python_callable=upload_to_gcs,
+        provide_context=True,
+    )
+
+    # Task 4: Send summary notification
+    send_notification = PythonOperator(
+        task_id='send_notification',
+        python_callable=send_summary_notification,
+        provide_context=True,
+        trigger_rule='all_done',  # Run even if upstream tasks fail
+    )
+
+    # Define task dependencies
+    [extract_to_csv, extract_to_json] >> upload_to_gcs_task >> send_notification
