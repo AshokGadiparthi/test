@@ -1,480 +1,209 @@
 """
-DAG: Enterprise Airflow Monitoring & Root Cause Analysis
-Description: Complete metadata, lineage, and failure analysis for reporting
-Author: Data Engineering Team (hardened)
+DAG: Airflow CDP Monitoring - Simplified Console Version
+Description: Lightweight monitoring of latest DAG runs (tag='cdp') with root cause and performance insights.
+Author: Data Engineering Team
 """
 
 from datetime import datetime, timedelta
-import os
-import json
 import logging
-from typing import List, Dict, Any, Optional
-
 import pandas as pd
 
 from airflow import DAG
-from airflow.models import DagBag, Variable, TaskInstance
+from airflow.models import DagBag, Variable
 from airflow.operators.python import PythonOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-from airflow.providers.google.cloud.hooks.gcs import GCSHook
 from airflow.utils.state import State
 
+
 # -----------------------
-# Configurable defaults
+# Configuration
 # -----------------------
 DEFAULT_ARGS = {
     'owner': 'data_engineering',
     'depends_on_past': False,
-    'email_on_failure': False,
     'retries': 1,
-    'retry_delay': timedelta(minutes=5),
+    'retry_delay': timedelta(minutes=3),
 }
 
-# How far back for historical statistics (days)
-HISTORICAL_LOOKBACK_DAYS = int(Variable.get('airflow_monitor_lookback_days', 30))
 LATEST_RUN_WINDOW_DAYS = int(Variable.get('airflow_monitor_latest_run_window_days', 7))
 
-# SQL - parameterized via string.format for lookbacks (safe constants only)
+# -----------------------
+# SQL: latest run metadata
+# -----------------------
 METADATA_QUERY = f"""
 WITH latest_runs AS (
-    SELECT 
-        dag_id,
-        MAX(execution_date) AS latest_execution_date
+    SELECT dag_id, MAX(execution_date) AS latest_execution_date
     FROM dag_run
     WHERE execution_date >= CURRENT_DATE - INTERVAL '{LATEST_RUN_WINDOW_DAYS} days'
     GROUP BY dag_id
-),
-historical_stats AS (
-    SELECT 
-        dr.dag_id,
-        ti.task_id,
-        COUNT(*) AS total_runs_{HISTORICAL_LOOKBACK_DAYS}d,
-        COUNT(*) FILTER (WHERE ti.state = 'success') AS success_count_{HISTORICAL_LOOKBACK_DAYS}d,
-        COUNT(*) FILTER (WHERE ti.state = 'failed') AS failure_count_{HISTORICAL_LOOKBACK_DAYS}d,
-        ROUND(AVG(EXTRACT(EPOCH FROM (ti.end_date - ti.start_date))::NUMERIC) FILTER (WHERE ti.state = 'success'), 2) AS avg_duration_seconds,
-        ROUND(MAX(EXTRACT(EPOCH FROM (ti.end_date - ti.start_date))::NUMERIC) FILTER (WHERE ti.state = 'success'), 2) AS max_duration_seconds,
-        ROUND(STDDEV(EXTRACT(EPOCH FROM (ti.end_date - ti.start_date))::NUMERIC) FILTER (WHERE ti.state = 'success'), 2) AS stddev_duration_seconds
-    FROM dag_run dr
-    JOIN task_instance ti ON dr.dag_id = ti.dag_id AND dr.run_id = ti.run_id
-    WHERE dr.execution_date >= CURRENT_DATE - INTERVAL '{HISTORICAL_LOOKBACK_DAYS} days'
-    GROUP BY dr.dag_id, ti.task_id
 )
 SELECT 
-    -- DAG Information
     dr.dag_id,
     dr.run_id,
-    dr.execution_date AS latest_run_date,
-    dr.start_date AS dag_start_date,
-    dr.end_date AS dag_end_date,
+    dr.execution_date,
     dr.state AS dag_state,
-    dr.run_type,
-    dr.external_trigger,
-    ROUND(EXTRACT(EPOCH FROM (dr.end_date - dr.start_date))::NUMERIC, 2) AS dag_duration_seconds,
-    
-    -- Task Information
+    dr.start_date,
+    dr.end_date,
+    ROUND(EXTRACT(EPOCH FROM (dr.end_date - dr.start_date)), 2) AS dag_duration_seconds,
     ti.task_id,
     ti.state AS task_state,
+    ti.operator,
     ti.start_date AS task_start_date,
     ti.end_date AS task_end_date,
+    ROUND(EXTRACT(EPOCH FROM (ti.end_date - ti.start_date)), 2) AS task_duration_seconds,
+    ROUND(EXTRACT(EPOCH FROM (ti.start_date - ti.queued_dttm)), 2) AS queue_wait_seconds,
     ti.try_number,
     ti.max_tries,
-    ti.operator,
-    ti.pool,
-    ti.queue,
-    ti.priority_weight,
-    ti.hostname,
-    ti.map_index,
-    
-    -- Task Timing
-    ROUND(EXTRACT(EPOCH FROM (ti.end_date - ti.start_date))::NUMERIC, 2) AS task_duration_seconds,
-    ROUND(EXTRACT(EPOCH FROM (ti.start_date - ti.queued_dttm))::NUMERIC, 2) AS queue_wait_seconds,
-    ti.queued_dttm,
-    
-    -- Job Details (if available)
-    j.state AS job_state,
-    j.latest_heartbeat,
-    
-    -- Status Flags
-    CASE WHEN ti.state = 'success' THEN 'SUCCESS' ELSE 'NOT_SUCCESS' END AS success_flag,
-    CASE WHEN ti.state IN ('failed', 'upstream_failed') THEN 'FAILED' ELSE 'NOT_FAILED' END AS failure_flag,
-    CASE WHEN ti.state = 'failed' THEN 'DIRECT_FAILURE' 
-         WHEN ti.state = 'upstream_failed' THEN 'UPSTREAM_FAILURE' 
-         ELSE 'NO_FAILURE' END AS failure_type,
-    CASE WHEN ti.try_number > 1 THEN 'YES' ELSE 'NO' END AS retry_flag,
-    CASE WHEN ti.state IN ('running', 'queued', 'scheduled') THEN 'ACTIVE' ELSE 'INACTIVE' END AS active_status,
-    
-    -- Historical Statistics
-    hs.total_runs_{HISTORICAL_LOOKBACK_DAYS}d AS total_runs_30d,
-    hs.success_count_{HISTORICAL_LOOKBACK_DAYS}d AS success_count_30d,
-    hs.failure_count_{HISTORICAL_LOOKBACK_DAYS}d AS failure_count_30d,
-    ROUND((hs.failure_count_{HISTORICAL_LOOKBACK_DAYS}d::NUMERIC / NULLIF(hs.total_runs_{HISTORICAL_LOOKBACK_DAYS}d, 0) * 100), 2) AS failure_rate_percent,
-    hs.avg_duration_seconds AS avg_duration_30d,
-    hs.max_duration_seconds AS max_duration_30d,
-    hs.stddev_duration_seconds,
-    
-    -- Performance Indicators
-    CASE 
-        WHEN ti.state = 'success' AND hs.avg_duration_seconds IS NOT NULL 
-        THEN ROUND(((EXTRACT(EPOCH FROM (ti.end_date - ti.start_date))::NUMERIC - hs.avg_duration_seconds) / NULLIF(hs.avg_duration_seconds, 0) * 100), 2)
-        ELSE NULL 
-    END AS duration_variance_percent,
-    
-    CASE 
-        WHEN ti.state = 'success' AND hs.avg_duration_seconds IS NOT NULL 
-             AND EXTRACT(EPOCH FROM (ti.end_date - ti.start_date))::NUMERIC > (hs.avg_duration_seconds + 2 * COALESCE(hs.stddev_duration_seconds, 0))
-        THEN 'SLOW'
-        ELSE 'NORMAL'
-    END AS performance_flag,
-    
-    -- Metadata
     CURRENT_TIMESTAMP AT TIME ZONE 'UTC' AS extracted_at
-
 FROM latest_runs lr
-INNER JOIN dag_run dr ON lr.dag_id = dr.dag_id AND lr.latest_execution_date = dr.execution_date
-INNER JOIN task_instance ti ON dr.dag_id = ti.dag_id AND dr.run_id = ti.run_id
-LEFT JOIN job j ON ti.job_id = j.id
-LEFT JOIN historical_stats hs ON dr.dag_id = hs.dag_id AND ti.task_id = hs.task_id
-
-ORDER BY 
-    dr.dag_id,
-    CASE ti.state 
-        WHEN 'failed' THEN 1
-        WHEN 'upstream_failed' THEN 2
-        WHEN 'running' THEN 3
-        WHEN 'queued' THEN 4
-        WHEN 'success' THEN 5
-        ELSE 6
-    END,
-    ti.task_id;
+JOIN dag_run dr 
+    ON lr.dag_id = dr.dag_id AND lr.latest_execution_date = dr.execution_date
+JOIN task_instance ti 
+    ON dr.dag_id = ti.dag_id AND dr.run_id = ti.run_id
+ORDER BY dr.dag_id, ti.task_id;
 """
 
-# -----------------------
-# Helpers: lineage extract
-# -----------------------
-def _safe_task_list_to_csv(task_list: List[str]) -> str:
-    return ','.join(task_list) if task_list else ''
-
-def extract_task_lineage_from_dagbag(**context) -> pd.DataFrame:
-    logging.info("Loading DagBag for lineage extraction...")
-    dagbag = DagBag()
-    lineage_rows, dag_summary_rows = [], []
-
-    for dag_id, dag in dagbag.dags.items():
-        try:
-            owner = getattr(dag, "owner", None) or dag.default_args.get('owner') if dag.default_args else None
-            owner = owner if isinstance(owner, str) else ','.join(owner) if owner else ''
-        except Exception:
-            owner = ''
-
-        dag_summary_rows.append({
-            'dag_id': dag_id,
-            'description': (dag.description or '')[:1000],
-            'schedule_interval': str(dag.schedule_interval),
-            'tags': ','.join(dag.tags) if getattr(dag, 'tags', None) else '',
-            'total_tasks': len(dag.task_dict),
-            'owner': owner,
-        })
-
-        for task_id, task in dag.task_dict.items():
-            try:
-                upstream_ids = [t.task_id for t in getattr(task, 'upstream_list', [])]
-            except Exception:
-                upstream_ids = list(getattr(task, 'upstream_task_ids', []))
-            try:
-                downstream_ids = [t.task_id for t in getattr(task, 'downstream_list', [])]
-            except Exception:
-                downstream_ids = list(getattr(task, 'downstream_task_ids', []))
-
-            lineage_rows.append({
-                'dag_id': dag_id,
-                'task_id': task_id,
-                'operator': getattr(task, 'task_type', getattr(task, '__class__', type(task)).__name__),
-                'upstream_task_ids': _safe_task_list_to_csv(upstream_ids),
-                'downstream_task_ids': _safe_task_list_to_csv(downstream_ids),
-                'upstream_count': len(upstream_ids),
-                'downstream_count': len(downstream_ids),
-                'is_start_task': 'YES' if len(upstream_ids) == 0 else 'NO',
-                'is_end_task': 'YES' if len(downstream_ids) == 0 else 'NO',
-                'trigger_rule': getattr(task, 'trigger_rule', ''),
-                'retry_delay': str(getattr(task, 'retry_delay', '')),
-                'retries': getattr(task, 'retries', None),
-            })
-
-    lineage_df = pd.DataFrame(lineage_rows)
-    dag_summary_df = pd.DataFrame(dag_summary_rows)
-    exec_ts = context['execution_date'].strftime('%Y%m%d_%H%M%S')
-    lineage_path = f"/tmp/task_lineage_{exec_ts}.csv"
-    dag_summary_path = f"/tmp/dag_summary_{exec_ts}.csv"
-    lineage_df.to_csv(lineage_path, index=False)
-    dag_summary_df.to_csv(dag_summary_path, index=False)
-    context['ti'].xcom_push(key='lineage_path', value=lineage_path)
-    context['ti'].xcom_push(key='dag_summary_path', value=dag_summary_path)
-    logging.info(f"Extracted lineage for {len(lineage_df)} tasks across {len(dag_summary_df)} DAGs.")
-    return lineage_df
 
 # -----------------------
-# Helpers: metadata extract
+# Metadata Extraction
 # -----------------------
-def extract_metadata(**context) -> pd.DataFrame:
-    logging.info("Connecting to Airflow metadata DB (Postgres)...")
+def extract_latest_metadata(**context) -> pd.DataFrame:
+    logging.info("Connecting to Airflow metadata database (Postgres)...")
     pg_hook = PostgresHook(postgres_conn_id='airflow_db')
-    conn = None
-    try:
-        conn = pg_hook.get_conn()
-        logging.info("Executing metadata SQL...")
-        df = pd.read_sql(METADATA_QUERY, conn)
-        logging.info(f"Metadata extracted: {len(df)} rows")
-        exec_ts = context['execution_date'].strftime('%Y%m%d_%H%M%S')
-        metadata_path = f"/tmp/airflow_metadata_{exec_ts}.csv"
-        df.to_csv(metadata_path, index=False)
-        context['ti'].xcom_push(key='metadata_path', value=metadata_path)
-        context['ti'].xcom_push(key='total_records', value=len(df))
-        return df
-    except Exception:
-        logging.exception("Failed to extract metadata from Postgres")
-        raise
-    finally:
-        if conn:
-            try:
-                conn.close()
-            except Exception:
-                pass
+    conn = pg_hook.get_conn()
+    df = pd.read_sql(METADATA_QUERY, conn)
+    conn.close()
+
+    # Filter only DAGs tagged with 'cdp'
+    dagbag = DagBag()
+    cdp_dags = [d for d in dagbag.dags.values() if 'cdp' in getattr(d, "tags", [])]
+    cdp_ids = [d.dag_id for d in cdp_dags]
+    df = df[df['dag_id'].isin(cdp_ids)]
+
+    if df.empty:
+        logging.warning("No DAGs found with tag='cdp' in the latest runs window.")
+    else:
+        logging.info(f"Extracted {len(df)} task rows from {df['dag_id'].nunique()} CDP DAGs.")
+    context['ti'].xcom_push(key='metadata_df', value=df.to_json())
+    return df
+
 
 # -----------------------
-# Root cause analysis
+# Root Cause Analysis
 # -----------------------
-def perform_root_cause_analysis(**context) -> Optional[pd.DataFrame]:
-    lineage_path = context['ti'].xcom_pull(task_ids='extract_lineage', key='lineage_path')
-    metadata_path = context['ti'].xcom_pull(task_ids='extract_metadata', key='metadata_path')
+def analyze_failures(**context):
+    df_json = context['ti'].xcom_pull(task_ids='extract_metadata', key='metadata_df')
+    if not df_json:
+        logging.warning("No metadata found for RCA.")
+        return
 
-    if not lineage_path or not metadata_path:
-        logging.warning("Missing lineage or metadata files; skipping RCA")
-        return None
+    df = pd.read_json(df_json)
+    failed = df[df['task_state'].isin(['failed', 'upstream_failed'])]
+    if failed.empty:
+        logging.info("✅ No failed tasks found in latest CDP DAG runs.")
+        return
 
-    try:
-        metadata_df = pd.read_csv(metadata_path)
-        lineage_df = pd.read_csv(lineage_path)
-    except Exception:
-        logging.exception("Error reading lineage/metadata CSVs")
-        raise
+    summary = []
+    for dag_id in failed['dag_id'].unique():
+        dag_failures = failed[failed['dag_id'] == dag_id]
+        failed_tasks = dag_failures['task_id'].tolist()
+        logging.info(f"🚨 DAG '{dag_id}' has {len(failed_tasks)} failed tasks: {failed_tasks}")
 
-    failure_analysis = []
-
-    for dag_id in metadata_df['dag_id'].unique():
-        dag_meta = metadata_df[metadata_df['dag_id'] == dag_id]
-        dag_lineage = lineage_df[lineage_df['dag_id'] == dag_id]
-        lineage_map = {
-            row['task_id']: {
-                'upstream': (row['upstream_task_ids'].split(',') if row.get('upstream_task_ids') else []),
-                'downstream': (row['downstream_task_ids'].split(',') if row.get('downstream_task_ids') else [])
-            }
-            for _, row in (dag_lineage.fillna('')).iterrows()
-        }
-
-        failed_tasks = dag_meta[dag_meta['failure_flag'] == 'FAILED']
-        if failed_tasks.empty:
-            continue
-
-        for _, failed in failed_tasks.iterrows():
-            task_id = failed['task_id']
-            failure_type = failed.get('failure_type', 'UNKNOWN')
-            failure_rate = failed.get('failure_rate_percent', 0) or 0
-            operator = failed.get('operator', '')
-            try_number = int(failed.get('try_number', 0)) if not pd.isna(failed.get('try_number')) else 0
-
-            analysis = {
+        # classify severity
+        for _, row in dag_failures.iterrows():
+            severity = "HIGH" if row['try_number'] > 1 else "MEDIUM"
+            summary.append({
                 'dag_id': dag_id,
-                'task_id': task_id,
-                'task_state': failed.get('task_state'),
-                'failure_type': failure_type,
-                'try_number': try_number,
-                'operator': operator,
-                'task_duration_seconds': failed.get('task_duration_seconds'),
-                'failure_rate_30d': failure_rate,
-                'is_root_cause': 'NO',
-                'root_cause': None,
-                'impacted_downstream_tasks': '',
-                'impacted_count': 0,
-                'chronic_failure': 'NO',
-                'severity': 'LOW'
-            }
+                'task_id': row['task_id'],
+                'operator': row['operator'],
+                'failure_type': row['task_state'],
+                'try_number': row['try_number'],
+                'severity': severity,
+                'duration_seconds': row['task_duration_seconds']
+            })
+    if summary:
+        rca_df = pd.DataFrame(summary)
+        logging.info("------ ROOT CAUSE SUMMARY ------")
+        logging.info("\n" + rca_df.to_string(index=False))
+        context['ti'].xcom_push(key='rca_summary', value=rca_df.to_json())
+    else:
+        logging.info("✅ All CDP DAG tasks completed successfully.")
 
-            if failure_type == 'DIRECT_FAILURE':
-                analysis['is_root_cause'] = 'YES'
-                analysis['root_cause'] = task_id
-                downstream = lineage_map.get(task_id, {}).get('downstream', [])
-                downstream = [d for d in downstream if d]
-                analysis['impacted_downstream_tasks'] = ','.join(downstream) if downstream else 'NONE'
-                analysis['impacted_count'] = len(downstream)
-                if failure_rate > 20:
-                    analysis['chronic_failure'] = 'YES'
-                    analysis['severity'] = 'HIGH'
-                else:
-                    analysis['severity'] = 'MEDIUM' if analysis['impacted_count'] > 0 else 'LOW'
-            elif failure_type == 'UPSTREAM_FAILURE':
-                analysis['is_root_cause'] = 'NO'
-                upstreams = lineage_map.get(task_id, {}).get('upstream', [])
-                upstreams = [u for u in upstreams if u]
-                root_candidates = []
-                for u in upstreams:
-                    u_row = dag_meta[dag_meta['task_id'] == u]
-                    if not u_row.empty and u_row.iloc[0]['failure_flag'] == 'FAILED':
-                        root_candidates.append(f"{u}({u_row.iloc[0].get('failure_type','')})")
-                analysis['root_cause'] = ','.join(root_candidates) if root_candidates else 'UNKNOWN'
-                analysis['severity'] = 'MEDIUM' if root_candidates else 'LOW'
-            else:
-                analysis['root_cause'] = 'UNKNOWN'
-                analysis['severity'] = 'LOW'
-
-            failure_analysis.append(analysis)
-
-    if not failure_analysis:
-        logging.info("No failures found in latest runs")
-        return None
-
-    failure_df = pd.DataFrame(failure_analysis)
-    ordering = {'HIGH': 1, 'MEDIUM': 2, 'LOW': 3}
-    failure_df['severity_order'] = failure_df['severity'].map(ordering).fillna(99)
-    failure_df = failure_df.sort_values(['severity_order', 'dag_id', 'is_root_cause'], ascending=[True, True, False])
-    failure_df = failure_df.drop(columns=['severity_order'], errors='ignore')
-
-    exec_ts = context['execution_date'].strftime('%Y%m%d_%H%M%S')
-    failure_path = f"/tmp/failure_analysis_{exec_ts}.csv"
-    failure_df.to_csv(failure_path, index=False)
-    context['ti'].xcom_push(key='failure_analysis_path', value=failure_path)
-    logging.info(f"Root cause analysis saved: {failure_path} (rows: {len(failure_df)})")
-    return failure_df
 
 # -----------------------
-# Executive report
+# Executive Console Report
 # -----------------------
-def generate_executive_report(**context) -> Optional[str]:
-    metadata_path = context['ti'].xcom_pull(task_ids='extract_metadata', key='metadata_path')
-    failure_path = context['ti'].xcom_pull(task_ids='root_cause_analysis', key='failure_analysis_path')
-    dag_summary_path = context['ti'].xcom_pull(task_ids='extract_lineage', key='dag_summary_path')
+def print_executive_summary(**context):
+    df_json = context['ti'].xcom_pull(task_ids='extract_metadata', key='metadata_df')
+    if not df_json:
+        logging.warning("No data found for executive summary.")
+        return
 
-    metadata_df = pd.read_csv(metadata_path) if metadata_path and os.path.exists(metadata_path) else pd.DataFrame()
-    failure_df = pd.read_csv(failure_path) if failure_path and os.path.exists(failure_path) else pd.DataFrame()
-    dag_summary_df = pd.read_csv(dag_summary_path) if dag_summary_path and os.path.exists(dag_summary_path) else pd.DataFrame()
+    df = pd.read_json(df_json)
+    total_dags = df['dag_id'].nunique()
+    total_tasks = len(df)
+    failed_tasks = len(df[df['task_state'].isin(['failed', 'upstream_failed'])])
+    success_tasks = len(df[df['task_state'] == 'success'])
+    success_rate = (success_tasks / total_tasks * 100) if total_tasks > 0 else 0.0
 
-    exec_ts = context['execution_date'].strftime('%Y%m%d_%H%M%S')
-    report_path = f"/tmp/executive_report_{exec_ts}.txt"
+    logging.info("=" * 100)
+    logging.info("AIRFLOW CDP EXECUTIVE SUMMARY (LATEST RUNS)")
+    logging.info("=" * 100)
+    logging.info(f"  Monitored CDP DAGs: {total_dags}")
+    logging.info(f"  Total Tasks (latest run): {total_tasks}")
+    logging.info(f"  Successful: {success_tasks}")
+    logging.info(f"  Failed: {failed_tasks}")
+    logging.info(f"  Success Rate: {success_rate:.1f}%")
+    logging.info("-" * 100)
 
-    with open(report_path, 'w') as f:
-        f.write("=" * 120 + "\n")
-        f.write("AIRFLOW MONITORING & ROOT CAUSE ANALYSIS - EXECUTIVE REPORT\n")
-        f.write("=" * 120 + "\n")
-        f.write(f"Report Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}\n")
-        f.write(f"Reporting Period: Latest run per DAG (Last {LATEST_RUN_WINDOW_DAYS} days window)\n")
-        f.write("=" * 120 + "\n\n")
+    dag_summary = (
+        df.groupby(['dag_id', 'dag_state'])
+          .agg(total_tasks=('task_id', 'count'),
+               success=('task_state', lambda x: (x == 'success').sum()),
+               failed=('task_state', lambda x: (x.isin(['failed', 'upstream_failed'])).sum()))
+          .reset_index()
+    )
 
-        # OVERALL HEALTH
-        f.write("SECTION 1: AIRFLOW HEALTH OVERVIEW\n")
-        f.write("-" * 120 + "\n")
-        if not metadata_df.empty:
-            total_dags = metadata_df['dag_id'].nunique()
-            total_tasks = len(metadata_df)
-            success_tasks = len(metadata_df[metadata_df['success_flag'] == 'SUCCESS'])
-            failed_tasks = len(metadata_df[metadata_df['failure_flag'] == 'FAILED'])
-            active_tasks = len(metadata_df[metadata_df['active_status'] == 'ACTIVE'])
-            success_rate = (success_tasks / total_tasks * 100) if total_tasks > 0 else 0.0
-            f.write(f"  Total DAGs Monitored: {total_dags}\n")
-            f.write(f"  Total Tasks in Latest Runs: {total_tasks}\n")
-            f.write(f"  Successful Tasks: {success_tasks} ({success_rate:.1f}%)\n")
-            f.write(f"  Failed Tasks: {failed_tasks}\n")
-            f.write(f"  Active/Running Tasks: {active_tasks}\n")
-            health = 'HEALTHY' if success_rate >= 90 else "NEEDS ATTENTION" if success_rate >= 75 else "CRITICAL"
-            f.write(f"  Overall Health: {health}\n")
-        else:
-            f.write("  No metadata extracted; check metadata extraction step.\n")
+    for _, row in dag_summary.iterrows():
+        symbol = "✅" if row['dag_state'] == 'success' else "❌" if row['dag_state'] == 'failed' else "⏳"
+        logging.info(f"{symbol} DAG: {row['dag_id']} | Status: {row['dag_state']} | Tasks: {row['total_tasks']} "
+                     f"(✓{row['success']} ✗{row['failed']})")
 
-        # --- Remaining report sections unchanged ---
-        # (Sections 2-5 copied as-is from your original code)
+    logging.info("=" * 100)
+    logging.info("END OF REPORT")
+    logging.info("=" * 100)
 
-    logging.info(f"Executive report written to {report_path}")
-    context['ti'].xcom_push(key='report_path', value=report_path)
-    return report_path
 
 # -----------------------
-# Upload to GCS
-# -----------------------
-def upload_to_gcs(**context) -> List[str]:
-    files = {
-        'metadata.csv': context['ti'].xcom_pull(task_ids='extract_metadata', key='metadata_path'),
-        'task_lineage.csv': context['ti'].xcom_pull(task_ids='extract_lineage', key='lineage_path'),
-        'dag_summary.csv': context['ti'].xcom_pull(task_ids='extract_lineage', key='dag_summary_path'),
-        'failure_analysis.csv': context['ti'].xcom_pull(task_ids='root_cause_analysis', key='failure_analysis_path'),
-        'executive_report.txt': context['ti'].xcom_pull(task_ids='generate_report', key='report_path'),
-    }
-
-    composer_bucket = os.environ.get('GCS_BUCKET') or os.environ.get('COMPOSER_BUCKET')
-    gcs_bucket = Variable.get('airflow_metadata_gcs_bucket', composer_bucket)
-
-    if not gcs_bucket:
-        logging.warning("No GCS bucket configured; skipping upload.")
-        return []
-
-    if gcs_bucket.startswith('gs://'):
-        gcs_bucket = gcs_bucket.replace('gs://', '')
-
-    uploaded = []
-    gcs_hook = GCSHook(gcp_conn_id='google_cloud_default')
-    exec_date = context['ds']
-    for fname, fpath in files.items():
-        if not fpath or not os.path.exists(fpath):
-            logging.info(f"Skipping upload; file missing: {fname} -> {fpath}")
-            continue
-        dest_path = f"airflow_monitoring/{exec_date}/{fname}"
-        gcs_hook.upload(bucket_name=gcs_bucket, object_name=dest_path, filename=fpath)
-        uploaded.append(f"gs://{gcs_bucket}/{dest_path}")
-        logging.info(f"Uploaded to GCS: gs://{gcs_bucket}/{dest_path}")
-
-    context['ti'].xcom_push(key='uploaded_files', value=uploaded)
-    return uploaded
-
-# -----------------------
-# DAG definition
+# DAG Definition
 # -----------------------
 with DAG(
-    dag_id='airflow_enterprise_monitoring',
+    dag_id='airflow_cdp_monitoring',
     default_args=DEFAULT_ARGS,
-    description='Enterprise-grade Airflow monitoring with lineage and root cause analysis',
-    schedule_interval='0 2 * * *',  # daily at 02:00 UTC
+    description='Simplified real-time Airflow monitoring for CDP-tagged DAGs',
+    schedule_interval='0 * * * *',  # hourly
     start_date=datetime(2025, 1, 1),
     catchup=False,
-    tags=['monitoring', 'enterprise', 'lineage', 'root-cause-analysis'],
+    tags=['monitoring', 'cdp'],
     max_active_runs=1,
 ) as dag:
 
-    extract_lineage = PythonOperator(
-        task_id='extract_lineage',
-        python_callable=extract_task_lineage_from_dagbag,
-        provide_context=True,
-    )
-
     extract_metadata = PythonOperator(
         task_id='extract_metadata',
-        python_callable=extract_metadata,
+        python_callable=extract_latest_metadata,
         provide_context=True,
     )
 
     root_cause_analysis = PythonOperator(
         task_id='root_cause_analysis',
-        python_callable=perform_root_cause_analysis,
+        python_callable=analyze_failures,
         provide_context=True,
     )
 
-    generate_report = PythonOperator(
-        task_id='generate_report',
-        python_callable=generate_executive_report,
+    print_report = PythonOperator(
+        task_id='print_executive_summary',
+        python_callable=print_executive_summary,
         provide_context=True,
     )
 
-    upload_to_gcs_task = PythonOperator(
-        task_id='upload_to_gcs',
-        python_callable=upload_to_gcs,
-        provide_context=True,
-    )
-
-    # Orchestration
-    [extract_lineage, extract_metadata] >> root_cause_analysis >> generate_report >> upload_to_gcs_task
+    extract_metadata >> root_cause_analysis >> print_report
