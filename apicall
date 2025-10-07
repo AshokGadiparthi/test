@@ -1,275 +1,38 @@
-from datetime import datetime, timedelta
-import logging
-import pandas as pd
-import numpy as np
-from airflow import DAG
-from airflow.models import Variable
-from airflow.operators.python import PythonOperator
-from airflow.providers.postgres.hooks.postgres import PostgresHook
-from airflow.providers.google.cloud.hooks.bigquery import BigQueryHook
-from google.cloud import bigquery
+# --- Normalize and enforce column types ---
+timestamp_cols = [
+    "execution_date", "start_date", "end_date",
+    "task_start_date", "task_end_date", "extracted_at"
+]
+for col in timestamp_cols:
+    if col in df.columns:
+        df[col] = pd.to_datetime(df[col], errors="coerce", utc=True)
 
-# -----------------------------
-# Default and Config
-# -----------------------------
-DEFAULT_ARGS = {
-    'owner': 'data_engineering',
-    'depends_on_past': False,
-    'retries': 1,
-    'retry_delay': timedelta(minutes=3),
-}
+numeric_cols = [
+    "dag_duration_seconds", "task_duration_seconds",
+    "queue_wait_seconds"
+]
+for col in numeric_cols:
+    if col in df.columns:
+        df[col] = pd.to_numeric(df[col], errors="coerce")
 
-LATEST_RUN_WINDOW_DAYS = int(Variable.get('airflow_monitor_latest_run_window_days', 7))
-BQ_DATASET = Variable.get('bq_monitoring_dataset', default_var='dbtdatamesh')
-BQ_TABLE = Variable.get('bq_monitoring_table', default_var='cdp_monitor_latest')
+int_cols = ["try_number", "max_tries"]
+for col in int_cols:
+    if col in df.columns:
+        df[col] = df[col].fillna(0).astype("Int64")
 
-# -----------------------------
-# SQL Query (Latest Run)
-# -----------------------------
-METADATA_QUERY = f"""
-WITH latest_runs AS (
-    SELECT dag_id, MAX(execution_date) AS latest_execution_date
-    FROM dag_run
-    WHERE execution_date >= CURRENT_DATE - INTERVAL '{LATEST_RUN_WINDOW_DAYS} days'
-    GROUP BY dag_id
-)
-SELECT 
-    dr.dag_id,
-    dr.run_id,
-    dr.execution_date,
-    dr.state AS dag_state,
-    dr.start_date,
-    dr.end_date,
-    ROUND(EXTRACT(EPOCH FROM (dr.end_date - dr.start_date))::NUMERIC, 2) AS dag_duration_seconds,
-    ti.task_id,
-    ti.state AS task_state,
-    ti.operator,
-    ti.start_date AS task_start_date,
-    ti.end_date AS task_end_date,
-    ROUND(EXTRACT(EPOCH FROM (ti.end_date - ti.start_date))::NUMERIC, 2) AS task_duration_seconds,
-    ROUND(EXTRACT(EPOCH FROM (ti.start_date - ti.queued_dttm))::NUMERIC, 2) AS queue_wait_seconds,
-    ti.try_number,
-    ti.max_tries,
-    CURRENT_TIMESTAMP AT TIME ZONE 'UTC' AS extracted_at
-FROM latest_runs lr
-JOIN dag_run dr ON lr.dag_id = dr.dag_id AND lr.latest_execution_date = dr.execution_date
-JOIN task_instance ti ON dr.dag_id = ti.dag_id AND dr.run_id = ti.run_id
-ORDER BY dr.dag_id, ti.task_id;
-"""
+# Ensure dataframe matches BigQuery schema types
+df = df.astype({
+    "dag_id": "string",
+    "run_id": "string",
+    "dag_state": "string",
+    "task_id": "string",
+    "task_state": "string",
+    "operator": "string"
+})
 
-# -----------------------------
-# Step 1: Extract Metadata
-# -----------------------------
-def extract_latest_metadata(**context):
-    logging.info("Extracting Airflow DAG metadata...")
-    pg_hook = PostgresHook(postgres_conn_id='airflow_db')
-    conn = None
-    try:
-        conn = pg_hook.get_conn()
-        cdp_ids_df = pd.read_sql("SELECT dag_id FROM dag_tag WHERE name = 'cdp';", conn)
-        cdp_ids = cdp_ids_df['dag_id'].dropna().unique().tolist()
-
-        if not cdp_ids:
-            logging.warning("No CDP DAGs found.")
-            context['ti'].xcom_push(key='metadata_df', value=pd.DataFrame().to_json(orient='records'))
-            return pd.DataFrame()
-
-        df = pd.read_sql(METADATA_QUERY, conn)
-        df = df[df['dag_id'].isin(cdp_ids)].reset_index(drop=True)
-
-        # --- Normalize columns ---
-        for col in ['execution_date', 'start_date', 'end_date', 'task_start_date', 'task_end_date', 'extracted_at']:
-            df[col] = pd.to_datetime(df[col], errors='coerce', utc=True)
-
-        num_cols = ['dag_duration_seconds', 'task_duration_seconds', 'queue_wait_seconds']
-        for col in num_cols:
-            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype(float)
-
-        int_cols = ['try_number', 'max_tries']
-        for col in int_cols:
-            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype(int)
-
-        df = df.replace({np.nan: None})
-
-        context['ti'].xcom_push(key='metadata_df', value=df.to_json(orient='records'))
-        logging.info(f"Extracted {len(df)} rows for {len(df['dag_id'].unique())} DAGs.")
-        return df
-    finally:
-        if conn:
-            conn.close()
-
-# -----------------------------
-# Step 2: RCA (Root Cause Summary)
-# -----------------------------
-def analyze_failures(**context):
-    df_json = context['ti'].xcom_pull(task_ids='extract_metadata', key='metadata_df')
-    if not df_json:
-        logging.warning("No metadata found for RCA.")
-        return
-    df = pd.read_json(df_json)
-    if df.empty:
-        logging.info("✅ All CDP DAGs succeeded in latest run.")
-        return
-
-    failed = df[df['task_state'].isin(['failed', 'upstream_failed'])]
-    if failed.empty:
-        logging.info("✅ All tasks succeeded.")
-        return
-
-    rca_rows = []
-    for _, row in failed.iterrows():
-        cause = "direct_failure" if row['task_state'] == 'failed' else "upstream_failure"
-        rca_rows.append({
-            'dag_id': row['dag_id'],
-            'task_id': row['task_id'],
-            'task_state': row['task_state'],
-            'root_cause': cause,
-            'severity': "HIGH" if row['try_number'] > 1 else "MEDIUM",
-            'task_duration_sec': row['task_duration_seconds']
-        })
-    rca_df = pd.DataFrame(rca_rows)
-    context['ti'].xcom_push(key='rca_df', value=rca_df.to_json(orient='records'))
-    logging.info(f"Generated RCA for {len(rca_df)} failed tasks.")
-
-# -----------------------------
-# Step 3: Load to BigQuery
-# -----------------------------
-def load_to_bigquery(**context):
-    df_json = context['ti'].xcom_pull(task_ids='extract_metadata', key='metadata_df')
-    if not df_json:
-        logging.warning("No data to load to BigQuery.")
-        return
-    df = pd.read_json(df_json)
-    if df.empty:
-        logging.info("No rows to load.")
-        return
-
-    # --- Define Schema explicitly ---
-    schema = [
-        bigquery.SchemaField("dag_id", "STRING"),
-        bigquery.SchemaField("run_id", "STRING"),
-        bigquery.SchemaField("execution_date", "TIMESTAMP"),
-        bigquery.SchemaField("dag_state", "STRING"),
-        bigquery.SchemaField("start_date", "TIMESTAMP"),
-        bigquery.SchemaField("end_date", "TIMESTAMP"),
-        bigquery.SchemaField("dag_duration_seconds", "FLOAT"),
-        bigquery.SchemaField("task_id", "STRING"),
-        bigquery.SchemaField("task_state", "STRING"),
-        bigquery.SchemaField("operator", "STRING"),
-        bigquery.SchemaField("task_start_date", "TIMESTAMP"),
-        bigquery.SchemaField("task_end_date", "TIMESTAMP"),
-        bigquery.SchemaField("task_duration_seconds", "FLOAT"),
-        bigquery.SchemaField("queue_wait_seconds", "FLOAT"),
-        bigquery.SchemaField("try_number", "INTEGER"),
-        bigquery.SchemaField("max_tries", "INTEGER"),
-        bigquery.SchemaField("extracted_at", "TIMESTAMP")
-    ]
-
-    bq_hook = BigQueryHook(gcp_conn_id='google_cloud_default', use_legacy_sql=False)
-    client = bq_hook.get_client()
-    table_id = f"{client.project}.{BQ_DATASET}.{BQ_TABLE}"
-
-    # --- Create table if not exists ---
-    try:
-        client.get_table(table_id)
-        logging.info(f"Table {table_id} already exists.")
-    except Exception:
-        table = bigquery.Table(table_id, schema=schema)
-        table = client.create_table(table)
-        logging.info(f"Created new BigQuery table: {table_id}")
-
-    # --- Load data ---
-    logging.info(f"Loading {len(df)} rows into BigQuery table {table_id}...")
-    job_config = bigquery.LoadJobConfig(schema=schema, write_disposition="WRITE_APPEND")
-    job = client.load_table_from_dataframe(df, table_id, job_config=job_config)
-    job.result()
-    logging.info(f"✅ BigQuery load complete: {len(df)} rows inserted.")
-
-# -----------------------------
-# Step 4: Executive Summary
-# -----------------------------
-def print_summary(**context):
-    df_json = context['ti'].xcom_pull(task_ids='extract_metadata', key='metadata_df')
-    if not df_json:
-        logging.warning("No data for summary.")
-        return
-    df = pd.read_json(df_json)
-    if df.empty:
-        logging.info("No task data.")
-        return
-
-    total_tasks = len(df)
-    success = len(df[df['task_state'] == 'success'])
-    failed = len(df[df['task_state'].isin(['failed', 'upstream_failed'])])
-    success_rate = (success / total_tasks) * 100 if total_tasks else 0
-
-    logging.info("=" * 90)
-    logging.info(" AIRFLOW EXECUTIVE SUMMARY ")
-    logging.info("=" * 90)
-    logging.info(f"DAGs monitored: {df['dag_id'].nunique()}")
-    logging.info(f"Total Tasks: {total_tasks}")
-    logging.info(f"Success: {success} | Failed: {failed}")
-    logging.info(f"Success Rate: {success_rate:.2f}%")
-    logging.info("=" * 90)
-
-# -----------------------------
-# DAG Definition
-# -----------------------------
-with DAG(
-    dag_id='airflow_cdp_monitoring_bq_final',
-    default_args=DEFAULT_ARGS,
-    description='Airflow CDP DAG Monitoring and BigQuery Loader',
-    schedule_interval='0 * * * *',
-    start_date=datetime(2025, 1, 1),
-    catchup=False,
-    max_active_runs=1,
-    tags=['monitoring', 'cdp', 'bigquery']
-) as dag:
-
-    extract_metadata = PythonOperator(
-        task_id='extract_metadata',
-        python_callable=extract_latest_metadata,
-        provide_context=True,
-    )
-
-    analyze_failures_task = PythonOperator(
-        task_id='analyze_failures',
-        python_callable=analyze_failures,
-        provide_context=True,
-    )
-
-    load_to_bq = PythonOperator(
-        task_id='load_to_bigquery',
-        python_callable=load_to_bigquery,
-        provide_context=True,
-    )
-
-    print_summary_task = PythonOperator(
-        task_id='print_summary',
-        python_callable=print_summary,
-        provide_context=True,
-    )
-
-    extract_metadata >> analyze_failures_task >> load_to_bq >> print_summary_task
-
-
-
-CREATE TABLE `cogent-bolt-473314-j0.dbtdatamesh.cdp_monitor_latest` (
-     dag_id STRING NOT NULL,
-  run_id STRING,
-  execution_date TIMESTAMP,
-  dag_state STRING,
-  start_date TIMESTAMP,
-  end_date TIMESTAMP,
-  dag_duration_seconds FLOAT64,
-  task_id STRING,
-  task_state STRING,
-  operator STRING,
-  task_start_date TIMESTAMP,
-  task_end_date TIMESTAMP,
-  task_duration_seconds FLOAT64,
-  queue_wait_seconds FLOAT64,
-  try_number INT64,
-  max_tries INT64,
-  extracted_at TIMESTAMP
-);
+# --- Load data ---
+logging.info(f"Loading {len(df)} rows into BigQuery table {table_id}...")
+job_config = bigquery.LoadJobConfig(schema=schema, write_disposition="WRITE_APPEND")
+job = client.load_table_from_dataframe(df, table_id, job_config=job_config)
+job.result()
+logging.info(f"✅ BigQuery load complete: {len(df)} rows inserted.")
