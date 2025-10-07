@@ -28,6 +28,7 @@ LATEST_RUN_WINDOW_DAYS = int(Variable.get('airflow_monitor_latest_run_window_day
 
 # -----------------------
 # SQL: latest run metadata (CAST EXTRACT -> numeric before ROUND to avoid Postgres error)
+# Note: JOIN uses dr.run_id = ti.run_id (Airflow 2.x schema)
 # -----------------------
 METADATA_QUERY = f"""
 WITH latest_runs AS (
@@ -59,7 +60,7 @@ FROM latest_runs lr
 JOIN dag_run dr 
     ON lr.dag_id = dr.dag_id AND lr.latest_execution_date = dr.execution_date
 JOIN task_instance ti 
-    ON dr.dag_id = ti.dag_id AND dr.execution_date = ti.execution_date
+    ON dr.dag_id = ti.dag_id AND dr.run_id = ti.run_id
 ORDER BY dr.dag_id, ti.task_id;
 """
 
@@ -77,20 +78,24 @@ def extract_latest_metadata(**context) -> pd.DataFrame:
     conn = None
     try:
         conn = pg_hook.get_conn()
-        # Get DAG ids that have tag 'cdp' from dag_tag table (metadata DB)
-        cdp_ids_df = pd.read_sql("SELECT dag_id FROM dag_tag WHERE name = 'cdp';", conn)
-        cdp_ids = cdp_ids_df['dag_id'].tolist()
+
+        # 1) Get DAG ids that have tag 'cdp' from dag_tag table (metadata DB)
+        try:
+            cdp_ids_df = pd.read_sql("SELECT dag_id FROM dag_tag WHERE name = 'cdp';", conn)
+            cdp_ids = cdp_ids_df['dag_id'].dropna().unique().tolist()
+        except Exception:
+            logging.exception("Failed to query dag_tag for 'cdp' tag.")
+            cdp_ids = []
+
         if not cdp_ids:
             logging.warning("No DAGs found with tag='cdp'. Nothing to monitor.")
-            # push empty JSON to XCom for downstream tasks to handle gracefully
-            context['ti'].xcom_push(key='metadata_df', value=pd.DataFrame().to_json())
+            context['ti'].xcom_push(key='metadata_df', value=pd.DataFrame().to_json(orient='records'))
             return pd.DataFrame()
 
-        # Use parameterized SQL to pull latest-run metadata for those DAGs
-        sql = METADATA_QUERY
-        df = pd.read_sql(sql, conn)
+        # 2) Pull latest-run metadata (for all DAGs in DB) then filter by CDP dag ids
+        df = pd.read_sql(METADATA_QUERY, conn)
 
-        # Filter by the CDP dag ids we discovered
+        # 3) Filter by CDP dag ids (safe in Python)
         df = df[df['dag_id'].isin(cdp_ids)].reset_index(drop=True)
 
         if df.empty:
@@ -175,7 +180,7 @@ def analyze_failures(**context):
         rca_df = pd.DataFrame(summary_rows)
         logging.info("\n" + rca_df.to_string(index=False))
         # push the RCA summary for downstream use if needed
-        context['ti'].xcom_push(key='rca_summary', value(rca_df.to_json(orient='records')))
+        context['ti'].xcom_push(key='rca_summary', value=rca_df.to_json(orient='records'))
     else:
         logging.info("RCA completed — no actionable failures found.")
 
