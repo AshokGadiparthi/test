@@ -1,38 +1,14 @@
-# --- Normalize and enforce column types ---
 timestamp_cols = [
-    "execution_date", "start_date", "end_date",
-    "task_start_date", "task_end_date", "extracted_at"
+"execution_date", "start_date", "end_date",
+"task_start_date", "task_end_date", "extracted_at"
 ]
+
 for col in timestamp_cols:
-    if col in df.columns:
-        df[col] = pd.to_datetime(df[col], errors="coerce", utc=True)
-
-numeric_cols = [
-    "dag_duration_seconds", "task_duration_seconds",
-    "queue_wait_seconds"
-]
-for col in numeric_cols:
-    if col in df.columns:
-        df[col] = pd.to_numeric(df[col], errors="coerce")
-
-int_cols = ["try_number", "max_tries"]
-for col in int_cols:
-    if col in df.columns:
-        df[col] = df[col].fillna(0).astype("Int64")
-
-# Ensure dataframe matches BigQuery schema types
-df = df.astype({
-    "dag_id": "string",
-    "run_id": "string",
-    "dag_state": "string",
-    "task_id": "string",
-    "task_state": "string",
-    "operator": "string"
-})
-
-# --- Load data ---
-logging.info(f"Loading {len(df)} rows into BigQuery table {table_id}...")
-job_config = bigquery.LoadJobConfig(schema=schema, write_disposition="WRITE_APPEND")
-job = client.load_table_from_dataframe(df, table_id, job_config=job_config)
-job.result()
-logging.info(f"✅ BigQuery load complete: {len(df)} rows inserted.")
+if col in df.columns:
+# Detect if numeric and looks like epoch
+if pd.api.types.is_numeric_dtype(df[col]):
+# Assume milliseconds — change to 's' if your values have 10 digits instead of 13
+df[col] = pd.to_datetime(df[col], unit='ms', errors='coerce', utc=True)
+else:
+# If already ISO string
+df[col] = pd.to_datetime(df[col], errors='coerce', utc=True)
