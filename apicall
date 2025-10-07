@@ -1,22 +1,24 @@
 """
-DAG: Airflow CDP Monitoring - Simplified Console Version
-Description: Lightweight monitoring of latest DAG runs (tag='cdp') with root cause and performance insights.
-Author: Data Engineering Team (hardened)
+DAG: Airflow CDP Monitoring - Real-time Lineage + RCA + BigQuery Loader
+Description:
+  Real-time monitoring of latest CDP-tagged DAG runs with root cause analysis,
+  task-level lineage insights, and automatic reporting to BigQuery for dashboards.
+Author: Data Engineering Team (TrustIQ)
 """
 
 from datetime import datetime, timedelta
 import logging
 import pandas as pd
-
 from airflow import DAG
 from airflow.models import Variable
 from airflow.operators.python import PythonOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
+from airflow.providers.google.cloud.hooks.bigquery import BigQueryHook
 from airflow.utils.state import State
 
-# -----------------------
+# -----------------------------
 # Configuration
-# -----------------------
+# -----------------------------
 DEFAULT_ARGS = {
     'owner': 'data_engineering',
     'depends_on_past': False,
@@ -25,11 +27,12 @@ DEFAULT_ARGS = {
 }
 
 LATEST_RUN_WINDOW_DAYS = int(Variable.get('airflow_monitor_latest_run_window_days', 7))
+BQ_DATASET = Variable.get('bq_monitoring_dataset', default_var='airflow_monitoring')
+BQ_TABLE = Variable.get('bq_monitoring_table', default_var='cdp_monitor_latest')
 
-# -----------------------
-# SQL: latest run metadata (CAST EXTRACT -> numeric before ROUND to avoid Postgres error)
-# Note: JOIN uses dr.run_id = ti.run_id (Airflow 2.x schema)
-# -----------------------
+# -----------------------------
+# SQL Query (Latest Run)
+# -----------------------------
 METADATA_QUERY = f"""
 WITH latest_runs AS (
     SELECT dag_id, MAX(execution_date) AS latest_execution_date
@@ -44,7 +47,6 @@ SELECT
     dr.state AS dag_state,
     dr.start_date,
     dr.end_date,
-    -- cast to numeric before rounding to avoid PostgreSQL ROUND(double precision, int) issue
     ROUND(EXTRACT(EPOCH FROM (dr.end_date - dr.start_date))::NUMERIC, 2) AS dag_duration_seconds,
     ti.task_id,
     ti.state AS task_state,
@@ -55,203 +57,164 @@ SELECT
     ROUND(EXTRACT(EPOCH FROM (ti.start_date - ti.queued_dttm))::NUMERIC, 2) AS queue_wait_seconds,
     ti.try_number,
     ti.max_tries,
+    array_agg(DISTINCT td.upstream_task_id) FILTER (WHERE td.upstream_task_id IS NOT NULL) AS upstream_tasks,
     CURRENT_TIMESTAMP AT TIME ZONE 'UTC' AS extracted_at
 FROM latest_runs lr
-JOIN dag_run dr 
-    ON lr.dag_id = dr.dag_id AND lr.latest_execution_date = dr.execution_date
-JOIN task_instance ti 
-    ON dr.dag_id = ti.dag_id AND dr.run_id = ti.run_id
+JOIN dag_run dr ON lr.dag_id = dr.dag_id AND lr.latest_execution_date = dr.execution_date
+JOIN task_instance ti ON dr.dag_id = ti.dag_id AND dr.run_id = ti.run_id
+LEFT JOIN task_dependency td ON ti.dag_id = td.dag_id AND td.downstream_task_id = ti.task_id
+GROUP BY dr.dag_id, dr.run_id, dr.execution_date, dr.state, dr.start_date, dr.end_date,
+         ti.task_id, ti.state, ti.operator, ti.start_date, ti.end_date,
+         ti.try_number, ti.max_tries, ti.queued_dttm
 ORDER BY dr.dag_id, ti.task_id;
 """
 
-# -----------------------
-# Metadata Extraction
-# -----------------------
+# -----------------------------
+# Step 1: Extract Metadata
+# -----------------------------
 def extract_latest_metadata(**context) -> pd.DataFrame:
-    """
-    Connect to Airflow metadata DB, get CDP-tagged DAG IDs from dag_tag,
-    then pull latest-run task metadata for those DAGs.
-    Pushes DataFrame JSON into XCom under 'metadata_df'.
-    """
-    logging.info("Connecting to Airflow metadata database (Postgres)...")
+    logging.info("Connecting to Airflow metadata database...")
     pg_hook = PostgresHook(postgres_conn_id='airflow_db')
     conn = None
     try:
         conn = pg_hook.get_conn()
 
-        # 1) Get DAG ids that have tag 'cdp' from dag_tag table (metadata DB)
-        try:
-            cdp_ids_df = pd.read_sql("SELECT dag_id FROM dag_tag WHERE name = 'cdp';", conn)
-            cdp_ids = cdp_ids_df['dag_id'].dropna().unique().tolist()
-        except Exception:
-            logging.exception("Failed to query dag_tag for 'cdp' tag.")
-            cdp_ids = []
+        cdp_ids_df = pd.read_sql("SELECT dag_id FROM dag_tag WHERE name = 'cdp';", conn)
+        cdp_ids = cdp_ids_df['dag_id'].dropna().unique().tolist()
 
         if not cdp_ids:
-            logging.warning("No DAGs found with tag='cdp'. Nothing to monitor.")
+            logging.warning("No DAGs found with tag='cdp'.")
             context['ti'].xcom_push(key='metadata_df', value=pd.DataFrame().to_json(orient='records'))
             return pd.DataFrame()
 
-        # 2) Pull latest-run metadata (for all DAGs in DB) then filter by CDP dag ids
         df = pd.read_sql(METADATA_QUERY, conn)
-
-        # 3) Filter by CDP dag ids (safe in Python)
         df = df[df['dag_id'].isin(cdp_ids)].reset_index(drop=True)
 
-        if df.empty:
-            logging.warning("No latest-run rows found for CDP DAGs within lookback window.")
-        else:
-            logging.info(f"Extracted {len(df)} task rows from {df['dag_id'].nunique()} CDP DAG(s).")
-
-        # store as JSON in XCom (keeps everything in-memory; no files)
         context['ti'].xcom_push(key='metadata_df', value=df.to_json(orient='records'))
+        logging.info(f"Extracted {len(df)} records for {len(df['dag_id'].unique())} CDP DAGs.")
         return df
-
-    except Exception:
-        logging.exception("Failed to extract metadata from Postgres")
-        raise
     finally:
         if conn:
-            try:
-                conn.close()
-            except Exception:
-                pass
+            conn.close()
 
 
-# -----------------------
-# Root Cause Analysis
-# -----------------------
+# -----------------------------
+# Step 2: Root Cause + Lineage Analysis
+# -----------------------------
 def analyze_failures(**context):
-    """
-    Simple RCA using latest-run metadata:
-    - finds failed / upstream_failed tasks
-    - classifies severity (basic heuristics)
-    - prints a concise root-cause summary to logs
-    """
     df_json = context['ti'].xcom_pull(task_ids='extract_metadata', key='metadata_df')
     if not df_json:
-        logging.warning("No metadata found for RCA.")
+        logging.warning("No metadata for RCA.")
         return
 
-    # load JSON into DataFrame (safe if empty)
-    try:
-        df = pd.read_json(df_json)
-    except ValueError:
-        df = pd.DataFrame()
-
+    df = pd.read_json(df_json)
     if df.empty:
-        logging.info("No data for RCA (empty DataFrame).")
+        logging.info("No task data for RCA.")
         return
 
     failed = df[df['task_state'].isin(['failed', 'upstream_failed'])]
     if failed.empty:
-        logging.info("✅ No failed tasks found in latest CDP DAG runs.")
+        logging.info("✅ All CDP DAGs succeeded in latest run.")
         return
 
-    summary_rows = []
-    logging.info("------ ROOT CAUSE ANALYSIS (LATEST RUNS) ------")
-    for dag_id, dag_grp in failed.groupby('dag_id'):
-        failed_tasks = dag_grp['task_id'].tolist()
-        logging.info(f"🚨 DAG '{dag_id}' failed tasks: {failed_tasks}")
+    rca_rows = []
+    logging.info("---- RCA: Failure Insights ----")
 
-        # For each failed task produce a short RCA row
-        for _, row in dag_grp.iterrows():
-            task_id = row['task_id']
-            task_state = row['task_state']
-            try_number = int(row.get('try_number') or 0)
-            duration = row.get('task_duration_seconds')
+    for _, row in failed.iterrows():
+        upstreams = row.get('upstream_tasks') or []
+        cause = "direct_failure"
+        if upstreams:
+            upstream_fails = df[(df['dag_id'] == row['dag_id']) & 
+                                (df['task_id'].isin(upstreams)) & 
+                                (df['task_state'].isin(['failed', 'upstream_failed']))]
+            if not upstream_fails.empty:
+                cause = f"upstream_failed: {','.join(upstream_fails['task_id'].tolist())}"
 
-            severity = "HIGH" if try_number > 1 else "MEDIUM"
-            root_cause = task_id if task_state == 'failed' else 'upstream_failure'
-            action = f"Investigate {task_id} in DAG {dag_id} (operator={row.get('operator')})"
+        severity = "HIGH" if row.get('try_number', 0) > 1 else "MEDIUM"
+        rca_rows.append({
+            'dag_id': row['dag_id'],
+            'task_id': row['task_id'],
+            'task_state': row['task_state'],
+            'severity': severity,
+            'root_cause': cause,
+            'operator': row.get('operator'),
+            'task_duration_sec': row.get('task_duration_seconds'),
+            'upstream_tasks': upstreams,
+        })
+        logging.info(f"DAG={row['dag_id']}, Task={row['task_id']} failed, Cause={cause}")
 
-            summary_rows.append({
-                'dag_id': dag_id,
-                'task_id': task_id,
-                'task_state': task_state,
-                'try_number': try_number,
-                'duration_sec': duration,
-                'severity': severity,
-                'root_cause': root_cause,
-                'action_needed': action,
-            })
-
-    if summary_rows:
-        rca_df = pd.DataFrame(summary_rows)
-        logging.info("\n" + rca_df.to_string(index=False))
-        # push the RCA summary for downstream use if needed
-        context['ti'].xcom_push(key='rca_summary', value=rca_df.to_json(orient='records'))
-    else:
-        logging.info("RCA completed — no actionable failures found.")
+    if rca_rows:
+        rca_df = pd.DataFrame(rca_rows)
+        context['ti'].xcom_push(key='rca_df', value=rca_df.to_json(orient='records'))
 
 
-# -----------------------
-# Executive Console Report
-# -----------------------
-def print_executive_summary(**context):
-    """
-    Reads metadata_df from XCom and prints a compact executive summary to logs.
-    """
+# -----------------------------
+# Step 3: Load to BigQuery
+# -----------------------------
+def load_to_bigquery(**context):
     df_json = context['ti'].xcom_pull(task_ids='extract_metadata', key='metadata_df')
     if not df_json:
-        logging.warning("No data found for executive summary.")
+        logging.warning("No data to load to BigQuery.")
         return
 
-    try:
-        df = pd.read_json(df_json)
-    except ValueError:
-        df = pd.DataFrame()
-
+    df = pd.read_json(df_json)
     if df.empty:
-        logging.info("No CDP latest-run data to report.")
+        logging.info("No rows to load to BigQuery.")
+        return
+
+    bq_hook = BigQueryHook(gcp_conn_id='google_cloud_default', use_legacy_sql=False)
+    client = bq_hook.get_client()
+
+    table_id = f"{client.project}.{BQ_DATASET}.{BQ_TABLE}"
+    logging.info(f"Loading {len(df)} rows into BigQuery table {table_id}...")
+
+    job = client.load_table_from_dataframe(df, table_id)
+    job.result()
+
+    logging.info(f"✅ BigQuery load complete: {len(df)} rows loaded.")
+
+
+# -----------------------------
+# Step 4: Executive Summary
+# -----------------------------
+def print_executive_summary(**context):
+    df_json = context['ti'].xcom_pull(task_ids='extract_metadata', key='metadata_df')
+    if not df_json:
+        logging.warning("No data for summary.")
+        return
+
+    df = pd.read_json(df_json)
+    if df.empty:
+        logging.info("No data for reporting.")
         return
 
     total_dags = df['dag_id'].nunique()
     total_tasks = len(df)
-    failed_tasks = len(df[df['task_state'].isin(['failed', 'upstream_failed'])])
-    success_tasks = len(df[df['task_state'] == 'success'])
-    success_rate = (success_tasks / total_tasks * 100) if total_tasks > 0 else 0.0
+    failed = len(df[df['task_state'].isin(['failed', 'upstream_failed'])])
+    success = len(df[df['task_state'] == 'success'])
+    success_rate = (success / total_tasks) * 100 if total_tasks else 0
 
     logging.info("=" * 100)
     logging.info("AIRFLOW CDP EXECUTIVE SUMMARY (LATEST RUNS)")
     logging.info("=" * 100)
-    logging.info(f"  Monitored CDP DAGs: {total_dags}")
-    logging.info(f"  Total Tasks (latest run): {total_tasks}")
-    logging.info(f"  Successful: {success_tasks}")
-    logging.info(f"  Failed: {failed_tasks}")
-    logging.info(f"  Success Rate: {success_rate:.1f}%")
-    logging.info("-" * 100)
-
-    dag_summary = (
-        df.groupby(['dag_id', 'dag_state'])
-          .agg(total_tasks=('task_id', 'count'),
-               success=('task_state', lambda x: (x == 'success').sum()),
-               failed=('task_state', lambda x: (x.isin(['failed', 'upstream_failed'])).sum()))
-          .reset_index()
-    )
-
-    for _, row in dag_summary.iterrows():
-        symbol = "✅" if row['dag_state'] == 'success' else "❌" if row['dag_state'] == 'failed' else "⏳"
-        logging.info(f"{symbol} DAG: {row['dag_id']} | Status: {row['dag_state']} | Tasks: {row['total_tasks']} "
-                     f"(✓{row['success']} ✗{row['failed']})")
-
-    logging.info("=" * 100)
-    logging.info("END OF REPORT")
+    logging.info(f"Monitored DAGs: {total_dags}")
+    logging.info(f"Total Tasks: {total_tasks}")
+    logging.info(f"Success: {success} | Failed: {failed} | Success Rate: {success_rate:.1f}%")
     logging.info("=" * 100)
 
 
-# -----------------------
+# -----------------------------
 # DAG Definition
-# -----------------------
+# -----------------------------
 with DAG(
-    dag_id='airflow_cdp_monitoring',
+    dag_id='airflow_cdp_monitoring_bq',
     default_args=DEFAULT_ARGS,
-    description='Simplified real-time Airflow monitoring for CDP-tagged DAGs',
+    description='Real-time Airflow CDP DAG monitoring with lineage, RCA, and BigQuery export',
     schedule_interval='0 * * * *',  # hourly
     start_date=datetime(2025, 1, 1),
     catchup=False,
-    tags=['monitoring', 'cdp'],
     max_active_runs=1,
+    tags=['monitoring', 'cdp', 'bigquery'],
 ) as dag:
 
     extract_metadata = PythonOperator(
@@ -266,10 +229,16 @@ with DAG(
         provide_context=True,
     )
 
-    print_report = PythonOperator(
+    load_bq = PythonOperator(
+        task_id='load_to_bigquery',
+        python_callable=load_to_bigquery,
+        provide_context=True,
+    )
+
+    print_summary = PythonOperator(
         task_id='print_executive_summary',
         python_callable=print_executive_summary,
         provide_context=True,
     )
 
-    extract_metadata >> root_cause_analysis >> print_report
+    extract_metadata >> root_cause_analysis >> load_bq >> print_summary
