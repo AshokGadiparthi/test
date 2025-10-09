@@ -1,86 +1,14 @@
-def load_to_bigquery(**context):
-    import pandas as pd
-    import logging
-    from google.cloud import bigquery
-    from airflow.providers.google.cloud.hooks.bigquery import BigQueryHook
-
-    df_json = context['ti'].xcom_pull(task_ids='extract_metadata', key='metadata_df')
-    if not df_json:
-        logging.warning("No data to load to BigQuery.")
-        return
-    df = pd.read_json(df_json)
-    if df.empty:
-        logging.info("No rows to load.")
-        return
-
-    bq_hook = BigQueryHook(gcp_conn_id='google_cloud_default', use_legacy_sql=False)
-    client = bq_hook.get_client()
-    dataset = "dbtdatamesh"
-    table = "cdp_monitor_latest"
-    table_id = f"{client.project}.{dataset}.{table}"
-
-    # --- Define schema (matches table DDL) ---
-    schema = [
-        bigquery.SchemaField("dag_id", "STRING"),
-        bigquery.SchemaField("run_id", "STRING"),
-        bigquery.SchemaField("execution_date", "TIMESTAMP"),
-        bigquery.SchemaField("dag_state", "STRING"),
-        bigquery.SchemaField("start_date", "TIMESTAMP"),
-        bigquery.SchemaField("end_date", "TIMESTAMP"),
-        bigquery.SchemaField("dag_duration_seconds", "FLOAT"),
-        bigquery.SchemaField("task_id", "STRING"),
-        bigquery.SchemaField("task_state", "STRING"),
-        bigquery.SchemaField("operator", "STRING"),
-        bigquery.SchemaField("task_start_date", "TIMESTAMP"),
-        bigquery.SchemaField("task_end_date", "TIMESTAMP"),
-        bigquery.SchemaField("task_duration_seconds", "FLOAT"),
-        bigquery.SchemaField("queue_wait_seconds", "FLOAT"),
-        bigquery.SchemaField("try_number", "INTEGER"),
-        bigquery.SchemaField("max_tries", "INTEGER"),
-        bigquery.SchemaField("extracted_at", "TIMESTAMP")
-    ]
-
-    # --- Stage data to temporary BigQuery table ---
-    temp_table_id = f"{dataset}.temp_cdp_monitor_{int(pd.Timestamp.utcnow().timestamp())}"
-
-    job_config = bigquery.LoadJobConfig(
-        schema=schema,
-        write_disposition="WRITE_TRUNCATE"
-    )
-    job = client.load_table_from_dataframe(df, temp_table_id, job_config=job_config)
-    job.result()
-    logging.info(f"✅ Loaded {len(df)} rows to temporary table {temp_table_id}")
-
-    # --- Perform MERGE (Upsert) ---
-    merge_sql = f"""
-    MERGE `{table_id}` T
-    USING `{temp_table_id}` S
-    ON T.dag_id = S.dag_id
-    WHEN MATCHED THEN
-      UPDATE SET
-        run_id = S.run_id,
-        execution_date = S.execution_date,
-        dag_state = S.dag_state,
-        start_date = S.start_date,
-        end_date = S.end_date,
-        dag_duration_seconds = S.dag_duration_seconds,
-        task_id = S.task_id,
-        task_state = S.task_state,
-        operator = S.operator,
-        task_start_date = S.task_start_date,
-        task_end_date = S.task_end_date,
-        task_duration_seconds = S.task_duration_seconds,
-        queue_wait_seconds = S.queue_wait_seconds,
-        try_number = S.try_number,
-        max_tries = S.max_tries,
-        extracted_at = S.extracted_at
-    WHEN NOT MATCHED THEN
-      INSERT ROW;
-    """
-    query_job = client.query(merge_sql)
-    query_job.result()
-    logging.info(f"✅ Upsert completed into {table_id}")
-
-    # --- Cleanup temp table ---
-    client.delete_table(temp_table_id, not_found_ok=True)
-    logging.info(f"🧹 Temporary table {temp_table_id} deleted.")
+pCollection
+.apply(Window.<KV<String, Mutation>>into(FixedWindows.of(Duration.standardSeconds(10)))
+.triggering(Repeatedly.forever(
+AfterProcessingTime.pastFirstElementInPane().plusDelayOf(Duration.standardSeconds(5))))
+.discardingFiredPanes()
+.withAllowedLateness(Duration.ZERO))
+.apply(GroupIntoBatches.ofSize(500)) // group records into manageable batches
+.apply(SpannerIO.write()
+.withInstanceId("instance")
+.withDatabaseId("db")
+.withMaxNumMutations(1000)
+.withBatchSizeBytes(512 * 1024)
+.withMaxCumulativeBacklogBytes(20 * 1024 * 1024) // 20MB backlog
+.withRetryPolicy(RetryPolicy.exponentialBackoff(5)));
