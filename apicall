@@ -1,23 +1,10 @@
-Before
-Issues were found after business impact.
+#!/bin/bash
+while true; do
+echo "Refreshing OIDC token..."
+curl -s -H "Metadata-Flavor: Google" \
+http://metadata/computeMetadata/v1/instance/service-accounts/default/identity?audience=https://example.com \
+-o /opt/keys/temp-token.json
 
-Needed manual log checks across jobs.
-
-Took hours to find root cause and fix issues.
-
-No single dashboard to monitor data flow.
-
-Teams had to wait for user complaints or validation to act.
-
-After
-Real-time alerts for failures and slowdowns.
-
-Single dashboard for Dataflow, BigQuery, Spanner job health.
-
-Faster root cause analysis – reduced recovery time by ~70%.
-
-Improved data reliability and on-time delivery.
-
-Less manual work, more proactive monitoring.
-
-Higher confidence for business teams using CDP data.
+export GOOGLE_APPLICATION_CREDENTIALS=/opt/keys/temp-token.json
+sleep 3000 # refresh every 50 minutes
+done
