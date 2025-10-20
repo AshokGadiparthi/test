@@ -1,10 +1,42 @@
 #!/bin/bash
-while true; do
-echo "Refreshing OIDC token..."
-curl -s -H "Metadata-Flavor: Google" \
-http://metadata/computeMetadata/v1/instance/service-accounts/default/identity?audience=https://example.com \
--o /opt/keys/temp-token.json
 
-export GOOGLE_APPLICATION_CREDENTIALS=/opt/keys/temp-token.json
-sleep 3000 # refresh every 50 minutes
+# Path for storing OIDC token
+TOKEN_PATH="/opt/keys/temp-token.json"
+APP_JAR="/opt/app/yourapp.jar"
+AUDIENCE="https://example.com"
+
+# Function to refresh OIDC token
+refresh_token() {
+  echo "$(date '+%Y-%m-%d %H:%M:%S') - Refreshing OIDC token..."
+  curl -s -H "Metadata-Flavor: Google" \
+    "http://metadata/computeMetadata/v1/instance/service-accounts/default/identity?audience=${AUDIENCE}" \
+    -o "$TOKEN_PATH"
+
+  export GOOGLE_APPLICATION_CREDENTIALS="$TOKEN_PATH"
+}
+
+# Function to start your Spring Boot app
+start_app() {
+  echo "$(date '+%Y-%m-%d %H:%M:%S') - Starting Spring Boot application..."
+  java -jar "$APP_JAR" &
+  APP_PID=$!
+}
+
+# Function to check and restart app if needed
+check_app() {
+  if ! ps -p $APP_PID > /dev/null; then
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - App stopped, restarting..."
+    start_app
+  fi
+}
+
+# Initial startup
+refresh_token
+start_app
+
+# Loop for periodic refresh and health check
+while true; do
+  sleep 3000  # ~50 minutes
+  refresh_token
+  check_app
 done
