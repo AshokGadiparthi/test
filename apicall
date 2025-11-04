@@ -1,128 +1,63 @@
-Perfect 👍 — you’re using the **`serlesen/fullstack-oauth2`** pattern, which was designed for validating tokens from an external provider (Google) — *not* for redirect-based sign-in.
+package com.sergio.oauth2.backend.controllers;
 
-Right now your backend is configured as a **Resource Server** (`opaqueToken`), meaning it expects the Angular app to already have a valid access token and simply validates it.
-If you actually want **browser login with redirect → Google SSO → Spring Boot → Angular**, you need to change it from “resource server” mode to “client login” mode.
+import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeRequestUrl;
+import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeTokenRequest;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.gson.GsonFactory;
+import com.sergio.oauth2.backend.dtos.TokenDto;
+import com.sergio.oauth2.backend.dtos.UrlDto;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
-Below I’ll show you the step-by-step changes class by class.
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.util.Arrays;
 
----
-
-## 🔧 1️⃣ `SecurityConfig.java` → convert from Resource Server to OAuth 2 Login
-
-### Before
-
-```java
-.oauth2ResourceServer(c -> c.opaqueToken(Customizer.withDefaults()));
-```
-
-### After
-
-```java
-.oauth2Login(oauth -> oauth
-        .defaultSuccessUrl("http://localhost:4200/home", true)
-)
-.logout(logout -> logout
-        .logoutSuccessUrl("http://localhost:4200/")
-);
-```
-
-Also change the session policy: for a login flow you can keep stateless = true if you use JWT cookies, but normally use default (STATEFUL) first.
-
-Full class:
-
-```java
-@Configuration
-@EnableWebSecurity
+@RestController
 @RequiredArgsConstructor
-public class SecurityConfig {
+public class AuthController {
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-            .cors(Customizer.withDefaults())
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/", "/error", "/public/**").permitAll()
-                .anyRequest().authenticated()
-            )
-            .oauth2Login(oauth -> oauth
-                .defaultSuccessUrl("http://localhost:4200/home", true)
-            )
-            .logout(logout -> logout
-                .logoutSuccessUrl("http://localhost:4200/")
-            );
-        return http.build();
+    @Value("${spring.security.oauth2.client.registration.google.client-id}")
+    private String clientId;
+
+    @Value("${spring.security.oauth2.client.registration.google.client-secret}")
+    private String clientSecret;
+
+    @GetMapping("/auth/url")
+    public ResponseEntity<UrlDto> auth() {
+        String url = new GoogleAuthorizationCodeRequestUrl(
+                clientId,
+                "http://localhost:8080/auth/callback",
+                Arrays.asList("email", "profile", "openid")
+        ).build();
+
+        return ResponseEntity.ok(new UrlDto(url));
+    }
+
+    @GetMapping("/auth/callback")
+    public ResponseEntity<TokenDto> callback(@RequestParam("code") String code)
+            throws URISyntaxException {
+
+        String token;
+        try {
+            token = new GoogleAuthorizationCodeTokenRequest(
+                    new NetHttpTransport(),
+                    new GsonFactory(),
+                    clientId,
+                    clientSecret,
+                    code,
+                    "http://localhost:8080/auth/callback"
+            ).execute().getAccessToken();
+        } catch (IOException e) {
+            System.err.println(e.getMessage());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        return ResponseEntity.ok(new TokenDto(token));
     }
 }
-```
-
-✅ Remove the `userInfoClient` injection and all `OpaqueTokenIntrospector` bits — they are not needed anymore.
-
----
-
-## 🔧 2️⃣ `WebConfig.java`
-
-Keep as is — your CORS config looks good, but allow credentials if you’ll use cookies:
-
-```java
-registry.addMapping("/**")
-        .allowedMethods("GET", "POST", "OPTIONS")
-        .allowedOrigins("http://localhost:4200")
-        .allowCredentials(true);
-```
-
----
-
-## 🔧 3️⃣ `WebClientConfig.java`
-
-You can **delete this class entirely** for the login flow.
-It’s only needed for token introspection (resource server).
-After switching to OAuth2 login, Spring Security will automatically call Google’s user-info endpoint via its own client.
-
----
-
-## 🔧 4️⃣ `GoogleOpaqueTokenIntrospector.java`
-
-Also **delete this class** — not used anymore.
-OAuth2 Login handles token exchange and user info automatically.
-
----
-
-## ✅ Add/Update `application.yml`
-
-```yaml
-spring:
-  security:
-    oauth2:
-      client:
-        registration:
-          google:
-            client-id: YOUR_CLIENT_ID
-            client-secret: YOUR_CLIENT_SECRET
-            scope:
-              - openid
-              - email
-              - profile
-            redirect-uri: "{baseUrl}/login/oauth2/code/google"
-        provider:
-          google:
-            authorization-uri: https://accounts.google.com/o/oauth2/v2/auth
-            token-uri: https://oauth2.googleapis.com/token
-            user-info-uri: https://www.googleapis.com/oauth2/v3/userinfo
-            user-name-attribute: sub
-```
-
----
-
-## ✅ Final flow
-
-1. Angular sends browser to
-   `http://localhost:8080/oauth2/authorization/google`
-2. Google login page appears → user signs in.
-3. Google redirects back to
-   `http://localhost:8080/login/oauth2/code/google`
-4. Spring Boot exchanges the code for token and authenticates.
-5. User is redirected to `http://localhost:4200/home`.
-
----
-
-Would you like me to show how to return the logged-in user’s details (email, name) to your Angular app after login?
