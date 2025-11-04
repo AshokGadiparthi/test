@@ -1,58 +1,14 @@
-package com.sergio.oauth2.backend.config;
+import { Component, OnInit } from '@angular/core';
 
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+@Component({
+  selector: 'app-login-form',
+  templateUrl: './login-form.component.html',
+  styleUrls: ['./login-form.component.css']
+})
+export class LoginFormComponent implements OnInit {
 
-@Configuration
-public class WebConfig {
-
-    @Bean
-    public WebMvcConfigurer corsConfigurer() {
-        return new WebMvcConfigurer() {
-            @Override
-            public void addCorsMappings(CorsRegistry registry) {
-                registry.addMapping("/**")
-                        .allowedOrigins("http://localhost:4200") // ✅ Your Angular app
-                        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                        .allowedHeaders("*")
-                        .allowCredentials(true); // ✅ Important for session/cookies
-            }
-        };
-    }
-}
-
-
-
-package com.sergio.oauth2.backend.config;
-
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.Customizer;
-import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.web.SecurityFilterChain;
-
-@Configuration
-@EnableWebSecurity
-public class SecurityConfig {
-
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-            .cors(Customizer.withDefaults())   // ✅ Add this line here
-            .csrf(csrf -> csrf.disable())      // disable CSRF for Angular dev
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/", "/error", "/public/**").permitAll()
-                .anyRequest().authenticated()
-            )
-            .oauth2Login(oauth -> oauth
-                .defaultSuccessUrl("http://localhost:4200/home", true)
-            )
-            .logout(logout -> logout
-                .logoutSuccessUrl("http://localhost:4200/")
-            );
-        return http.build();
-    }
+  ngOnInit(): void {
+    // ✅ Redirect immediately to Spring Boot's OAuth2 login endpoint
+    window.location.href = 'http://localhost:8080/oauth2/authorization/google';
+  }
 }
