@@ -1,35 +1,93 @@
-Got it 👍 — you want to **keep using the “User OAuth (personal)” flow** (i.e., browser redirect → Google login → back to your app), **not** the service account.
+Perfect 👍 — you’re using the **`serlesen/fullstack-oauth2`** pattern, which was designed for validating tokens from an external provider (Google) — *not* for redirect-based sign-in.
 
-Here’s exactly how to fix your setup for that flow 👇
+Right now your backend is configured as a **Resource Server** (`opaqueToken`), meaning it expects the Angular app to already have a valid access token and simply validates it.
+If you actually want **browser login with redirect → Google SSO → Spring Boot → Angular**, you need to change it from “resource server” mode to “client login” mode.
 
----
-
-## ✅ Correct Configuration for **User OAuth (Google SSO)**
-
-### 1️⃣ Google Cloud Console setup
-
-Create credentials of type **OAuth client ID → Web Application**
-
-Add:
-
-**Authorized JavaScript origins**
-
-```
-http://localhost:4200
-http://localhost:8080
-```
-
-**Authorized redirect URIs**
-
-```
-http://localhost:8080/login/oauth2/code/google
-```
-
-> These must match your Spring Boot app URL that handles the login callback.
+Below I’ll show you the step-by-step changes class by class.
 
 ---
 
-### 2️⃣ Spring Boot `application.yml`
+## 🔧 1️⃣ `SecurityConfig.java` → convert from Resource Server to OAuth 2 Login
+
+### Before
+
+```java
+.oauth2ResourceServer(c -> c.opaqueToken(Customizer.withDefaults()));
+```
+
+### After
+
+```java
+.oauth2Login(oauth -> oauth
+        .defaultSuccessUrl("http://localhost:4200/home", true)
+)
+.logout(logout -> logout
+        .logoutSuccessUrl("http://localhost:4200/")
+);
+```
+
+Also change the session policy: for a login flow you can keep stateless = true if you use JWT cookies, but normally use default (STATEFUL) first.
+
+Full class:
+
+```java
+@Configuration
+@EnableWebSecurity
+@RequiredArgsConstructor
+public class SecurityConfig {
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+            .cors(Customizer.withDefaults())
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/", "/error", "/public/**").permitAll()
+                .anyRequest().authenticated()
+            )
+            .oauth2Login(oauth -> oauth
+                .defaultSuccessUrl("http://localhost:4200/home", true)
+            )
+            .logout(logout -> logout
+                .logoutSuccessUrl("http://localhost:4200/")
+            );
+        return http.build();
+    }
+}
+```
+
+✅ Remove the `userInfoClient` injection and all `OpaqueTokenIntrospector` bits — they are not needed anymore.
+
+---
+
+## 🔧 2️⃣ `WebConfig.java`
+
+Keep as is — your CORS config looks good, but allow credentials if you’ll use cookies:
+
+```java
+registry.addMapping("/**")
+        .allowedMethods("GET", "POST", "OPTIONS")
+        .allowedOrigins("http://localhost:4200")
+        .allowCredentials(true);
+```
+
+---
+
+## 🔧 3️⃣ `WebClientConfig.java`
+
+You can **delete this class entirely** for the login flow.
+It’s only needed for token introspection (resource server).
+After switching to OAuth2 login, Spring Security will automatically call Google’s user-info endpoint via its own client.
+
+---
+
+## 🔧 4️⃣ `GoogleOpaqueTokenIntrospector.java`
+
+Also **delete this class** — not used anymore.
+OAuth2 Login handles token exchange and user info automatically.
+
+---
+
+## ✅ Add/Update `application.yml`
 
 ```yaml
 spring:
@@ -55,86 +113,16 @@ spring:
 
 ---
 
-### 3️⃣ Spring Boot `SecurityConfig.java`
+## ✅ Final flow
 
-```java
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.web.SecurityFilterChain;
-
-@Configuration
-public class SecurityConfig {
-
-    @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/", "/error", "/public/**").permitAll()
-                .anyRequest().authenticated()
-            )
-            .oauth2Login(oauth -> oauth
-                .defaultSuccessUrl("http://localhost:4200/home", true)
-            )
-            .logout(logout -> logout
-                .logoutSuccessUrl("http://localhost:4200/")
-            );
-        return http.build();
-    }
-}
-```
+1. Angular sends browser to
+   `http://localhost:8080/oauth2/authorization/google`
+2. Google login page appears → user signs in.
+3. Google redirects back to
+   `http://localhost:8080/login/oauth2/code/google`
+4. Spring Boot exchanges the code for token and authenticates.
+5. User is redirected to `http://localhost:4200/home`.
 
 ---
 
-### 4️⃣ Login URL (for Angular or direct browser)
-
-Use:
-
-```
-http://localhost:8080/oauth2/authorization/google
-```
-
-Spring Security will:
-
-1. Redirect the user to **Google login**.
-2. Google returns to `/login/oauth2/code/google`.
-3. Spring exchanges the code → token → retrieves profile → authenticates the user.
-
----
-
-### 5️⃣ CORS configuration
-
-```java
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-
-@Configuration
-public class WebConfig {
-    @Bean
-    public WebMvcConfigurer corsConfigurer() {
-        return new WebMvcConfigurer() {
-            @Override
-            public void addCorsMappings(CorsRegistry registry) {
-                registry.addMapping("/**")
-                        .allowedOrigins("http://localhost:4200")
-                        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                        .allowCredentials(true);
-            }
-        };
-    }
-}
-```
-
----
-
-### ✅ Summary of your chosen flow
-
-| Flow Type                 | Uses Browser Redirect? | Requires Client ID/Secret? | Uses JSON Key? | Intended For               |
-| ------------------------- | ---------------------- | -------------------------- | -------------- | -------------------------- |
-| **User OAuth (personal)** | ✅ Yes                  | ✅ Yes                      | ❌ No           | Human sign-in (Google SSO) |
-
----
-
-If you want, I can show a **small working example** (backend + frontend sequence diagram) showing exactly how `Spring Boot ↔ Google ↔ Angular` interact during this OAuth login flow. Would you like that?
+Would you like me to show how to return the logged-in user’s details (email, name) to your Angular app after login?
