@@ -1,42 +1,140 @@
-#!/bin/bash
+Got it 👍 — you want to **keep using the “User OAuth (personal)” flow** (i.e., browser redirect → Google login → back to your app), **not** the service account.
 
-# Path for storing OIDC token
-TOKEN_PATH="/opt/keys/temp-token.json"
-APP_JAR="/opt/app/yourapp.jar"
-AUDIENCE="https://example.com"
+Here’s exactly how to fix your setup for that flow 👇
 
-# Function to refresh OIDC token
-refresh_token() {
-  echo "$(date '+%Y-%m-%d %H:%M:%S') - Refreshing OIDC token..."
-  curl -s -H "Metadata-Flavor: Google" \
-    "http://metadata/computeMetadata/v1/instance/service-accounts/default/identity?audience=${AUDIENCE}" \
-    -o "$TOKEN_PATH"
+---
 
-  export GOOGLE_APPLICATION_CREDENTIALS="$TOKEN_PATH"
+## ✅ Correct Configuration for **User OAuth (Google SSO)**
+
+### 1️⃣ Google Cloud Console setup
+
+Create credentials of type **OAuth client ID → Web Application**
+
+Add:
+
+**Authorized JavaScript origins**
+
+```
+http://localhost:4200
+http://localhost:8080
+```
+
+**Authorized redirect URIs**
+
+```
+http://localhost:8080/login/oauth2/code/google
+```
+
+> These must match your Spring Boot app URL that handles the login callback.
+
+---
+
+### 2️⃣ Spring Boot `application.yml`
+
+```yaml
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: YOUR_CLIENT_ID
+            client-secret: YOUR_CLIENT_SECRET
+            scope:
+              - openid
+              - email
+              - profile
+            redirect-uri: "{baseUrl}/login/oauth2/code/google"
+        provider:
+          google:
+            authorization-uri: https://accounts.google.com/o/oauth2/v2/auth
+            token-uri: https://oauth2.googleapis.com/token
+            user-info-uri: https://www.googleapis.com/oauth2/v3/userinfo
+            user-name-attribute: sub
+```
+
+---
+
+### 3️⃣ Spring Boot `SecurityConfig.java`
+
+```java
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.web.SecurityFilterChain;
+
+@Configuration
+public class SecurityConfig {
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/", "/error", "/public/**").permitAll()
+                .anyRequest().authenticated()
+            )
+            .oauth2Login(oauth -> oauth
+                .defaultSuccessUrl("http://localhost:4200/home", true)
+            )
+            .logout(logout -> logout
+                .logoutSuccessUrl("http://localhost:4200/")
+            );
+        return http.build();
+    }
 }
+```
 
-# Function to start your Spring Boot app
-start_app() {
-  echo "$(date '+%Y-%m-%d %H:%M:%S') - Starting Spring Boot application..."
-  java -jar "$APP_JAR" &
-  APP_PID=$!
+---
+
+### 4️⃣ Login URL (for Angular or direct browser)
+
+Use:
+
+```
+http://localhost:8080/oauth2/authorization/google
+```
+
+Spring Security will:
+
+1. Redirect the user to **Google login**.
+2. Google returns to `/login/oauth2/code/google`.
+3. Spring exchanges the code → token → retrieves profile → authenticates the user.
+
+---
+
+### 5️⃣ CORS configuration
+
+```java
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class WebConfig {
+    @Bean
+    public WebMvcConfigurer corsConfigurer() {
+        return new WebMvcConfigurer() {
+            @Override
+            public void addCorsMappings(CorsRegistry registry) {
+                registry.addMapping("/**")
+                        .allowedOrigins("http://localhost:4200")
+                        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                        .allowCredentials(true);
+            }
+        };
+    }
 }
+```
 
-# Function to check and restart app if needed
-check_app() {
-  if ! ps -p $APP_PID > /dev/null; then
-    echo "$(date '+%Y-%m-%d %H:%M:%S') - App stopped, restarting..."
-    start_app
-  fi
-}
+---
 
-# Initial startup
-refresh_token
-start_app
+### ✅ Summary of your chosen flow
 
-# Loop for periodic refresh and health check
-while true; do
-  sleep 3000  # ~50 minutes
-  refresh_token
-  check_app
-done
+| Flow Type                 | Uses Browser Redirect? | Requires Client ID/Secret? | Uses JSON Key? | Intended For               |
+| ------------------------- | ---------------------- | -------------------------- | -------------- | -------------------------- |
+| **User OAuth (personal)** | ✅ Yes                  | ✅ Yes                      | ❌ No           | Human sign-in (Google SSO) |
+
+---
+
+If you want, I can show a **small working example** (backend + frontend sequence diagram) showing exactly how `Spring Boot ↔ Google ↔ Angular` interact during this OAuth login flow. Would you like that?
