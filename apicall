@@ -1,33 +1,235 @@
-WITH normalized AS (
+Perfect, this helps.
+
+You already have step 4 (final table):
+
+vz-it-pr-hukv-cdwldo-0.vzw_cdp_prd_tbls.dq_cjcm_vs_spanner_mismatch_summary_rows
+-- col_name
+-- mismatch_count
+-- (optionally) total_cells_compared
+-- sample_mismatches (ARRAY<STRUCT<cust_id, acct_num, cust_line_seqid, cjcm_value, spanner_value>>)
+Now I’ll give you a world-class “step 5+” SQL layer that turns this into executive-grade dashboard data.
+
+1️⃣ Optional metadata: domain + criticality per column
+
+
+This makes the dashboard look intelligent (execs love “Domain + Criticality + Traffic Lights”).
+
+-- One-time setup table – you can maintain it manually
+CREATE OR REPLACE TABLE
+  `vz-it-pr-hukv-cdwldo-0.vzw_cdp_prd_tbls.dq_cjcm_vs_spanner_column_meta` AS
+SELECT 'wless_protect_plan_ind'   AS col_name, 'ACCOUNT'  AS domain, 'HIGH'   AS criticality UNION ALL
+SELECT 'youtube_prem_inact_days'  AS col_name, 'ACCOUNT'  AS domain, 'MEDIUM' AS criticality UNION ALL
+SELECT 'line_atdmomnt_nrt_prjctn_flg' AS col_name, 'LINE' AS domain, 'HIGH'   AS criticality;
+-- 👉 extend this with all important columns (can be exported from Excel etc.)
+2️⃣ Enriched column-risk summary (for grids + heatmaps)
+
+
+This is the core table to drive almost all charts.
+
+CREATE OR REPLACE TABLE
+  `vz-it-pr-hukv-cdwldo-0.vzw_cdp_prd_tbls.dq_cjcm_vs_spanner_column_risk_summary` AS
 SELECT
-CustID,
-AcctNum,
-CustLineSeqid,
+  s.col_name,
+  COALESCE(m.domain, 'UNKNOWN')       AS domain,
+  COALESCE(m.criticality, 'MEDIUM')   AS criticality,
 
--- Normalize CJCM
-(
-SELECT STRING_AGG(x, ', ' ORDER BY x)
-FROM UNNEST(
-REGEXP_EXTRACT_ALL(
-TO_JSON_STRING(CJCM_Value),
-r'"([^"]+)"'
+  s.total_cells_compared,
+  s.mismatch_count,
+  SAFE_DIVIDE(
+    s.total_cells_compared - s.mismatch_count,
+    s.total_cells_compared
+  ) * 100                               AS match_rate_pct,
+
+  -- Simple risk based on mismatch %
+  CASE
+    WHEN SAFE_DIVIDE(
+           s.total_cells_compared - s.mismatch_count,
+           s.total_cells_compared
+         ) * 100 >= 99.5
+      THEN 'GREEN'
+    WHEN SAFE_DIVIDE(
+           s.total_cells_compared - s.mismatch_count,
+           s.total_cells_compared
+         ) * 100 BETWEEN 98 AND 99.5
+      THEN 'AMBER'
+    ELSE 'RED'
+  END AS quality_status,
+
+  -- Numeric risk score (0 = best, 100 = worst)
+  100 - SAFE_DIVIDE(
+          s.total_cells_compared - s.mismatch_count,
+          s.total_cells_compared
+        ) * 100                        AS mismatch_pct,
+  CASE
+    WHEN COALESCE(m.criticality, 'MEDIUM') = 'HIGH'
+      THEN (100 - SAFE_DIVIDE(
+                     s.total_cells_compared - s.mismatch_count,
+                     s.total_cells_compared
+                   ) * 100) * 1.5   -- weight HIGH
+    WHEN COALESCE(m.criticality, 'MEDIUM') = 'LOW'
+      THEN (100 - SAFE_DIVIDE(
+                     s.total_cells_compared - s.mismatch_count,
+                     s.total_cells_compared
+                   ) * 100) * 0.5   -- weight LOW
+    ELSE (100 - SAFE_DIVIDE(
+                   s.total_cells_compared - s.mismatch_count,
+                   s.total_cells_compared
+                 ) * 100)
+  END AS weighted_risk_score
+FROM
+  `vz-it-pr-hukv-cdwldo-0.vzw_cdp_prd_tbls.dq_cjcm_vs_spanner_mismatch_summary_rows` s
+LEFT JOIN
+  `vz-it-pr-hukv-cdwldo-0.vzw_cdp_prd_tbls.dq_cjcm_vs_spanner_column_meta` m
+USING (col_name);
+How you’ll use this in UI
+Exec grid: order by weighted_risk_score DESC
+
+Heatmap: X = domain, Y = col_name, color = weighted_risk_score
+
+Traffic light badges: based on quality_status
+
+3️⃣ Global KPIs (top tiles for CXO dashboard)
+
+
+This is the upgraded version of step 5.
+
+CREATE OR REPLACE TABLE
+  `vz-it-pr-hukv-cdwldo-0.vzw_cdp_prd_tbls.dq_cjcm_vs_spanner_kpis` AS
+WITH base AS (
+  SELECT
+    COUNT(*)                                         AS total_columns,
+    SUM(total_cells_compared)                        AS total_cells,
+    SUM(mismatch_count)                              AS total_mismatches,
+    SUM(total_cells_compared - mismatch_count)       AS total_matches
+  FROM `vz-it-pr-hukv-cdwldo-0.vzw_cdp_prd_tbls.dq_cjcm_vs_spanner_mismatch_summary_rows`
+),
+bands AS (
+  SELECT
+    COUNTIF(match_rate_pct >= 99.5)                             AS green_columns,
+    COUNTIF(match_rate_pct BETWEEN 98 AND 99.5)                 AS amber_columns,
+    COUNTIF(match_rate_pct < 98)                                AS red_columns
+  FROM (
+    SELECT
+      SAFE_DIVIDE(
+        total_cells_compared - mismatch_count,
+        total_cells_compared
+      ) * 100 AS match_rate_pct
+    FROM `vz-it-pr-hukv-cdwldo-0.vzw_cdp_prd_tbls.dq_cjcm_vs_spanner_mismatch_summary_rows`
+  )
+),
+risk AS (
+  SELECT
+    AVG(weighted_risk_score) AS avg_weighted_risk
+  FROM `vz-it-pr-hukv-cdwldo-0.vzw_cdp_prd_tbls.dq_cjcm_vs_spanner_column_risk_summary`
 )
-) AS x
-) AS CJCM_Value_Ordered,
+SELECT
+  b.total_columns,
+  b.total_cells,
+  b.total_matches,
+  b.total_mismatches,
+  SAFE_DIVIDE(b.total_matches, b.total_cells) * 100 AS overall_match_rate_pct,
 
--- Normalize SPANNER
-(
-SELECT STRING_AGG(x, ', ' ORDER BY x)
-FROM UNNEST(
-REGEXP_EXTRACT_ALL(
-TO_JSON_STRING(Spanner_Value),
-r'"([^"]+)"'
-)
-) AS x
-) AS Spanner_Value_Ordered
+  g.green_columns,
+  g.amber_columns,
+  g.red_columns,
 
-FROM your_table
-)
+  r.avg_weighted_risk,
 
-SELECT *
-FROM normalized;
+  -- Executive-friendly readiness score (0–100, higher is better)
+  LEAST(
+    100,
+    GREATEST(
+      0,
+      SAFE_DIVIDE(b.total_matches, b.total_cells) * 100
+      - r.avg_weighted_risk * 0.3
+    )
+  ) AS go_live_readiness_score
+FROM base b
+CROSS JOIN bands g
+CROSS JOIN risk r;
+How this appears in dashboard
+
+
+Top tiles:
+
+Overall Match Rate – overall_match_rate_pct
+
+Go-Live Readiness Score – go_live_readiness_score
+
+Columns: Green / Amber / Red – green_columns, amber_columns, red_columns
+
+Total Data Points Compared – total_cells
+
+Total Mismatches – total_mismatches
+
+4️⃣ Domain-level summary (middle panel for execs)
+
+
+Execs love to see “Domains” (ACCOUNT, LINE, ORDER…) with traffic lights.
+
+CREATE OR REPLACE TABLE
+  `vz-it-pr-hukv-cdwldo-0.vzw_cdp_prd_tbls.dq_cjcm_vs_spanner_domain_summary` AS
+SELECT
+  domain,
+  COUNT(*) AS columns_in_domain,
+  SUM(total_cells_compared) AS total_cells,
+  SUM(mismatch_count) AS total_mismatches,
+  SAFE_DIVIDE(
+    SUM(total_cells_compared) - SUM(mismatch_count),
+    SUM(total_cells_compared)
+  ) * 100 AS match_rate_pct,
+  COUNTIF(quality_status = 'GREEN') AS green_columns,
+  COUNTIF(quality_status = 'AMBER') AS amber_columns,
+  COUNTIF(quality_status = 'RED')   AS red_columns,
+  AVG(weighted_risk_score)          AS avg_weighted_risk
+FROM
+  `vz-it-pr-hukv-cdwldo-0.vzw_cdp_prd_tbls.dq_cjcm_vs_spanner_column_risk_summary`
+GROUP BY
+  domain
+ORDER BY
+  avg_weighted_risk DESC;
+UI ideas
+Bar chart: Domain vs Match Rate
+
+Stacked bar: Green/Amber/Red per domain
+
+Click domain → list of columns (use column_risk_summary with a WHERE clause)
+
+5️⃣ Queries your UI can directly call
+
+
+5.1 Executive tiles
+SELECT * FROM
+  `vz-it-pr-hukv-cdwldo-0.vzw_cdp_prd_tbls.dq_cjcm_vs_spanner_kpis`;
+5.2 Domain summary grid / chart
+SELECT * FROM
+  `vz-it-pr-hukv-cdwldo-0.vzw_cdp_prd_tbls.dq_cjcm_vs_spanner_domain_summary`;
+5.3 Column list with risk + traffic light (main table for end users)
+SELECT
+  col_name,
+  domain,
+  criticality,
+  total_cells_compared,
+  mismatch_count,
+  match_rate_pct,
+  quality_status,
+  weighted_risk_score
+FROM
+  `vz-it-pr-hukv-cdwldo-0.vzw_cdp_prd_tbls.dq_cjcm_vs_spanner_column_risk_summary`
+ORDER BY
+  weighted_risk_score DESC;
+5.4 Column drill-down (you already have this pattern)
+SELECT
+  cust_id,
+  acct_num,
+  cust_line_seqid,
+  cjcm_value,
+  spanner_value
+FROM
+  UNNEST((
+    SELECT sample_mismatches
+    FROM `vz-it-pr-hukv-cdwldo-0.vzw_cdp_prd_tbls.dq_cjcm_vs_spanner_mismatch_summary_rows`
+    WHERE col_name = @column_name
+  ))
+ORDER BY cust_id, acct_num, cust_line_seqid;
+If you’d like, next step I can sketch the exact dashboard layout (which tiles, which chart, which query) in one diagram-style description so you can wire your UI straight to these tables with no confusion.
