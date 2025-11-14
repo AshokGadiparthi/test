@@ -1,32 +1,33 @@
+WITH normalized AS (
 SELECT
-*,
+CustID,
+AcctNum,
+CustLineSeqid,
 
--- Normalize CJCM value (works for array or string)
+-- Normalize CJCM
 (
-SELECT STRING_AGG(v, ', ' ORDER BY v)
+SELECT STRING_AGG(x, ', ' ORDER BY x)
 FROM UNNEST(
-SPLIT(
-CASE
-WHEN NOT REGEXP_CONTAINS(TO_JSON_STRING(CJCM_Value), r'^\["')
-THEN CJCM_Value
-ELSE ARRAY_TO_STRING(CJCM_Value, ',')
-END
-, ',')
-) AS v
+REGEXP_EXTRACT_ALL(
+TO_JSON_STRING(CJCM_Value),
+r'"([^"]+)"'
+)
+) AS x
 ) AS CJCM_Value_Ordered,
 
--- Normalize Spanner value
+-- Normalize SPANNER
 (
-SELECT STRING_AGG(v, ', ' ORDER BY v)
+SELECT STRING_AGG(x, ', ' ORDER BY x)
 FROM UNNEST(
-SPLIT(
-CASE
-WHEN NOT REGEXP_CONTAINS(TO_JSON_STRING(Spanner_Value), r'^\["')
-THEN Spanner_Value
-ELSE ARRAY_TO_STRING(Spanner_Value, ',')
-END
-, ',')
-) AS v
+REGEXP_EXTRACT_ALL(
+TO_JSON_STRING(Spanner_Value),
+r'"([^"]+)"'
+)
+) AS x
 ) AS Spanner_Value_Ordered
 
-FROM your_table;
+FROM your_table
+)
+
+SELECT *
+FROM normalized;
