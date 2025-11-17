@@ -1,235 +1,170 @@
-Perfect, this helps.
+package com.example.dataflow;
 
-You already have step 4 (final table):
+import com.google.api.services.bigquery.model.TableRow;
+import com.google.cloud.Timestamp;
+import com.google.cloud.spanner.Struct;
+import com.google.cloud.spanner.Type;
+import org.apache.beam.runners.dataflow.options.DataflowPipelineOptions;
+import org.apache.beam.sdk.Pipeline;
+import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
+import org.apache.beam.sdk.io.gcp.spanner.SpannerConfig;
+import org.apache.beam.sdk.io.gcp.spanner.SpannerIO;
+import org.apache.beam.sdk.options.Default;
+import org.apache.beam.sdk.options.Description;
+import org.apache.beam.sdk.options.PipelineOptionsFactory;
+import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.transforms.ParDo;
 
-vz-it-pr-hukv-cdwldo-0.vzw_cdp_prd_tbls.dq_cjcm_vs_spanner_mismatch_summary_rows
--- col_name
--- mismatch_count
--- (optionally) total_cells_compared
--- sample_mismatches (ARRAY<STRUCT<cust_id, acct_num, cust_line_seqid, cjcm_value, spanner_value>>)
-Now I’ll give you a world-class “step 5+” SQL layer that turns this into executive-grade dashboard data.
+/**
+ * FULL BACKFILL JOB:
+ *   Cloud Spanner  ->  BigQuery
+ *   Handles Spanner TIMESTAMP -> BigQuery DATETIME conversion.
+ */
+public class SpannerToBigQueryBatch {
 
-1️⃣ Optional metadata: domain + criticality per column
+    public interface Options extends DataflowPipelineOptions {
 
+        @Description("Cloud Spanner Instance ID")
+        String getSpannerInstanceId();
+        void setSpannerInstanceId(String id);
 
-This makes the dashboard look intelligent (execs love “Domain + Criticality + Traffic Lights”).
+        @Description("Cloud Spanner Database ID")
+        String getSpannerDatabaseId();
+        void setSpannerDatabaseId(String id);
 
--- One-time setup table – you can maintain it manually
-CREATE OR REPLACE TABLE
-  `vz-it-pr-hukv-cdwldo-0.vzw_cdp_prd_tbls.dq_cjcm_vs_spanner_column_meta` AS
-SELECT 'wless_protect_plan_ind'   AS col_name, 'ACCOUNT'  AS domain, 'HIGH'   AS criticality UNION ALL
-SELECT 'youtube_prem_inact_days'  AS col_name, 'ACCOUNT'  AS domain, 'MEDIUM' AS criticality UNION ALL
-SELECT 'line_atdmomnt_nrt_prjctn_flg' AS col_name, 'LINE' AS domain, 'HIGH'   AS criticality;
--- 👉 extend this with all important columns (can be exported from Excel etc.)
-2️⃣ Enriched column-risk summary (for grids + heatmaps)
+        @Description("Query to read Spanner data (SELECT * FROM table)")
+        String getSpannerQuery();
+        void setSpannerQuery(String sql);
 
+        @Description("Output BigQuery table (project:dataset.table)")
+        String getOutputTable();
+        void setOutputTable(String value);
 
-This is the core table to drive almost all charts.
+        @Description("Truncate output table first?")
+        @Default.Boolean(true)
+        Boolean getTruncateFirst();
+        void setTruncateFirst(Boolean value);
+    }
 
-CREATE OR REPLACE TABLE
-  `vz-it-pr-hukv-cdwldo-0.vzw_cdp_prd_tbls.dq_cjcm_vs_spanner_column_risk_summary` AS
-SELECT
-  s.col_name,
-  COALESCE(m.domain, 'UNKNOWN')       AS domain,
-  COALESCE(m.criticality, 'MEDIUM')   AS criticality,
+    public static void main(String[] args) {
 
-  s.total_cells_compared,
-  s.mismatch_count,
-  SAFE_DIVIDE(
-    s.total_cells_compared - s.mismatch_count,
-    s.total_cells_compared
-  ) * 100                               AS match_rate_pct,
+        PipelineOptionsFactory.register(Options.class);
+        Options options =
+                PipelineOptionsFactory.fromArgs(args)
+                        .withValidation()
+                        .as(Options.class);
 
-  -- Simple risk based on mismatch %
-  CASE
-    WHEN SAFE_DIVIDE(
-           s.total_cells_compared - s.mismatch_count,
-           s.total_cells_compared
-         ) * 100 >= 99.5
-      THEN 'GREEN'
-    WHEN SAFE_DIVIDE(
-           s.total_cells_compared - s.mismatch_count,
-           s.total_cells_compared
-         ) * 100 BETWEEN 98 AND 99.5
-      THEN 'AMBER'
-    ELSE 'RED'
-  END AS quality_status,
+        Pipeline p = Pipeline.create(options);
 
-  -- Numeric risk score (0 = best, 100 = worst)
-  100 - SAFE_DIVIDE(
-          s.total_cells_compared - s.mismatch_count,
-          s.total_cells_compared
-        ) * 100                        AS mismatch_pct,
-  CASE
-    WHEN COALESCE(m.criticality, 'MEDIUM') = 'HIGH'
-      THEN (100 - SAFE_DIVIDE(
-                     s.total_cells_compared - s.mismatch_count,
-                     s.total_cells_compared
-                   ) * 100) * 1.5   -- weight HIGH
-    WHEN COALESCE(m.criticality, 'MEDIUM') = 'LOW'
-      THEN (100 - SAFE_DIVIDE(
-                     s.total_cells_compared - s.mismatch_count,
-                     s.total_cells_compared
-                   ) * 100) * 0.5   -- weight LOW
-    ELSE (100 - SAFE_DIVIDE(
-                   s.total_cells_compared - s.mismatch_count,
-                   s.total_cells_compared
-                 ) * 100)
-  END AS weighted_risk_score
-FROM
-  `vz-it-pr-hukv-cdwldo-0.vzw_cdp_prd_tbls.dq_cjcm_vs_spanner_mismatch_summary_rows` s
-LEFT JOIN
-  `vz-it-pr-hukv-cdwldo-0.vzw_cdp_prd_tbls.dq_cjcm_vs_spanner_column_meta` m
-USING (col_name);
-How you’ll use this in UI
-Exec grid: order by weighted_risk_score DESC
+        // Spanner connection config
+        SpannerConfig spannerConfig =
+                SpannerConfig.create()
+                        .withInstanceId(options.getSpannerInstanceId())
+                        .withDatabaseId(options.getSpannerDatabaseId());
 
-Heatmap: X = domain, Y = col_name, color = weighted_risk_score
+        // 1) READ FROM SPANNER (full batch)
+        var spannerRows =
+                p.apply("ReadSpanner",
+                        SpannerIO.read()
+                                .withSpannerConfig(spannerConfig)
+                                .withQuery(options.getSpannerQuery())
+                                .withBatching(true) // critical for large tables
+                );
 
-Traffic light badges: based on quality_status
+        // 2) CONVERT Struct → TableRow with TYPE HANDLING
+        var bqRows =
+                spannerRows.apply("ConvertToBQ",
+                        ParDo.of(new StructToBQFn()));
 
-3️⃣ Global KPIs (top tiles for CXO dashboard)
+        // 3) WRITE TO BIGQUERY
+        BigQueryIO.Write<TableRow> write =
+                BigQueryIO.writeTableRows()
+                        .to(options.getOutputTable())
+                        .withMethod(BigQueryIO.WriteMethod.STORAGE_WRITE_API)
+                        .withCreateDisposition(BigQueryIO.Write.CreateDisposition.CREATE_IF_NEEDED);
 
+        if (options.getTruncateFirst()) {
+            write = write.withWriteDisposition(BigQueryIO.Write.WriteDisposition.WRITE_TRUNCATE);
+        } else {
+            write = write.withWriteDisposition(BigQueryIO.Write.WriteDisposition.WRITE_APPEND);
+        }
 
-This is the upgraded version of step 5.
+        bqRows.apply("WriteBQ", write);
 
-CREATE OR REPLACE TABLE
-  `vz-it-pr-hukv-cdwldo-0.vzw_cdp_prd_tbls.dq_cjcm_vs_spanner_kpis` AS
-WITH base AS (
-  SELECT
-    COUNT(*)                                         AS total_columns,
-    SUM(total_cells_compared)                        AS total_cells,
-    SUM(mismatch_count)                              AS total_mismatches,
-    SUM(total_cells_compared - mismatch_count)       AS total_matches
-  FROM `vz-it-pr-hukv-cdwldo-0.vzw_cdp_prd_tbls.dq_cjcm_vs_spanner_mismatch_summary_rows`
-),
-bands AS (
-  SELECT
-    COUNTIF(match_rate_pct >= 99.5)                             AS green_columns,
-    COUNTIF(match_rate_pct BETWEEN 98 AND 99.5)                 AS amber_columns,
-    COUNTIF(match_rate_pct < 98)                                AS red_columns
-  FROM (
-    SELECT
-      SAFE_DIVIDE(
-        total_cells_compared - mismatch_count,
-        total_cells_compared
-      ) * 100 AS match_rate_pct
-    FROM `vz-it-pr-hukv-cdwldo-0.vzw_cdp_prd_tbls.dq_cjcm_vs_spanner_mismatch_summary_rows`
-  )
-),
-risk AS (
-  SELECT
-    AVG(weighted_risk_score) AS avg_weighted_risk
-  FROM `vz-it-pr-hukv-cdwldo-0.vzw_cdp_prd_tbls.dq_cjcm_vs_spanner_column_risk_summary`
-)
-SELECT
-  b.total_columns,
-  b.total_cells,
-  b.total_matches,
-  b.total_mismatches,
-  SAFE_DIVIDE(b.total_matches, b.total_cells) * 100 AS overall_match_rate_pct,
+        p.run().waitUntilFinish();
+    }
 
-  g.green_columns,
-  g.amber_columns,
-  g.red_columns,
+    /**
+     * Converts Spanner Struct → BigQuery TableRow with proper type mapping.
+     *
+     * Special logic:
+     *   TIMESTAMP → BigQuery DATETIME (strip timezone)
+     */
+    public static class StructToBQFn extends DoFn<Struct, TableRow> {
 
-  r.avg_weighted_risk,
+        @ProcessElement
+        public void processElement(ProcessContext c) {
+            Struct record = c.element();
+            TableRow output = new TableRow();
 
-  -- Executive-friendly readiness score (0–100, higher is better)
-  LEAST(
-    100,
-    GREATEST(
-      0,
-      SAFE_DIVIDE(b.total_matches, b.total_cells) * 100
-      - r.avg_weighted_risk * 0.3
-    )
-  ) AS go_live_readiness_score
-FROM base b
-CROSS JOIN bands g
-CROSS JOIN risk r;
-How this appears in dashboard
+            for (int i = 0; i < record.getColumnCount(); i++) {
+                String col = record.getColumnName(i);
+                Type type = record.getColumnType(i);
 
+                if (record.isNull(i)) {
+                    output.set(col, null);
+                    continue;
+                }
 
-Top tiles:
+                switch (type.getCode()) {
+                    case BOOL:
+                        output.set(col, record.getBoolean(i));
+                        break;
 
-Overall Match Rate – overall_match_rate_pct
+                    case INT64:
+                        output.set(col, String.valueOf(record.getLong(i)));
+                        break;
 
-Go-Live Readiness Score – go_live_readiness_score
+                    case FLOAT64:
+                        output.set(col, record.getDouble(i));
+                        break;
 
-Columns: Green / Amber / Red – green_columns, amber_columns, red_columns
+                    case STRING:
+                        output.set(col, record.getString(i));
+                        break;
 
-Total Data Points Compared – total_cells
+                    case NUMERIC:
+                        output.set(col, record.getNumeric(i).toString());
+                        break;
 
-Total Mismatches – total_mismatches
+                    case JSON:
+                        output.set(col, record.getJson(i));
+                        break;
 
-4️⃣ Domain-level summary (middle panel for execs)
+                    case BYTES:
+                        output.set(col, record.getBytes(i).toBase64());
+                        break;
 
+                    case DATE:
+                        output.set(col, record.getDate(i).toString());
+                        break;
 
-Execs love to see “Domains” (ACCOUNT, LINE, ORDER…) with traffic lights.
+                    case TIMESTAMP:
+                        // ⭐️⭐️ KEY LOGIC: Convert TIMESTAMP → DATETIME ⭐️⭐️
+                        Timestamp ts = record.getTimestamp(i);
+                        
+                        // Strip timezone; keep date+time (BigQuery DATETIME format)
+                        String datetime = ts.toString().replace("Z", "").replace("T", " ");
+                        output.set(col, datetime);
+                        break;
 
-CREATE OR REPLACE TABLE
-  `vz-it-pr-hukv-cdwldo-0.vzw_cdp_prd_tbls.dq_cjcm_vs_spanner_domain_summary` AS
-SELECT
-  domain,
-  COUNT(*) AS columns_in_domain,
-  SUM(total_cells_compared) AS total_cells,
-  SUM(mismatch_count) AS total_mismatches,
-  SAFE_DIVIDE(
-    SUM(total_cells_compared) - SUM(mismatch_count),
-    SUM(total_cells_compared)
-  ) * 100 AS match_rate_pct,
-  COUNTIF(quality_status = 'GREEN') AS green_columns,
-  COUNTIF(quality_status = 'AMBER') AS amber_columns,
-  COUNTIF(quality_status = 'RED')   AS red_columns,
-  AVG(weighted_risk_score)          AS avg_weighted_risk
-FROM
-  `vz-it-pr-hukv-cdwldo-0.vzw_cdp_prd_tbls.dq_cjcm_vs_spanner_column_risk_summary`
-GROUP BY
-  domain
-ORDER BY
-  avg_weighted_risk DESC;
-UI ideas
-Bar chart: Domain vs Match Rate
+                    default:
+                        // fallback
+                        output.set(col, record.getColumnValue(i).toString());
+                }
+            }
 
-Stacked bar: Green/Amber/Red per domain
-
-Click domain → list of columns (use column_risk_summary with a WHERE clause)
-
-5️⃣ Queries your UI can directly call
-
-
-5.1 Executive tiles
-SELECT * FROM
-  `vz-it-pr-hukv-cdwldo-0.vzw_cdp_prd_tbls.dq_cjcm_vs_spanner_kpis`;
-5.2 Domain summary grid / chart
-SELECT * FROM
-  `vz-it-pr-hukv-cdwldo-0.vzw_cdp_prd_tbls.dq_cjcm_vs_spanner_domain_summary`;
-5.3 Column list with risk + traffic light (main table for end users)
-SELECT
-  col_name,
-  domain,
-  criticality,
-  total_cells_compared,
-  mismatch_count,
-  match_rate_pct,
-  quality_status,
-  weighted_risk_score
-FROM
-  `vz-it-pr-hukv-cdwldo-0.vzw_cdp_prd_tbls.dq_cjcm_vs_spanner_column_risk_summary`
-ORDER BY
-  weighted_risk_score DESC;
-5.4 Column drill-down (you already have this pattern)
-SELECT
-  cust_id,
-  acct_num,
-  cust_line_seqid,
-  cjcm_value,
-  spanner_value
-FROM
-  UNNEST((
-    SELECT sample_mismatches
-    FROM `vz-it-pr-hukv-cdwldo-0.vzw_cdp_prd_tbls.dq_cjcm_vs_spanner_mismatch_summary_rows`
-    WHERE col_name = @column_name
-  ))
-ORDER BY cust_id, acct_num, cust_line_seqid;
-If you’d like, next step I can sketch the exact dashboard layout (which tiles, which chart, which query) in one diagram-style description so you can wire your UI straight to these tables with no confusion.
+            c.output(output);
+        }
+    }
+}
