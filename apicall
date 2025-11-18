@@ -1,9 +1,10 @@
 BEGIN
 
-create or replace table `pr-hukv-edw-do-0.vzw_cdp_prd_tbls.nrt_vzw_cust_acct_line_prfl_dly_dedup` as
-(
+CREATE OR REPLACE TABLE `pr-hukv-edw-do-0.vzw_cdp_prd_tbls.nrt_vzw_cust_acct_line_prfl_dly_dedups_old` AS
+
+WITH unioned AS (
 -----------------------------------------------
--- BUCKET 1 (kept exactly same)
+-- BUCKET 1 (unchanged)
 -----------------------------------------------
 SELECT
 cust_id,
@@ -13,7 +14,8 @@ acct_num,
 line_eff_dt,
 line_term_dt,
 min_act_dt,
-min_stat_ind
+min_stat_ind,
+update_ts
 FROM `pr-hukv-edw-do-0.vzw_cdp_prd_tbls.nrt_vzw_cust_acct_line_prfl_dly`
 WHERE cust_line_seq_id LIKE '1%'
 AND CONCAT(cust_id, '-', acct_num, '-', min_act_dt) IN (
@@ -24,7 +26,7 @@ FROM `pr-hukv-edw-do-0.vzw_cdp_prd_tbls.nrt_vzw_cust_acct_line_prfl_dly`
 UNION ALL
 
 -----------------------------------------------
--- BUCKET 2 (kept exactly same)
+-- BUCKET 2 (unchanged)
 -----------------------------------------------
 SELECT
 cust_id,
@@ -34,7 +36,8 @@ acct_num,
 line_eff_dt,
 line_term_dt,
 min_act_dt,
-min_stat_ind
+min_stat_ind,
+update_ts
 FROM `pr-hukv-edw-do-0.vzw_cdp_prd_tbls.nrt_vzw_cust_acct_line_prfl_dly`
 WHERE cust_line_seq_id IS NOT NULL
 AND cust_line_seq_id NOT LIKE '1%'
@@ -42,7 +45,7 @@ AND cust_line_seq_id NOT LIKE '1%'
 UNION ALL
 
 -----------------------------------------------
--- BUCKET 3 (kept exactly same)
+-- BUCKET 3 (unchanged)
 -----------------------------------------------
 SELECT
 a.cust_id,
@@ -52,198 +55,27 @@ a.acct_num,
 a.line_eff_dt,
 a.line_term_dt,
 a.min_act_dt,
-a.min_stat_ind
+a.min_stat_ind,
+a.update_ts
 FROM `pr-hukv-edw-do-0.vzw_cdp_prd_tbls.nrt_vzw_cust_acct_line_prfl_dly` a
 JOIN `pr-hukv-edw-do-0.vzw_cdp_prd_tbls.vzw_cust_acct_line_prfl_batch` b
 ON a.cust_id = b.nrt_cust_id
 AND a.acct_num = b.nrt_acct_num
 WHERE a.cust_line_seq_id LIKE '%2%'
-OR DATE(a.update_ts) = CURRENT_DATE('America/New_York')
+OR DATE(a.update_ts) = CURRENT_DATE("America/New_York")
 )
 
--- *************************************************
--- FINAL FIXED DEDUP SECTION (ONLY THIS PART WAS FIXED)
--- *************************************************
+SELECT *
+FROM unioned
+
 QUALIFY ROW_NUMBER() OVER (
 PARTITION BY cust_id, acct_num, cust_line_seq_id
-
 ORDER BY
-CASE WHEN min_stat_ind = 'A' THEN 0 ELSE 1 END, -- ❤️ ACTIVE ALWAYS WINS
+CASE WHEN min_stat_ind = 'A' THEN 0 ELSE 1 END,
 COALESCE(line_term_dt, '9999-12-31') DESC,
 COALESCE(line_eff_dt, '1900-01-01') DESC,
-COALESCE(min_act_dt, '1900-01-01') DESC
+COALESCE(min_act_dt, '1900-01-01') DESC,
+update_ts DESC
 ) = 1;
 
 END;
-
-==============================================
-
-Absolutely — here are ready-to-run SQL queries that give you ALL scenarios you need:
-
-✅ 
-GOAL
-
-
-You want to compare:
-
-Records from your OLD (existing) logic
-
-Records from the NEW (fixed) logic
-
-Identify what changed
-
-Especially rows where ACTIVE profiles were deleted earlier
-
-Give counts + full detail rows
-
-
-
-Below are 6 queries that cover the entire validation lifecycle.
-
-✅ 
-STEP 1 — Run your OLD logic into a temp table
-
-
-If you already have the table, SKIP this.
-
-CREATE OR REPLACE TABLE old_dedup AS
-SELECT * FROM (
-    << paste your OLD logic exactly here >>
-);
-✅ 
-STEP 2 — Run new fixed logic into a temp table
-CREATE OR REPLACE TABLE new_dedup AS
-SELECT * FROM (
-    << paste NEW fixed logic I gave you >>
-);
-🚀 NOW BEGIN VALIDATION
-✅ 
-Query 1 — Rows that EXISTED BEFORE but NOT after the fix (OLD – NEW)
-
-
-💥 Most important: identifies falsely deleted ACTIVE profiles
-
-SELECT *
-FROM old_dedup o
-LEFT JOIN new_dedup n
-    ON o.cust_id = n.cust_id
-   AND o.acct_num = n.acct_num
-   AND o.cust_line_seq_id = n.cust_line_seq_id
-WHERE n.cust_id IS NULL;     -- present before, missing now
-👆 This tells you:
-Which rows were kept by old logic
-
-But removed by the new logic
-
-Most of these will be inactive duplicates
-
-You will clearly see if ACTIVE rows were being wrongly removed earlier
-
-✅ 
-Query 2 — Rows that were missing before but appear after fix (NEW – OLD)
-
-
-🌟 This shows ACTIVE rows that were previously deleted but are restored now.
-
-SELECT *
-FROM new_dedup n
-LEFT JOIN old_dedup o
-    ON o.cust_id = n.cust_id
-   AND o.acct_num = n.acct_num
-   AND o.cust_line_seq_id = n.cust_line_seq_id
-WHERE o.cust_id IS NULL;     -- exists after fix but not before
-👆 This is the proof that your fix worked.
-
-
-It shows ACTIVE rows that were lost earlier.
-
-✅ 
-Query 3 — ACTIVE rows that were removed earlier
-
-
-🔥 This is the exact root-cause verification.
-
-SELECT *
-FROM old_dedup
-WHERE min_stat_ind = 'A'
-  AND (cust_id, acct_num, cust_line_seq_id) NOT IN (
-        SELECT cust_id, acct_num, cust_line_seq_id FROM new_dedup
-      );
-👆 If this returns ANY rows → your old logic was 
-DELETING ACTIVE profiles
-.
-✅ 
-Query 4 — ACTIVE rows now restored in new logic
-SELECT *
-FROM new_dedup
-WHERE min_stat_ind = 'A'
-  AND (cust_id, acct_num, cust_line_seq_id) NOT IN (
-        SELECT cust_id, acct_num, cust_line_seq_id FROM old_dedup
-      );
-👆 These are the saved profiles the business cares about.
-✅ 
-Query 5 — Count comparison summary
-SELECT
-  (SELECT COUNT(*) FROM old_dedup) AS old_count,
-  (SELECT COUNT(*) FROM new_dedup) AS new_count,
-  (SELECT COUNT(*) FROM old_dedup) - 
-  (SELECT COUNT(*) FROM new_dedup) AS difference;
-✅ 
-Query 6 — Full side-by-side comparison by keys
-
-
-Shows how dedup selection changed for each key.
-
-SELECT
-    COALESCE(o.cust_id, n.cust_id) AS cust_id,
-    COALESCE(o.acct_num, n.acct_num) AS acct_num,
-    COALESCE(o.cust_line_seq_id, n.cust_line_seq_id) AS cust_line_seq_id,
-    o.min_stat_ind AS old_status,
-    n.min_stat_ind AS new_status,
-    o.line_eff_dt AS old_eff,
-    n.line_eff_dt AS new_eff,
-    o.line_term_dt AS old_term,
-    n.line_term_dt AS new_term
-FROM old_dedup o
-FULL OUTER JOIN new_dedup n
-    ON o.cust_id = n.cust_id
-   AND o.acct_num = n.acct_num
-   AND o.cust_line_seq_id = n.cust_line_seq_id
-ORDER BY cust_id, acct_num, cust_line_seq_id;
-🎯 
-You now have:
-
-
-✔ Difference rows
-
-✔ Restored ACTIVE profiles
-
-✔ Lost old duplicates
-
-✔ Summary counts
-
-✔ Full record-level comparison
-
-
-
-Exactly what business teams need for validation and sign-off.
-
-Want me to prepare a 
-dashboard-ready output
- (BigQuery view) with:
-
-
-- Active fixes
-
-
-- Before/after counts
-
-
-- Impact %
-
-
-- Executive summary table?
-
-
-Just tell me “Yes, give dashboard view” and I will generate it.
-
