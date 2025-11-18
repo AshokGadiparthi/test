@@ -1,81 +1,110 @@
-BEGIN
+Let’s compute the TRUE difference correctly
 
-CREATE OR REPLACE TABLE `pr-hukv-edw-do-0.vzw_cdp_prd_tbls.nrt_vzw_cust_acct_line_prfl_dly_dedups_old` AS
 
-WITH unioned AS (
------------------------------------------------
--- BUCKET 1 (unchanged)
------------------------------------------------
-SELECT
-cust_id,
-acct_id,
-cust_line_seq_id,
-acct_num,
-line_eff_dt,
-line_term_dt,
-min_act_dt,
-min_stat_ind,
-update_ts
-FROM `pr-hukv-edw-do-0.vzw_cdp_prd_tbls.nrt_vzw_cust_acct_line_prfl_dly`
-WHERE cust_line_seq_id LIKE '1%'
-AND CONCAT(cust_id, '-', acct_num, '-', min_act_dt) IN (
-SELECT CONCAT(cust_id, '-', acct_num, '-', min_act_dt)
-FROM `pr-hukv-edw-do-0.vzw_cdp_prd_tbls.nrt_vzw_cust_acct_line_prfl_dly`
+Use this exact query:
+
+
+
+🔍 1. Rows in OLD but NOT in NEW
+SELECT COUNT(*)
+FROM `old_dedup` o
+LEFT JOIN `new_dedup` n
+ON o.cust_id = n.cust_id
+AND o.acct_num = n.acct_num
+AND o.cust_line_seq_id = n.cust_line_seq_id
+AND o.line_eff_dt = n.line_eff_dt
+AND o.line_term_dt = n.line_term_dt
+AND o.mtn_stat_ind = n.mtn_stat_ind
+AND o.min_act_dt = n.min_act_dt
+WHERE n.cust_id IS NULL;
+📌 This will show the TRUE count of removed rows.
+
+🔍 2. Rows in NEW but NOT in OLD (restored active rows)
+SELECT COUNT(*)
+FROM `new_dedup` n
+LEFT JOIN `old_dedup` o
+ON o.cust_id = n.cust_id
+AND o.acct_num = n.acct_num
+AND o.cust_line_seq_id = n.cust_line_seq_id
+AND o.line_eff_dt = n.line_eff_dt
+AND o.line_term_dt = n.line_term_dt
+AND o.mtn_stat_ind = n.mtn_stat_ind
+AND o.min_act_dt = n.min_act_dt
+WHERE o.cust_id IS NULL;
+📌 These are your ACTIVE records restored by the fix.
+
+🔍 3. Full difference summary
+WITH old_count AS (
+  SELECT COUNT(*) AS cnt FROM old_dedup
+),
+new_count AS (
+  SELECT COUNT(*) AS cnt FROM new_dedup
+),
+removed AS (
+  SELECT COUNT(*) AS cnt
+  FROM old_dedup o
+  LEFT JOIN new_dedup n
+    ON o.cust_id = n.cust_id
+   AND o.acct_num = n.acct_num
+   AND o.cust_line_seq_id = n.cust_line_seq_id
+   AND o.line_eff_dt = n.line_eff_dt
+   AND o.line_term_dt = n.line_term_dt
+   AND o.mtn_stat_ind = n.mtn_stat_ind
+   AND o.min_act_dt = n.min_act_dt
+  WHERE n.cust_id IS NULL
+),
+added AS (
+  SELECT COUNT(*) AS cnt
+  FROM new_dedup n
+  LEFT JOIN old_dedup o
+    ON o.cust_id = n.cust_id
+   AND o.acct_num = n.acct_num
+   AND o.cust_line_seq_id = n.cust_line_seq_id
+   AND o.line_eff_dt = n.line_eff_dt
+   AND o.line_term_dt = n.line_term_dt
+   AND o.mtn_stat_ind = n.mtn_stat_ind
+   AND o.min_act_dt = n.min_act_dt
+  WHERE o.cust_id IS NULL
 )
+SELECT 
+  (SELECT cnt FROM old_count) AS old_rows,
+  (SELECT cnt FROM new_count) AS new_rows,
+  (SELECT cnt FROM removed)  AS removed_rows,
+  (SELECT cnt FROM added)    AS restored_rows;
+🎯 
+What this will give you
 
-UNION ALL
 
------------------------------------------------
--- BUCKET 2 (unchanged)
------------------------------------------------
-SELECT
-cust_id,
-acct_id,
-cust_line_seq_id,
-acct_num,
-line_eff_dt,
-line_term_dt,
-min_act_dt,
-min_stat_ind,
-update_ts
-FROM `pr-hukv-edw-do-0.vzw_cdp_prd_tbls.nrt_vzw_cust_acct_line_prfl_dly`
-WHERE cust_line_seq_id IS NOT NULL
-AND cust_line_seq_id NOT LIKE '1%'
+You will get:
 
-UNION ALL
+Total rows before
 
------------------------------------------------
--- BUCKET 3 (unchanged)
------------------------------------------------
-SELECT
-a.cust_id,
-a.acct_id,
-a.cust_line_seq_id,
-a.acct_num,
-a.line_eff_dt,
-a.line_term_dt,
-a.min_act_dt,
-a.min_stat_ind,
-a.update_ts
-FROM `pr-hukv-edw-do-0.vzw_cdp_prd_tbls.nrt_vzw_cust_acct_line_prfl_dly` a
-JOIN `pr-hukv-edw-do-0.vzw_cdp_prd_tbls.vzw_cust_acct_line_prfl_batch` b
-ON a.cust_id = b.nrt_cust_id
-AND a.acct_num = b.nrt_acct_num
-WHERE a.cust_line_seq_id LIKE '%2%'
-OR DATE(a.update_ts) = CURRENT_DATE("America/New_York")
-)
+Total rows after
 
-SELECT *
-FROM unioned
+Exact removed rows
 
-QUALIFY ROW_NUMBER() OVER (
-PARTITION BY cust_id, acct_num, cust_line_seq_id
-ORDER BY
-CASE WHEN min_stat_ind = 'A' THEN 0 ELSE 1 END,
-COALESCE(line_term_dt, '9999-12-31') DESC,
-COALESCE(line_eff_dt, '1900-01-01') DESC,
-COALESCE(min_act_dt, '1900-01-01') DESC,
-update_ts DESC
-) = 1;
+Exact added/restored rows
 
-END;
+Complete accuracy
+
+
+
+This will remove confusion around 1190 vs 3576.
+
+If you want
+
+
+I can generate:
+
+
+
+✔ One single BigQuery SCRIPT that runs all these validations
+
+
+✔ A FINAL dashboard output used for sign-off
+
+
+✔ A formatted JSON summary for your CDP validation reports
+
+
+Just tell me “Give me the combined validation script”.
