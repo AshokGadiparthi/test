@@ -1,36 +1,183 @@
-npm install @cytoscape/cytoscape-popper popper.js
+You are asking: “What is this file and why is it used?”
 
-npm install cytoscape-popper popper.js
-
-import cytoscape from 'cytoscape';
-import dagre from 'cytoscape-dagre';
-import popper from 'cytoscape-popper';
-import tippy from 'tippy.js';
-import 'tippy.js/dist/tippy.css';
-
-cytoscape.use(dagre);
-cytoscape.use(popper); // register plugin
-
-=============
-import cytoscape from 'cytoscape';
-import dagre from 'cytoscape-dagre';
-import popper from 'cytoscape-popper';
-import tippy from 'tippy.js';
-import 'tippy.js/dist/tippy.css';
-
-cytoscape.use(dagre);
-cytoscape.use(popper); // ✅ register popper plugin
+Based on all the screenshots, the file you are showing (ZDWA1SEG.txt) is NOT a model file, NOT Java, NOT Spark code.
 
 
-this.cy.nodes().forEach((node: any) => {
-  const ref = node.popperRef(); // now this works
-  const tip = tippy(document.createElement('div'), {
-    content: this.renderTooltip(node),
-    trigger: 'manual',
-    placement: 'bottom',
-    hideOnClick: true,
-    interactive: true,
-  });
-  node.on('mouseover', () => tip.show());
-  node.on('mouseout', () => tip.hide());
-});
+
+It is a job orchestration script used in Verizon’s ESPX production system.
+
+
+
+Let me explain clearly.
+
+✅ 
+What This File Is
+
+
+This file (ZDWA1SEG.txt) is a batch job orchestration definition used for:
+
+
+
+✔ Scheduling
+
+
+✔ Running
+
+
+✔ Sequencing
+
+
+✔ Automating
+
+
+✔ Monitoring
+
+
+the entire ML scoring pipeline for one or more models.
+
+
+
+It is basically the “CONTROL FILE” or “MASTER JOB FLOW” for the end-to-end ML scoring process.
+
+✅ 
+Why This File Is Used
+
+
+This orchestration file is used to automate the complete monthly scoring pipeline:
+
+
+
+1. Extract Input Data
+Runs Spark jobs
+
+Creates input files for model scoring
+
+Sets date variables, month boundaries, report dates
+
+
+
+2. Execute Model Scoring (Java MOJO)
+Calls the Java scorer for each model
+
+Generates score files
+
+Handles errors + status codes
+
+
+
+3. Manage HDFS Locations
+Creates directories
+
+Copies scored files to HDFS
+
+Removes old files
+
+Organizes data by month / model / report date
+
+
+
+4. Create External Hive Tables
+Triggers Spark-submit jobs
+
+Runs *_score_ext_tbl.py to create external tables
+
+
+
+5. Clean Staging Tables
+Runs BTEQ scripts to drop/create Teradata staging tables
+
+
+
+6. Load Scores into Teradata
+Runs BTEQ scripts to load data from Hive to Teradata
+
+Validates record counts
+
+Ensures final analytic tables are created correctly
+
+
+
+7. Send Email Notifications
+Sends “Model Run Complete” emails
+
+Notifies distros on success/failure
+
+Adds logs
+
+
+
+8. Error Handling & Recovery
+Each block is atomic (LINUX_JOB)
+
+Failures send alerts
+
+Pipeline stops in a controlled manner
+
+⭐ 
+In Simple Words
+
+
+This script is:
+
+
+
+The master controller that runs the entire ML pipeline — from input extraction to scoring to Teradata load — automatically, without manual work.
+
+
+It makes sure all steps run in the correct order:
+
+Prepare →
+
+Score →
+
+Load →
+
+Notify
+
+
+
+for every model.
+
+⭐ 
+If This File Did NOT Exist
+
+
+Your team would have to run:
+
+Spark jobs manually
+
+Python scripts manually
+
+Java scorers manually
+
+HDFS copies manually
+
+BTEQ loads manually
+
+Email notifications manually
+
+
+
+Which is impossible for 185+ models.
+
+
+
+This file ensures zero manual intervention, consistency, reliability, and monthly automation.
+
+⭐ 
+One-Line Answer
+
+
+This is an enterprise batch orchestration file used to automatically run, manage, and monitor the entire ML scoring pipeline for multiple models in production.
+
+If you want, I can also give you:
+
+✔ A simple 5-line explanation to tell your manager
+
+✔ A diagram showing how this job orchestrates everything
+
+✔ A voice-style explanation you can speak in meetings
+
+
+
+Just tell me.
