@@ -1,110 +1,331 @@
-Let’s compute the TRUE difference correctly
-
-
-Use this exact query:
+Below is your clean, professional, manager-ready explanation of the entire ML scoring system based on the files you shared (Java MOJO code, Python external table scripts, BTEQ, Spark wrapper, 185+ models, AutoML flow).
 
 
 
-🔍 1. Rows in OLD but NOT in NEW
-SELECT COUNT(*)
-FROM `old_dedup` o
-LEFT JOIN `new_dedup` n
-ON o.cust_id = n.cust_id
-AND o.acct_num = n.acct_num
-AND o.cust_line_seq_id = n.cust_line_seq_id
-AND o.line_eff_dt = n.line_eff_dt
-AND o.line_term_dt = n.line_term_dt
-AND o.mtn_stat_ind = n.mtn_stat_ind
-AND o.min_act_dt = n.min_act_dt
-WHERE n.cust_id IS NULL;
-📌 This will show the TRUE count of removed rows.
+This is written exactly the way you should speak to your manager, architect, or interviewer to show deep understanding.
 
-🔍 2. Rows in NEW but NOT in OLD (restored active rows)
-SELECT COUNT(*)
-FROM `new_dedup` n
-LEFT JOIN `old_dedup` o
-ON o.cust_id = n.cust_id
-AND o.acct_num = n.acct_num
-AND o.cust_line_seq_id = n.cust_line_seq_id
-AND o.line_eff_dt = n.line_eff_dt
-AND o.line_term_dt = n.line_term_dt
-AND o.mtn_stat_ind = n.mtn_stat_ind
-AND o.min_act_dt = n.min_act_dt
-WHERE o.cust_id IS NULL;
-📌 These are your ACTIVE records restored by the fix.
-
-🔍 3. Full difference summary
-WITH old_count AS (
-  SELECT COUNT(*) AS cnt FROM old_dedup
-),
-new_count AS (
-  SELECT COUNT(*) AS cnt FROM new_dedup
-),
-removed AS (
-  SELECT COUNT(*) AS cnt
-  FROM old_dedup o
-  LEFT JOIN new_dedup n
-    ON o.cust_id = n.cust_id
-   AND o.acct_num = n.acct_num
-   AND o.cust_line_seq_id = n.cust_line_seq_id
-   AND o.line_eff_dt = n.line_eff_dt
-   AND o.line_term_dt = n.line_term_dt
-   AND o.mtn_stat_ind = n.mtn_stat_ind
-   AND o.min_act_dt = n.min_act_dt
-  WHERE n.cust_id IS NULL
-),
-added AS (
-  SELECT COUNT(*) AS cnt
-  FROM new_dedup n
-  LEFT JOIN old_dedup o
-    ON o.cust_id = n.cust_id
-   AND o.acct_num = n.acct_num
-   AND o.cust_line_seq_id = n.cust_line_seq_id
-   AND o.line_eff_dt = n.line_eff_dt
-   AND o.line_term_dt = n.line_term_dt
-   AND o.mtn_stat_ind = n.mtn_stat_ind
-   AND o.min_act_dt = n.min_act_dt
-  WHERE o.cust_id IS NULL
-)
-SELECT 
-  (SELECT cnt FROM old_count) AS old_rows,
-  (SELECT cnt FROM new_count) AS new_rows,
-  (SELECT cnt FROM removed)  AS removed_rows,
-  (SELECT cnt FROM added)    AS restored_rows;
-🎯 
-What this will give you
+✅ 
+My Understanding of the Verizon H2O MOJO Scoring System (Clear & Professional)
 
 
-You will get:
+Below is the best-possible structured explanation of what your team is doing, in simple, accurate architecture terms.
 
-Total rows before
+1. Overall Goal of the System
 
-Total rows after
 
-Exact removed rows
-
-Exact added/restored rows
-
-Complete accuracy
+The objective of this platform is to:
 
 
 
-This will remove confusion around 1190 vs 3576.
+✔ Train ML models in H2O AutoML
 
-If you want
+✔ Export models as MOJO artifacts
 
+✔ Run predictions locally using Java MOJO executables
 
-I can generate:
+✔ Load predicted scores into Hive/Impala/Spark
 
+✔ Create external tables and final datasets
 
-
-✔ One single BigQuery SCRIPT that runs all these validations
-
-
-✔ A FINAL dashboard output used for sign-off
+✔ Push scoring results into Teradata
 
 
-✔ A formatted JSON summary for your CDP validation reports
+
+We do this for more than 185+ production scoring use cases (churn, upsell, cross-sell, usage patterns, sentiment, price sensitivity, fraud, retention, BDV, FiOS, wireless, etc.).
+
+2. Model Training Process (H2O AutoML)
 
 
-Just tell me “Give me the combined validation script”.
+1️⃣ Data scientists prepare features using Python notebooks.
+
+2️⃣ H2O AutoML trains models with constraints:
+
+max_models
+
+max_runtime_secs
+
+3️⃣ For many use cases:
+
+XGBoost / GBM / RandomForest dominate
+
+Deep Learning is normally excluded for speed
+
+4️⃣ H2O produces a MOJO.zip file for each trained model.
+
+5️⃣ MOJO is checked into Git and deployed to the scoring servers.
+
+
+
+➡ MOJO is the portable scoring artifact we use in Java.
+
+3. Java MOJO Scoring Program (Your Java Files)
+
+
+Each use case has a Java class:
+
+
+
+aal_ge_mbb_predict_model_mojo.java
+
+aal_smb_mbb_predict_model_mojo.java
+
+vzc_rev_fs_score_mojo.java
+
+win_upsell_score_mojo.java
+
+…etc.
+
+
+
+✔ Responsibilities of each Java file:
+
+
+A. Load the MOJO model
+
+GenModel genModel = MojoModel.load(modelName);
+model = new EasyPredictModelWrapper(
+    new EasyPredictModelWrapper.Config().setModel(genModel)
+);
+B. Parse command-line arguments
+
+--mojo (path to MOJO ZIP)
+
+--input (pipe-delimited input file)
+
+--output (predicted score file)
+
+
+
+C. Read input file
+
+Handles pipe ‘|’ delimiter
+
+Cleans data (NA, empty, or bad formats)
+
+Converts date columns to epoch timestamps
+
+
+
+D. Perform scoring
+
+Depending on model type:
+
+AutoEncoder  
+Binomial  
+Multinomial  
+Clustering  
+Regression
+E. Write predictions to the output CSV file.
+
+
+
+F. Shutdown + cleanup
+
+
+
+This Java scoring component is extremely stable and scalable — no need for Python model loading or Spark model broadcast.
+
+4. Python External Table Generators (*_score_ext_tbl.py)
+
+
+Each model has a corresponding Python script:
+
+
+
+Example:
+
+aal_ge_mbb_score_ext_tbl.py
+
+wls_5gbil_score_ext_tbl.py
+
+vzc_high_risk_score_ext_tbl.py
+
+
+
+✔ What these Python files do:
+Start Spark session
+
+Drop existing external tables if they exist
+
+Create external table pointing to the MOJO prediction output
+
+Load predictions into Hive/Impala
+
+Produce a uniform table structure for downstream BTEQ or Teradata load
+
+
+
+Example log messages:
+“Successfully dropped external table…”
+
+“Successfully created external view…”
+
+
+
+This guarantees each model’s scores are structured in the same way for downstream loading.
+
+5. Spark Integration
+
+
+Spark is not used for scoring the ML model.
+
+Spark is used only for:
+
+
+
+✔ Creating external tables
+
+✔ Reading prediction outputs
+
+✔ Maintaining schema and data types
+
+✔ Performing partition logic if needed
+
+
+
+This keeps scoring light-weight and fast.
+
+6. BTEQ Scripts
+
+
+Each use case has a .bteq file.
+
+
+
+Example:
+
+aal_ge_mbb_clean_stg.bteq
+
+
+
+These scripts:
+
+✔ Create Teradata staging tables
+
+✔ Load data from Hive external tables
+
+✔ Validate row counts
+
+✔ Apply data-type casting
+
+✔ Prepare final tables for analytics or downstream consumption
+
+
+
+This closes the final leg from Hadoop → Teradata.
+
+7. Multi-Cluster Execution
+
+
+Because scores need to be generated for 185+ models, you cannot run everything on one cluster.
+
+
+
+You maintain:
+
+✔ Multiple local H2O clusters
+
+✔ Distributed workloads based on data size + use case
+
+✔ Repurposed compute resources
+
+
+
+Each cluster focuses on a specific group of models (SMB, MBB, PS, GE, REV, UPS, BDV, TIBR, churn, etc.)
+
+8. Typical Prediction Flow (End-to-End)
+
+
+Step 1 — Input File Prepared (Pipe Delimited)
+
+
+input_data_file.txt
+
+
+
+Step 2 — Java MOJO Execution
+java -cp model.jar aal_ge_mbb_predict_model_mojo \
+ --mojo ge_mbb_tree_model.zip \
+ --input ge_input.txt \
+ --output ge_prediction_out.txt
+Step 3 — Create External Table (Python + Spark)
+
+
+Python script reads ge_prediction_out.txt and creates
+
+ext_tbl_ge_mbb_score
+
+
+
+Step 4 — BTEQ Loads to Teradata
+
+
+Final table:
+
+TERADATA.GE_MBB_SCORE_OUT
+
+
+
+Step 5 — Downstream Consumption
+
+
+BI, dashboards, churn systems, marketing triggers, etc.
+
+9. Understanding the 185+ Model Catalog
+
+
+You shared the Sheets list — examples include:
+
+
+
+✔ VBGWS_BM_SU — Upgrade likelihood
+
+✔ VBGWPS_CHURN — Churn predictor
+
+✔ VZC_GENERIC_UP — Connect propensity
+
+✔ VZC_LOGBOK_UP — Logbook upsell
+
+✔ VZC_HIGH_RISK_MDL — High-risk customer
+
+✔ VBGM_UPSELL_FIOS — FiOS upsell
+
+✔ VBGW_ACCT_5YRRLV — 5-year survivability
+
+✔ VBGWM_LINE_2YRLTV — 2-year LTV
+
+
+
+Each model has:
+
+Business intent
+
+Model ID
+
+Output schema
+
+Java MOJO class
+
+Python ETL script
+
+BTEQ staging script
+
+10. Summary — My Clear Understanding
+
+
+Here is the final summary you can tell your manager:
+
+“Our ML platform runs 185+ H2O AutoML models using a clean pipeline: Java MOJO for scoring, Python+Spark for external table creation, and BTEQ for loading predictions into Teradata. Each model has a dedicated Java executable that loads the MOJO, cleans input columns, performs scoring, and writes an output CSV. A Python script then creates a standardized external view, and finally BTEQ loads the data into Teradata tables. The entire system is modular, scalable, repeatable, and optimized so scoring is done without Spark—keeping performance extremely high.”
+If you’d like, I can also prepare:
+
+✅ Your one-page architecture diagram
+
+✅ Your manager-ready slide deck (8–10 slides)
+
+✅ Your spoken explanation for meetings
+
+✅ Your notepad bullet summary like your teammate
+
+
+
+Just tell me which one you want next.
