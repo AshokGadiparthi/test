@@ -1,3 +1,31 @@
+String tableQuery = """
+    SELECT
+      table_catalog,
+      table_schema,
+      table_name,
+      table_type,
+      creation_time,
+      TIMESTAMP_DIFF(CURRENT_TIMESTAMP(), creation_time, DAY) AS age_days,
+
+      -- We return NULL for row_count so Java can safely parse it
+      CAST(NULL AS INT64) AS row_count,
+
+      total_logical_bytes,
+      ROUND(total_logical_bytes / POW(1024, 3), 2) AS size_gb,
+
+      CASE
+        WHEN partitioning_type IS NULL THEN 'NONE'
+        ELSE partitioning_type
+      END AS partitioning,
+
+      ARRAY_TO_STRING(clustering_ordinal_position, ',') AS clustering
+
+    FROM `%s.%s.INFORMATION_SCHEMA.TABLES`
+    WHERE table_type = 'BASE TABLE'
+    ORDER BY total_logical_bytes DESC
+    """.formatted(bigQuery.getOptions().getProjectId(), datasetId);
+
+
 Nice, this is turning into a *real* product now 👌
 Let’s wrap everything into **one final, end-to-end Spring Boot solution** that:
 
