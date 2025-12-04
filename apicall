@@ -1,274 +1,1154 @@
-<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/27.0.9 Chrome/134.0.6998.205 Electron/35.4.0 Safari/537.36" version="27.0.9">
-  <diagram id="verizon-ml-pipeline" name="Page-1">
-    <mxGraphModel dx="1028" dy="707" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1920" pageHeight="1200" math="0" shadow="0">
-      <root>
-        <mxCell id="0" />
-        <mxCell id="1" parent="0" />
-        <mxCell id="title" value="Verizon VBG Machine Learning Pipeline - H2O Spark Teradata" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;fontStyle=1" parent="1" vertex="1">
-          <mxGeometry x="560" y="20" width="800" height="40" as="geometry" />
-        </mxCell>
-        <mxCell id="teradata" value="Teradata Database" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;fontStyle=1" parent="1" vertex="1">
-          <mxGeometry x="120" y="120" width="120" height="80" as="geometry" />
-        </mxCell>
-        <mxCell id="data_prep" value="Data Preparation&lt;br&gt;- Response Encoding&lt;br&gt;- Feature Engineering" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;fontStyle=1" parent="1" vertex="1">
-          <mxGeometry x="320" y="120" width="160" height="80" as="geometry" />
-        </mxCell>
-        <mxCell id="arrow1" parent="1" source="teradata" target="data_prep" edge="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="0LNpMn_QXechJm28ufxQ-3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="device_split" target="smartphone_path">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="0LNpMn_QXechJm28ufxQ-4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="device_split" target="other_path">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="device_split" value="Device Type Classification" style="rhombus;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;fontStyle=1" parent="1" vertex="1">
-          <mxGeometry x="560" y="100" width="160" height="120" as="geometry" />
-        </mxCell>
-        <mxCell id="arrow2" parent="1" source="data_prep" target="device_split" edge="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="0LNpMn_QXechJm28ufxQ-5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="smartphone_path" target="train_prep">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="smartphone_path" value="WIRELESS_BM_AAL_SMARTPHONE" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1" parent="1" vertex="1">
-          <mxGeometry x="800" y="80" width="200" height="50" as="geometry" />
-        </mxCell>
-        <mxCell id="0LNpMn_QXechJm28ufxQ-6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="other_path" target="train_prep">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="other_path" value="Other Device Categories" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1" parent="1" vertex="1">
-          <mxGeometry x="800" y="170" width="200" height="50" as="geometry" />
-        </mxCell>
-        <mxCell id="train_prep" value="Training Data Preparation&lt;br&gt;- MTR File Processing&lt;br&gt;- Date Range Selection&lt;br&gt;- Feature Selection" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;fontStyle=1" parent="1" vertex="1">
-          <mxGeometry x="1070" y="95" width="200" height="100" as="geometry" />
-        </mxCell>
-        <mxCell id="model_training" value="H2O Model Training Jobs" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=14;fontStyle=1" parent="1" vertex="1">
-          <mxGeometry x="120" y="280" width="1160" height="40" as="geometry" />
-        </mxCell>
-        <mxCell id="arrow7" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="train_prep" target="model_training" edge="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="train_only" value="SP_TRAIN_ONLY&lt;br&gt;Train Model" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11" parent="1" vertex="1">
-          <mxGeometry x="140" y="360" width="140" height="60" as="geometry" />
-        </mxCell>
-        <mxCell id="score_only" value="SP_SCORE_ONLY&lt;br&gt;Score Data" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11" parent="1" vertex="1">
-          <mxGeometry x="320" y="360" width="140" height="60" as="geometry" />
-        </mxCell>
-        <mxCell id="run_both" value="SP_RUN_BOTH&lt;br&gt;Train + Score" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11" parent="1" vertex="1">
-          <mxGeometry x="500" y="360" width="140" height="60" as="geometry" />
-        </mxCell>
-        <mxCell id="check_h2oup" value="SP_CHECK_H2OUP&lt;br&gt;Cluster Health" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11" parent="1" vertex="1">
-          <mxGeometry x="680" y="360" width="140" height="60" as="geometry" />
-        </mxCell>
-        <mxCell id="model_full" value="SP_MODEL_FULL&lt;br&gt;Complete Pipeline" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11" parent="1" vertex="1">
-          <mxGeometry x="860" y="360" width="140" height="60" as="geometry" />
-        </mxCell>
-        <mxCell id="del_prev" value="SP_DEL_PREV_METRICS&lt;br&gt;Cleanup" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11" parent="1" vertex="1">
-          <mxGeometry x="1040" y="360" width="160" height="60" as="geometry" />
-        </mxCell>
-        <mxCell id="arrow8" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="model_training" target="train_only" edge="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="arrow9" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="model_training" target="score_only" edge="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="arrow10" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="model_training" target="run_both" edge="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="arrow11" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="model_training" target="check_h2oup" edge="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="arrow12" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="model_training" target="model_full" edge="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="arrow13" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="model_training" target="del_prev" edge="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="h2o_process" value="H2O Spark Processing Layer" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#b1ddf0;strokeColor=#10739e;fontSize=14;fontStyle=1" parent="1" vertex="1">
-          <mxGeometry x="120" y="480" width="1160" height="40" as="geometry" />
-        </mxCell>
-        <mxCell id="arrow14" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="train_only" target="h2o_process" edge="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="arrow15" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="score_only" target="h2o_process" edge="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="arrow16" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="run_both" target="h2o_process" edge="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="model_ios" value="iOS Model&lt;br&gt;(VRSMS_BM_SP_IOS)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fad7ac;strokeColor=#b46504;fontSize=11" parent="1" vertex="1">
-          <mxGeometry x="140" y="570" width="150" height="60" as="geometry" />
-        </mxCell>
-        <mxCell id="model_android" value="Android Model&lt;br&gt;(AAL_SMB_SMARTPHN_ANDROID)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fad7ac;strokeColor=#b46504;fontSize=11" parent="1" vertex="1">
-          <mxGeometry x="330" y="570" width="180" height="60" as="geometry" />
-        </mxCell>
-        <mxCell id="model_sp" value="Smart Phone Model&lt;br&gt;(VRSMS_BM_SP)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fad7ac;strokeColor=#b46504;fontSize=11" parent="1" vertex="1">
-          <mxGeometry x="550" y="570" width="160" height="60" as="geometry" />
-        </mxCell>
-        <mxCell id="model_aal" value="AAL Model&lt;br&gt;(VRSMS_BM_AAL_SP)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fad7ac;strokeColor=#b46504;fontSize=11" parent="1" vertex="1">
-          <mxGeometry x="750" y="570" width="150" height="60" as="geometry" />
-        </mxCell>
-        <mxCell id="model_smb" value="SMB Model&lt;br&gt;(AAL_SMB_SMARTPHN)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fad7ac;strokeColor=#b46504;fontSize=11" parent="1" vertex="1">
-          <mxGeometry x="940" y="570" width="160" height="60" as="geometry" />
-        </mxCell>
-        <mxCell id="arrow17" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="h2o_process" target="model_ios" edge="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="arrow18" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="h2o_process" target="model_android" edge="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="arrow19" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="h2o_process" target="model_sp" edge="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="arrow20" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="h2o_process" target="model_aal" edge="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="arrow21" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="h2o_process" target="model_smb" edge="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="mojo_deploy" value="MOJO Model Deployment" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=14;fontStyle=1" parent="1" vertex="1">
-          <mxGeometry x="120" y="690" width="1160" height="40" as="geometry" />
-        </mxCell>
-        <mxCell id="arrow22" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="model_ios" target="mojo_deploy" edge="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="arrow23" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="model_android" target="mojo_deploy" edge="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="arrow24" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="model_sp" target="mojo_deploy" edge="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="arrow25" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="model_aal" target="mojo_deploy" edge="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="arrow26" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="model_smb" target="mojo_deploy" edge="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="spark_score_train" value="Spark Train File&lt;br&gt;(PySpark Python)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#cdeb8b;strokeColor=#36393d;fontSize=11" parent="1" vertex="1">
-          <mxGeometry x="140" y="780" width="150" height="60" as="geometry" />
-        </mxCell>
-        <mxCell id="spark_score_predict" value="Spark Predict File&lt;br&gt;(PySpark Python)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#cdeb8b;strokeColor=#36393d;fontSize=11" parent="1" vertex="1">
-          <mxGeometry x="330" y="780" width="150" height="60" as="geometry" />
-        </mxCell>
-        <mxCell id="spark_score_check" value="Check Flag Files&lt;br&gt;(Validation)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#cdeb8b;strokeColor=#36393d;fontSize=11" parent="1" vertex="1">
-          <mxGeometry x="520" y="780" width="150" height="60" as="geometry" />
-        </mxCell>
-        <mxCell id="spark_score_run" value="Score Run&lt;br&gt;(HDFS + Java IN)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#cdeb8b;strokeColor=#36393d;fontSize=11" parent="1" vertex="1">
-          <mxGeometry x="710" y="780" width="150" height="60" as="geometry" />
-        </mxCell>
-        <mxCell id="spark_metrics" value="Export Metrics&lt;br&gt;(To Database)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#cdeb8b;strokeColor=#36393d;fontSize=11" parent="1" vertex="1">
-          <mxGeometry x="900" y="780" width="150" height="60" as="geometry" />
-        </mxCell>
-        <mxCell id="arrow27" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="mojo_deploy" target="spark_score_train" edge="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="arrow28" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="mojo_deploy" target="spark_score_predict" edge="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="arrow29" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="mojo_deploy" target="spark_score_check" edge="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="arrow30" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="mojo_deploy" target="spark_score_run" edge="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="arrow31" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="mojo_deploy" target="spark_metrics" edge="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="output_process" value="Output Processing &amp; Storage" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#bac8d3;strokeColor=#23445d;fontSize=14;fontStyle=1" parent="1" vertex="1">
-          <mxGeometry x="120" y="900" width="1160" height="40" as="geometry" />
-        </mxCell>
-        <mxCell id="arrow32" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="spark_score_train" target="output_process" edge="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="arrow33" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="spark_score_predict" target="output_process" edge="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="arrow34" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="spark_score_check" target="output_process" edge="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="arrow35" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="spark_score_run" target="output_process" edge="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="arrow36" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="spark_metrics" target="output_process" edge="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="score_files" value="Score Files&lt;br&gt;(HDFS Storage)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#cce5ff;strokeColor=#36393d;fontSize=11" parent="1" vertex="1">
-          <mxGeometry x="180" y="990" width="140" height="60" as="geometry" />
-        </mxCell>
-        <mxCell id="metrics_db" value="Metrics to DB&lt;br&gt;(Teradata)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#cce5ff;strokeColor=#36393d;fontSize=11" parent="1" vertex="1">
-          <mxGeometry x="370" y="990" width="140" height="60" as="geometry" />
-        </mxCell>
-        <mxCell id="model_repo" value="Model Repository&lt;br&gt;(MOJO Files)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#cce5ff;strokeColor=#36393d;fontSize=11" parent="1" vertex="1">
-          <mxGeometry x="560" y="990" width="140" height="60" as="geometry" />
-        </mxCell>
-        <mxCell id="external_tbl" value="External Tables&lt;br&gt;(Score Results)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#cce5ff;strokeColor=#36393d;fontSize=11" parent="1" vertex="1">
-          <mxGeometry x="750" y="990" width="140" height="60" as="geometry" />
-        </mxCell>
-        <mxCell id="clean_flag" value="Clean Work Tables&lt;br&gt;(Housekeeping)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#cce5ff;strokeColor=#36393d;fontSize=11" parent="1" vertex="1">
-          <mxGeometry x="940" y="990" width="140" height="60" as="geometry" />
-        </mxCell>
-        <mxCell id="arrow37" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="output_process" target="score_files" edge="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="arrow38" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="output_process" target="metrics_db" edge="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="arrow39" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="output_process" target="model_repo" edge="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="arrow40" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="output_process" target="external_tbl" edge="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="arrow41" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="output_process" target="clean_flag" edge="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="legend_box" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;dashed=1" parent="1" vertex="1">
-          <mxGeometry x="1360" y="120" width="240" height="380" as="geometry" />
-        </mxCell>
-        <mxCell id="legend_title" value="LEGEND" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=16;fontStyle=1" parent="1" vertex="1">
-          <mxGeometry x="1360" y="130" width="240" height="30" as="geometry" />
-        </mxCell>
-        <mxCell id="leg1" value="Data Source" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10" parent="1" vertex="1">
-          <mxGeometry x="1380" y="170" width="80" height="40" as="geometry" />
-        </mxCell>
-        <mxCell id="leg1_text" value="Database/Storage" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10" parent="1" vertex="1">
-          <mxGeometry x="1470" y="175" width="120" height="30" as="geometry" />
-        </mxCell>
-        <mxCell id="leg2" value="Process" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10" parent="1" vertex="1">
-          <mxGeometry x="1380" y="220" width="80" height="40" as="geometry" />
-        </mxCell>
-        <mxCell id="leg2_text" value="Data Processing" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10" parent="1" vertex="1">
-          <mxGeometry x="1470" y="225" width="120" height="30" as="geometry" />
-        </mxCell>
-        <mxCell id="leg3" value="Decision" style="rhombus;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10" parent="1" vertex="1">
-          <mxGeometry x="1380" y="270" width="80" height="50" as="geometry" />
-        </mxCell>
-        <mxCell id="leg3_text" value="Decision Point" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10" parent="1" vertex="1">
-          <mxGeometry x="1470" y="280" width="120" height="30" as="geometry" />
-        </mxCell>
-        <mxCell id="leg4" value="ML Job" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10" parent="1" vertex="1">
-          <mxGeometry x="1380" y="330" width="80" height="40" as="geometry" />
-        </mxCell>
-        <mxCell id="leg4_text" value="Training/Scoring Jobs" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10" parent="1" vertex="1">
-          <mxGeometry x="1470" y="335" width="120" height="30" as="geometry" />
-        </mxCell>
-        <mxCell id="leg5" value="H2O Model" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fad7ac;strokeColor=#b46504;fontSize=10" parent="1" vertex="1">
-          <mxGeometry x="1380" y="380" width="80" height="40" as="geometry" />
-        </mxCell>
-        <mxCell id="leg5_text" value="ML Models" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10" parent="1" vertex="1">
-          <mxGeometry x="1470" y="385" width="120" height="30" as="geometry" />
-        </mxCell>
-        <mxCell id="leg6" value="Spark Job" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#cdeb8b;strokeColor=#36393d;fontSize=10" parent="1" vertex="1">
-          <mxGeometry x="1380" y="430" width="80" height="40" as="geometry" />
-        </mxCell>
-        <mxCell id="leg6_text" value="Spark Processing" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10" parent="1" vertex="1">
-          <mxGeometry x="1470" y="435" width="120" height="30" as="geometry" />
-        </mxCell>
-        <mxCell id="components" value="KEY COMPONENTS:&lt;br&gt;• H2O Machine Learning&lt;br&gt;• Spark Distributed Processing&lt;br&gt;• Java MOJO Deployment&lt;br&gt;• Teradata Data Warehouse&lt;br&gt;• HDFS Storage&lt;br&gt;• PySpark Python Scripts" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f9f7ed;strokeColor=#36393d;fontSize=11;align=left;verticalAlign=top" parent="1" vertex="1">
-          <mxGeometry x="1360" y="530" width="240" height="150" as="geometry" />
-        </mxCell>
-      </root>
-    </mxGraphModel>
-  </diagram>
-</mxfile>
+Nice, this is exactly the kind of thing that *does* add real value to your project and EB-1A story.
+Below is **one complete Spring Boot pack** you can paste into IntelliJ and start wiring to your BigQuery project.
+
+It:
+
+* Scans a **whole dataset** (all tables)
+* Reads **table storage stats, partitions, usage & cost**
+* Looks at **recent query jobs** for performance
+* Produces **gaps + recommendations + business value insights**
+* Returns everything as **one JSON response** (you can later add UI if you want)
+
+---
+
+## 1️⃣ Project structure
+
+Create a Maven project:
+
+```text
+bq-intelligence-engine/
+  pom.xml
+  src/main/java/com/bqintel/
+    BqIntelApplication.java
+    config/
+      BigQueryConfig.java
+    client/
+      BigQueryClientWrapper.java
+    controller/
+      DatasetAnalysisController.java
+    service/
+      DatasetAnalysisService.java
+      TableScanner.java
+      ColumnAnalyzer.java
+      PartitionSkewAnalyzer.java
+      GrowthAnalyzer.java
+      UsageAnalyzer.java
+      CostAnalyzer.java
+      PerformanceAnalyzer.java
+      GapAnalyzer.java
+      BusinessValueEngine.java
+    model/
+      DatasetAnalysisResponse.java
+      TableAnalysis.java
+      ColumnAnalysis.java
+      PartitionSkew.java
+      GrowthStats.java
+      Recommendations.java
+  src/main/resources/
+    application.yml
+```
+
+---
+
+## 2️⃣ `pom.xml`
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>3.2.5</version>
+    <relativePath/>
+  </parent>
+
+  <groupId>com.bqintel</groupId>
+  <artifactId>bq-intelligence-engine</artifactId>
+  <version>1.0.0</version>
+  <name>BigQuery Intelligence Engine</name>
+
+  <properties>
+    <java.version>17</java.version>
+  </properties>
+
+  <dependencies>
+    <!-- Spring Web -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+
+    <!-- Lombok -->
+    <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+      <version>1.18.32</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <!-- Google BigQuery client -->
+    <dependency>
+      <groupId>com.google.cloud</groupId>
+      <artifactId>google-cloud-bigquery</artifactId>
+      <version>2.43.4</version>
+    </dependency>
+
+    <!-- Jackson (for JSON) -->
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+    </dependency>
+
+    <!-- Validation (optional but good to have) -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-validation</artifactId>
+    </dependency>
+
+    <!-- Test (optional) -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
+
+</project>
+```
+
+---
+
+## 3️⃣ `application.yml`
+
+Adjust **project-id** and **location** to your GCP setup:
+
+```yaml
+server:
+  port: 8080
+
+gcp:
+  project-id: your-gcp-project-id
+  bigquery-location: us  # or eu, us-central1, etc
+
+spring:
+  jackson:
+    serialization:
+      INDENT_OUTPUT: true
+```
+
+---
+
+## 4️⃣ Main Application – `BqIntelApplication.java`
+
+```java
+package com.bqintel;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class BqIntelApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(BqIntelApplication.class, args);
+    }
+}
+```
+
+---
+
+## 5️⃣ BigQuery config – `config/BigQueryConfig.java`
+
+```java
+package com.bqintel.config;
+
+import com.google.cloud.bigquery.BigQuery;
+import com.google.cloud.bigquery.BigQueryOptions;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class BigQueryConfig {
+
+    @Value("${gcp.project-id}")
+    private String projectId;
+
+    @Bean
+    public BigQuery bigQuery() {
+        return BigQueryOptions.newBuilder()
+                .setProjectId(projectId)
+                .build()
+                .getService();
+    }
+}
+```
+
+> This uses **Application Default Credentials**. Run with `gcloud auth application-default login` locally, or a service account on GCP.
+
+---
+
+## 6️⃣ BigQuery wrapper – `client/BigQueryClientWrapper.java`
+
+This centralizes all SQL calls.
+
+```java
+package com.bqintel.client;
+
+import com.google.cloud.bigquery.*;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+import java.util.*;
+
+@Component
+@RequiredArgsConstructor
+public class BigQueryClientWrapper {
+
+    private final BigQuery bigQuery;
+
+    @Value("${gcp.project-id}")
+    private String projectId;
+
+    @Value("${gcp.bigquery-location}")
+    private String location; // e.g. "us"
+
+    /** Helper to build regional INFORMATION_SCHEMA prefix */
+    private String regionInfoSchema() {
+        // Example: `your-project.region-us`
+        return String.format("`%s.region-%s`", projectId, location);
+    }
+
+    public List<Map<String, Object>> executeQuery(String sql) {
+        QueryJobConfiguration cfg = QueryJobConfiguration.newBuilder(sql).build();
+        try {
+            TableResult result = bigQuery.query(cfg);
+            List<Map<String, Object>> rows = new ArrayList<>();
+
+            for (FieldValueList fvl : result.iterateAll()) {
+                Map<String, Object> row = new LinkedHashMap<>();
+                Schema schema = result.getSchema();
+                for (Field field : schema.getFields()) {
+                    FieldValue fv = fvl.get(field.getName());
+                    if (fv.isNull()) {
+                        row.put(field.getName(), null);
+                    } else {
+                        row.put(field.getName(), fv.getValue());
+                    }
+                }
+                rows.add(row);
+            }
+
+            return rows;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("BigQuery query interrupted", e);
+        } catch (Exception e) {
+            throw new RuntimeException("BigQuery query failed: " + sql, e);
+        }
+    }
+
+    /** Storage + basic table stats across a dataset */
+    public List<Map<String, Object>> getTableStorageStats(String datasetId) {
+        String sql = String.format("""
+            SELECT
+              table_schema,
+              table_name,
+              row_count,
+              ROUND(total_logical_bytes / 1024.0 / 1024.0 / 1024.0, 3) AS size_gb,
+              TIMESTAMP_DIFF(CURRENT_TIMESTAMP(), creation_time, DAY) AS age_days,
+              CASE
+                WHEN partitioning_type IS NULL THEN 'NONE'
+                ELSE partitioning_type
+              END AS partitioning_type,
+              ARRAY_TO_STRING(clustering_criteria, ',') AS clustering_fields
+            FROM %s.INFORMATION_SCHEMA.TABLE_STORAGE_STATS
+            WHERE table_schema = '%s'
+            ORDER BY size_gb DESC
+            """, regionInfoSchema(), datasetId);
+
+        return executeQuery(sql);
+    }
+
+    /** Column metadata (name + type) */
+    public List<Map<String, Object>> getColumnMetadata(String datasetId, String tableName) {
+        String sql = String.format("""
+            SELECT
+              column_name,
+              data_type
+            FROM `%s.%s`.INFORMATION_SCHEMA.COLUMNS
+            WHERE table_name = '%s'
+            ORDER BY ordinal_position
+            """, projectId, datasetId, tableName);
+
+        return executeQuery(sql);
+    }
+
+    /** Partition stats for a table */
+    public List<Map<String, Object>> getPartitionStats(String datasetId, String tableName) {
+        String sql = String.format("""
+            SELECT
+              partition_id,
+              row_count
+            FROM %s.INFORMATION_SCHEMA.PARTITIONS
+            WHERE table_schema = '%s'
+              AND table_name = '%s'
+            ORDER BY partition_id
+            """, regionInfoSchema(), datasetId, tableName);
+
+        return executeQuery(sql);
+    }
+
+    /** Query jobs over last N days */
+    public List<Map<String, Object>> getRecentJobs(int daysBack) {
+        String sql = String.format("""
+            SELECT
+              job_id,
+              user_email,
+              creation_time,
+              end_time,
+              total_bytes_processed,
+              total_slot_ms,
+              statement_type,
+              error_result,
+              query,
+              TIMESTAMP_DIFF(end_time, creation_time, MILLISECOND) AS runtime_ms
+            FROM %s.INFORMATION_SCHEMA.JOBS_BY_PROJECT
+            WHERE job_type = 'QUERY'
+              AND start_time > TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL %d DAY)
+            ORDER BY total_bytes_processed DESC
+            """, regionInfoSchema(), daysBack);
+
+        return executeQuery(sql);
+    }
+
+    /** Cost attribution: which tables are most scanned */
+    public List<Map<String, Object>> getTableScanBytes(String datasetId, int daysBack) {
+        String sql = String.format("""
+            SELECT
+              ref.table_id,
+              SUM(j.total_bytes_processed) AS total_scan_bytes
+            FROM %s.INFORMATION_SCHEMA.JOBS_BY_PROJECT AS j,
+              UNNEST(referenced_tables) AS ref
+            WHERE j.job_type = 'QUERY'
+              AND j.start_time > TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL %d DAY)
+              AND ref.dataset_id = '%s'
+            GROUP BY ref.table_id
+            ORDER BY total_scan_bytes DESC
+            """, regionInfoSchema(), daysBack, datasetId);
+
+        return executeQuery(sql);
+    }
+}
+```
+
+---
+
+## 7️⃣ Models – `model/*.java`
+
+### `DatasetAnalysisResponse.java`
+
+```java
+package com.bqintel.model;
+
+import lombok.*;
+
+import java.util.List;
+import java.util.Map;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class DatasetAnalysisResponse {
+
+    private String datasetId;
+    private int tableCount;
+    private long totalRows;
+    private double totalStorageGb;
+    private int overallHealthScore;
+
+    private List<TableAnalysis> tables;
+    private Recommendations recommendations;
+
+    // tableId -> total bytes scanned in recent period
+    private Map<String, Long> expensiveTables;
+
+    private List<String> performanceInsights;
+    private List<String> gapsDetected;
+    private List<String> businessValueInsights;
+}
+```
+
+### `TableAnalysis.java`
+
+```java
+package com.bqintel.model;
+
+import lombok.*;
+
+import java.util.List;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class TableAnalysis {
+
+    private String tableSchema;
+    private String tableName;
+    private long rowCount;
+    private double sizeGb;
+    private int ageDays;
+
+    private String partitioning;     // NONE / RANGE / TIME-UNIT etc.
+    private String clustering;      // comma-separated
+
+    private List<ColumnAnalysis> columns;
+    private PartitionSkew partitionSkew;
+    private GrowthStats growthStats;
+
+    // optional: quick performance flags/messages
+    private List<String> flags;
+}
+```
+
+### `ColumnAnalysis.java`
+
+```java
+package com.bqintel.model;
+
+import lombok.*;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class ColumnAnalysis {
+
+    private String columnName;
+    private String dataType;
+
+    // for now we keep 0–1 placeholders; can be enhanced later
+    private double nullRatio;
+    private double distinctRatio;
+
+    private boolean piiDetected;
+}
+```
+
+### `PartitionSkew.java`
+
+```java
+package com.bqintel.model;
+
+import lombok.*;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class PartitionSkew {
+
+    private String maxPartition;
+    private double maxPartitionPercent;
+    private int totalPartitions;
+    private boolean skewed;
+}
+```
+
+### `GrowthStats.java`
+
+```java
+package com.bqintel.model;
+
+import lombok.*;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class GrowthStats {
+
+    // Simple approximation based on current size and age
+    private int ageDays;
+    private double currentSizeGb;
+    private double approxSizePerDayGb;
+}
+```
+
+### `Recommendations.java`
+
+```java
+package com.bqintel.model;
+
+import lombok.*;
+
+import java.util.List;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class Recommendations {
+
+    private List<String> unpartitioned;
+    private List<String> unclustered;
+    private List<String> skewedPartitions;
+    private List<String> largeTables;
+}
+```
+
+---
+
+## 8️⃣ Services
+
+### 8.1 `TableScanner.java`
+
+```java
+package com.bqintel.service;
+
+import com.bqintel.client.BigQueryClientWrapper;
+import com.bqintel.model.TableAnalysis;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+import java.util.*;
+
+@Service
+@RequiredArgsConstructor
+public class TableScanner {
+
+    private final BigQueryClientWrapper bigQueryClient;
+
+    // aggregated across dataset
+    private long totalRows;
+    private double totalStorageGb;
+
+    public long getTotalRows() {
+        return totalRows;
+    }
+
+    public double getTotalStorageGb() {
+        return totalStorageGb;
+    }
+
+    public List<TableAnalysis> scanTables(String datasetId) {
+        totalRows = 0;
+        totalStorageGb = 0.0;
+
+        List<Map<String, Object>> rows = bigQueryClient.getTableStorageStats(datasetId);
+        List<TableAnalysis> tables = new ArrayList<>();
+
+        for (Map<String, Object> r : rows) {
+            long rowCount = r.get("row_count") == null ? 0L : ((Number) r.get("row_count")).longValue();
+            double sizeGb = r.get("size_gb") == null ? 0.0 : ((Number) r.get("size_gb")).doubleValue();
+            int ageDays = r.get("age_days") == null ? 0 : ((Number) r.get("age_days")).intValue();
+
+            totalRows += rowCount;
+            totalStorageGb += sizeGb;
+
+            TableAnalysis t = TableAnalysis.builder()
+                    .tableSchema((String) r.get("table_schema"))
+                    .tableName((String) r.get("table_name"))
+                    .rowCount(rowCount)
+                    .sizeGb(sizeGb)
+                    .ageDays(ageDays)
+                    .partitioning((String) r.get("partitioning_type"))
+                    .clustering((String) r.get("clustering_fields"))
+                    .build();
+
+            tables.add(t);
+        }
+
+        return tables;
+    }
+}
+```
+
+### 8.2 `ColumnAnalyzer.java`
+
+```java
+package com.bqintel.service;
+
+import com.bqintel.client.BigQueryClientWrapper;
+import com.bqintel.model.ColumnAnalysis;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+import java.util.*;
+
+@Service
+@RequiredArgsConstructor
+public class ColumnAnalyzer {
+
+    private final BigQueryClientWrapper bigQueryClient;
+
+    public List<ColumnAnalysis> analyzeColumns(String datasetId, String tableName) {
+        List<Map<String, Object>> meta = bigQueryClient.getColumnMetadata(datasetId, tableName);
+
+        List<ColumnAnalysis> columns = new ArrayList<>();
+        for (Map<String, Object> col : meta) {
+            String name = (String) col.get("column_name");
+            String type = (String) col.get("data_type");
+
+            columns.add(ColumnAnalysis.builder()
+                    .columnName(name)
+                    .dataType(type)
+                    // placeholders for now; you can later wire real stats per column
+                    .nullRatio(0.0)
+                    .distinctRatio(0.0)
+                    .piiDetected(isPII(name))
+                    .build());
+        }
+        return columns;
+    }
+
+    private boolean isPII(String colName) {
+        if (colName == null) return false;
+        String n = colName.toLowerCase();
+        return n.contains("email") || n.contains("phone") ||
+               n.contains("ssn") || n.contains("aadhaar") ||
+               n.contains("name") || n.contains("dob") ||
+               n.contains("address");
+    }
+}
+```
+
+### 8.3 `PartitionSkewAnalyzer.java`
+
+```java
+package com.bqintel.service;
+
+import com.bqintel.client.BigQueryClientWrapper;
+import com.bqintel.model.PartitionSkew;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+import java.util.*;
+
+@Service
+@RequiredArgsConstructor
+public class PartitionSkewAnalyzer {
+
+    private final BigQueryClientWrapper bigQueryClient;
+
+    public PartitionSkew analyze(String datasetId, String tableName, String partitioning) {
+        if (partitioning == null || "NONE".equalsIgnoreCase(partitioning)) {
+            return null;
+        }
+
+        List<Map<String, Object>> parts = bigQueryClient.getPartitionStats(datasetId, tableName);
+        if (parts.isEmpty()) return null;
+
+        long total = 0;
+        long max = 0;
+        String maxId = null;
+
+        for (Map<String, Object> p : parts) {
+            long cnt = p.get("row_count") == null ? 0L : ((Number) p.get("row_count")).longValue();
+            total += cnt;
+            String pid = (String) p.get("partition_id");
+            if (cnt > max) {
+                max = cnt;
+                maxId = pid;
+            }
+        }
+
+        double percent = total == 0 ? 0.0 : (double) max / (double) total;
+
+        return PartitionSkew.builder()
+                .maxPartition(maxId)
+                .maxPartitionPercent(percent)
+                .totalPartitions(parts.size())
+                .skewed(percent > 0.7)   // flag if > 70% in one partition
+                .build();
+    }
+}
+```
+
+### 8.4 `GrowthAnalyzer.java`
+
+Simple approximation using age + size:
+
+```java
+package com.bqintel.service;
+
+import com.bqintel.model.GrowthStats;
+import com.bqintel.model.TableAnalysis;
+import org.springframework.stereotype.Service;
+
+@Service
+public class GrowthAnalyzer {
+
+    public GrowthStats analyze(TableAnalysis table) {
+        int age = table.getAgeDays() <= 0 ? 1 : table.getAgeDays();
+        double perDay = table.getSizeGb() / age;
+
+        return GrowthStats.builder()
+                .ageDays(age)
+                .currentSizeGb(table.getSizeGb())
+                .approxSizePerDayGb(perDay)
+                .build();
+    }
+}
+```
+
+### 8.5 `UsageAnalyzer.java` (metadata-based recommendations)
+
+```java
+package com.bqintel.service;
+
+import com.bqintel.model.Recommendations;
+import com.bqintel.model.TableAnalysis;
+import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.List;
+
+@Service
+public class UsageAnalyzer {
+
+    public Recommendations generateRecommendations(List<TableAnalysis> tables) {
+
+        List<String> unpartitioned = new ArrayList<>();
+        List<String> unclustered = new ArrayList<>();
+        List<String> skewed = new ArrayList<>();
+        List<String> large = new ArrayList<>();
+
+        for (TableAnalysis t : tables) {
+            if ((t.getPartitioning() == null || "NONE".equalsIgnoreCase(t.getPartitioning()))
+                    && t.getSizeGb() > 10.0) {
+                unpartitioned.add(t.getTableName());
+            }
+
+            if ((t.getClustering() == null || t.getClustering().isBlank())
+                    && t.getSizeGb() > 20.0) {
+                unclustered.add(t.getTableName());
+            }
+
+            if (t.getPartitionSkew() != null && t.getPartitionSkew().isSkewed()) {
+                skewed.add(t.getTableName());
+            }
+
+            if (t.getSizeGb() > 200.0) {
+                large.add(t.getTableName());
+            }
+        }
+
+        return Recommendations.builder()
+                .unpartitioned(unpartitioned)
+                .unclustered(unclustered)
+                .skewedPartitions(skewed)
+                .largeTables(large)
+                .build();
+    }
+}
+```
+
+### 8.6 `CostAnalyzer.java`
+
+```java
+package com.bqintel.service;
+
+import com.bqintel.client.BigQueryClientWrapper;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+import java.util.*;
+
+@Service
+@RequiredArgsConstructor
+public class CostAnalyzer {
+
+    private final BigQueryClientWrapper bigQueryClient;
+
+    public Map<String, Long> findMostExpensiveTables(String datasetId, int daysBack) {
+        List<Map<String, Object>> rows = bigQueryClient.getTableScanBytes(datasetId, daysBack);
+        Map<String, Long> out = new LinkedHashMap<>();
+
+        for (Map<String, Object> r : rows) {
+            String tableId = (String) r.get("table_id");
+            Long bytes = r.get("total_scan_bytes") == null ? 0L : ((Number) r.get("total_scan_bytes")).longValue();
+            out.put(tableId, bytes);
+        }
+
+        return out;
+    }
+}
+```
+
+### 8.7 `PerformanceAnalyzer.java`
+
+Summarises recent job performance.
+
+```java
+package com.bqintel.service;
+
+import com.bqintel.client.BigQueryClientWrapper;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+import java.util.*;
+
+@Service
+@RequiredArgsConstructor
+public class PerformanceAnalyzer {
+
+    private final BigQueryClientWrapper bigQueryClient;
+
+    public List<String> summarizeRecentPerformance(int daysBack) {
+
+        List<Map<String, Object>> jobs = bigQueryClient.getRecentJobs(daysBack);
+
+        long totalBytes = 0;
+        long totalSlotMs = 0;
+        int slowQueries = 0;
+        int failedQueries = 0;
+
+        for (Map<String, Object> j : jobs) {
+            long b = j.get("total_bytes_processed") == null ? 0L : ((Number) j.get("total_bytes_processed")).longValue();
+            long s = j.get("total_slot_ms") == null ? 0L : ((Number) j.get("total_slot_ms")).longValue();
+            long runtimeMs = j.get("runtime_ms") == null ? 0L : ((Number) j.get("runtime_ms")).longValue();
+            String error = (String) j.get("error_result");
+
+            totalBytes += b;
+            totalSlotMs += s;
+
+            if (runtimeMs > 60_000) { // > 60 seconds
+                slowQueries++;
+            }
+            if (error != null) {
+                failedQueries++;
+            }
+        }
+
+        double totalTb = totalBytes / Math.pow(1024, 4);
+        double estCost = totalTb * 5.0; // $5 per TB on-demand
+        double totalSlotHours = totalSlotMs / 1000.0 / 60.0 / 60.0;
+
+        List<String> insights = new ArrayList<>();
+        insights.add(String.format("Analyzed %d query jobs in last %d days.", jobs.size(), daysBack));
+        insights.add(String.format("Total data scanned: %.2f TB (est. on-demand cost ~$%.2f).", totalTb, estCost));
+        insights.add(String.format("Total slot time: %.2f slot hours.", totalSlotHours));
+        insights.add(String.format("Slow queries (>60s): %d.", slowQueries));
+        insights.add(String.format("Failed queries: %d.", failedQueries));
+
+        return insights;
+    }
+}
+```
+
+### 8.8 `GapAnalyzer.java`
+
+```java
+package com.bqintel.service;
+
+import com.bqintel.model.TableAnalysis;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+import java.util.*;
+
+@Service
+@RequiredArgsConstructor
+public class GapAnalyzer {
+
+    public List<String> detectGaps(List<TableAnalysis> tables, Map<String, Long> costInfo) {
+
+        List<String> gaps = new ArrayList<>();
+
+        for (TableAnalysis t : tables) {
+            if ((t.getPartitioning() == null || "NONE".equalsIgnoreCase(t.getPartitioning()))
+                    && t.getSizeGb() > 10.0) {
+                gaps.add("Table " + t.getTableName() + " is >10GB and not partitioned.");
+            }
+
+            if ((t.getClustering() == null || t.getClustering().isBlank())
+                    && t.getSizeGb() > 20.0) {
+                gaps.add("Table " + t.getTableName() + " is >20GB and not clustered.");
+            }
+
+            if (t.getPartitionSkew() != null && t.getPartitionSkew().isSkewed()) {
+                gaps.add("Table " + t.getTableName() + " has severe partition skew ("
+                        + Math.round(t.getPartitionSkew().getMaxPartitionPercent() * 100)
+                        + "% of rows in one partition).");
+            }
+
+            if (t.getGrowthStats() != null && t.getGrowthStats().getApproxSizePerDayGb() > 5.0) {
+                gaps.add("Table " + t.getTableName()
+                        + " is growing fast (" + String.format("%.2f", t.getGrowthStats().getApproxSizePerDayGb())
+                        + " GB/day approx).");
+            }
+        }
+
+        for (Map.Entry<String, Long> e : costInfo.entrySet()) {
+            double tb = e.getValue() / Math.pow(1024, 4);
+            if (tb > 5.0) {
+                gaps.add("High scan volume on table " + e.getKey()
+                        + " (~" + String.format("%.2f", tb) + " TB in recent period).");
+            }
+        }
+
+        return gaps;
+    }
+}
+```
+
+### 8.9 `BusinessValueEngine.java`
+
+```java
+package com.bqintel.service;
+
+import com.bqintel.model.TableAnalysis;
+import org.springframework.stereotype.Service;
+
+import java.util.*;
+
+@Service
+public class BusinessValueEngine {
+
+    public List<String> deriveBusinessInsights(List<TableAnalysis> tables,
+                                               Map<String, Long> costInfo,
+                                               int daysBack) {
+
+        List<String> insights = new ArrayList<>();
+
+        double totalCost = 0.0;
+        for (Map.Entry<String, Long> e : costInfo.entrySet()) {
+            double tb = e.getValue() / Math.pow(1024, 4);
+            double cost = tb * 5.0;
+            totalCost += cost;
+
+            if (cost > 1000) {
+                insights.add("Table " + e.getKey()
+                        + " alone accounts for >$1000 estimated query cost in "
+                        + daysBack + " days → strong candidate for optimization/materialization.");
+            }
+        }
+
+        insights.add(String.format("Estimated total query cost across dataset in last %d days: ~$%.2f.",
+                daysBack, totalCost));
+
+        long veryLarge = tables.stream().filter(t -> t.getSizeGb() > 200.0).count();
+        if (veryLarge > 0) {
+            insights.add("Detected " + veryLarge
+                    + " very large tables (>200GB). Consider incremental pipelines, summary tables, or tiered storage.");
+        }
+
+        long piiColumns = tables.stream()
+                .flatMap(t -> t.getColumns() == null ? List.<String>of().stream()
+                        : t.getColumns().stream().filter(c -> c.isPiiDetected()).map(c -> c.getColumnName()))
+                .count();
+
+        if (piiColumns > 0) {
+            insights.add("Detected potential PII fields (email/phone/etc.). This supports governance and compliance initiatives.");
+        }
+
+        return insights;
+    }
+}
+```
+
+---
+
+## 9️⃣ Master Orchestrator – `DatasetAnalysisService.java`
+
+```java
+package com.bqintel.service;
+
+import com.bqintel.model.*;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+import java.util.*;
+
+@Service
+@RequiredArgsConstructor
+public class DatasetAnalysisService {
+
+    private final TableScanner tableScanner;
+    private final ColumnAnalyzer columnAnalyzer;
+    private final PartitionSkewAnalyzer partitionSkewAnalyzer;
+    private final GrowthAnalyzer growthAnalyzer;
+    private final UsageAnalyzer usageAnalyzer;
+    private final CostAnalyzer costAnalyzer;
+    private final PerformanceAnalyzer performanceAnalyzer;
+    private final GapAnalyzer gapAnalyzer;
+    private final BusinessValueEngine businessValueEngine;
+
+    public DatasetAnalysisResponse analyzeDataset(String datasetId) {
+
+        // 1) Scan tables & basic stats
+        List<TableAnalysis> tables = tableScanner.scanTables(datasetId);
+
+        // 2) For each table: columns, partition skew, growth
+        for (int i = 0; i < tables.size(); i++) {
+            TableAnalysis t = tables.get(i);
+
+            List<ColumnAnalysis> cols =
+                    columnAnalyzer.analyzeColumns(datasetId, t.getTableName());
+            PartitionSkew skew =
+                    partitionSkewAnalyzer.analyze(datasetId, t.getTableName(), t.getPartitioning());
+            GrowthStats growth = growthAnalyzer.analyze(t);
+
+            t.setColumns(cols);
+            t.setPartitionSkew(skew);
+            t.setGrowthStats(growth);
+
+            tables.set(i, t);
+        }
+
+        // 3) Recommendations from metadata
+        Recommendations rec = usageAnalyzer.generateRecommendations(tables);
+
+        // 4) Cost data (which tables are most expensive)
+        int costWindowDays = 7;
+        Map<String, Long> expensiveTables =
+                costAnalyzer.findMostExpensiveTables(datasetId, costWindowDays);
+
+        // 5) Performance summary across jobs
+        List<String> perfInsights = performanceAnalyzer.summarizeRecentPerformance(costWindowDays);
+
+        // 6) Gap analysis (where are we inefficient)
+        List<String> gaps = gapAnalyzer.detectGaps(tables, expensiveTables);
+
+        // 7) Business value narrative (for CDO / leadership)
+        List<String> valueInsights =
+                businessValueEngine.deriveBusinessInsights(tables, expensiveTables, costWindowDays);
+
+        // 8) Health score (simple heuristic)
+        int healthScore = calculateHealth(rec, gaps);
+
+        return DatasetAnalysisResponse.builder()
+                .datasetId(datasetId)
+                .tableCount(tables.size())
+                .totalRows(tableScanner.getTotalRows())
+                .totalStorageGb(tableScanner.getTotalStorageGb())
+                .overallHealthScore(healthScore)
+                .tables(tables)
+                .recommendations(rec)
+                .expensiveTables(expensiveTables)
+                .performanceInsights(perfInsights)
+                .gapsDetected(gaps)
+                .businessValueInsights(valueInsights)
+                .build();
+    }
+
+    private int calculateHealth(Recommendations rec, List<String> gaps) {
+        int score = 100;
+        if (rec != null) {
+            score -= rec.getUnpartitioned().size() * 2;
+            score -= rec.getUnclustered().size() * 1;
+            score -= rec.getSkewedPartitions().size() * 3;
+            score -= rec.getLargeTables().size() * 1;
+        }
+        score -= gaps.size(); // each gap reduces 1 point
+        return Math.max(0, score);
+    }
+}
+```
+
+---
+
+## 🔟 REST Controller – `DatasetAnalysisController.java`
+
+```java
+package com.bqintel.controller;
+
+import com.bqintel.model.DatasetAnalysisResponse;
+import com.bqintel.service.DatasetAnalysisService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/api/datasets")
+@RequiredArgsConstructor
+public class DatasetAnalysisController {
+
+    private final DatasetAnalysisService datasetAnalysisService;
+
+    @GetMapping("/{datasetId}/full-analysis")
+    public DatasetAnalysisResponse analyze(@PathVariable String datasetId) {
+        return datasetAnalysisService.analyzeDataset(datasetId);
+    }
+}
+```
+
+---
+
+## 🔚 How this adds **real value** to your project
+
+This is not just metadata scanning. It gives you:
+
+1. **Cost visibility**
+
+   * Which tables are burning the most TB scanned
+   * Estimated $$ over last 7 days
+   * High-cost tables flagged for action
+
+2. **Performance visibility**
+
+   * Number of slow queries, failed queries
+   * Slot-hours consumed
+   * Baseline performance insights you can show to managers
+
+3. **Actionable gaps**
+
+   * Unpartitioned / unclustered large tables
+   * Partition skew
+   * High-growth tables
+   * Tables with heavy scan volume
+
+4. **Business value story (for EB-1A & CDO narrative)**
+
+   * “We built an internal BigQuery intelligence engine that **automatically** analyzes datasets, query cost, and performance, and generates **actionable recommendations** that can save X% in cost and reduce latency for downstream dashboards.”
+
+5. **Extensible foundation**
+
+   * You can later plug:
+
+     * AI/LLM layer (agentic suggestions / SQL rewrite)
+     * Slack/Email alerts
+     * Scheduled daily scans
+     * UI dashboard (Angular)
+
+---
+
+### How to run
+
+1. Add your `project-id` and `location` in `application.yml`.
+2. Make sure ADC is configured (`gcloud auth application-default login`).
+3. Build & run:
+
+```bash
+mvn clean spring-boot:run
+```
+
+4. Call:
+
+```bash
+GET http://localhost:8080/api/datasets/your_dataset_name/full-analysis
+```
+
+You’ll get one big JSON with **tables + recommendations + cost + performance + business insights**.
+
+---
+
+If you want, next step I can:
+
+* Help you **write a 1–2 page architecture note** explaining this to Verizon / your manager / EB-1A final merits,
+* Or add **scheduler + Slack alerts** on top of this same code.
