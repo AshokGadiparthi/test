@@ -1,14 +1,31 @@
-Step1: Get service account access for Teradata, BigQuery, Dataproc, Vertex AI
-Step2: Access existing H2O/Spark ML production environment (Read-Only)
-Step3: Inventory of all ML models, pipelines, datasets, features
-Step4: Extract all Teradata table dependencies
-Step5: Understand BigQuery data models and feature store mapping
-Step6: Categorize ML models (BQML / Dataproc Spark ML / Vertex Python)
-Step7: Map all feature engineering pipelines to BigQuery/Python
-Step8: Migrate and modernize feature engineering (Spark → BQ/Dataflow)
-Step9: Retrain models on Vertex AI / BigQuery ML / Dataproc
-Step10: Validate model accuracy, performance, cost
-Step11: Setup CI/CD via Jenkins or Cloud Build
-Step12: Setup observability (Cloud Monitoring, Logging, BQ audit logs)
-Step13: Deploy models (Batch via Composer, Real-Time via Vertex Endpoint)
-Step14: Create cutover plan with parallel run and final switch
+WITH data AS (
+  SELECT
+    payload_json,
+    COALESCE(
+      CAST(JSON_VALUE(payload_json, '$.MODIFIED_TIMESTAMP') AS TIMESTAMP),
+      CAST(JSON_VALUE(payload_json, '$.DB_TIMESTAMP') AS TIMESTAMP),
+      CAST(JSON_VALUE(payload_json, '$.CREATE_TIMESTAMP') AS TIMESTAMP)
+    ) AS expected_ts,
+    'STALE' AS actual_category
+  FROM `project.dataset.stale_table`
+  
+  UNION ALL
+
+  SELECT
+    payload_json,
+    COALESCE(
+      CAST(JSON_VALUE(payload_json, '$.MODIFIED_TIMESTAMP') AS TIMESTAMP),
+      CAST(JSON_VALUE(payload_json, '$.DB_TIMESTAMP') AS TIMESTAMP),
+      CAST(JSON_VALUE(payload_json, '$.CREATE_TIMESTAMP') AS TIMESTAMP)
+    ) AS expected_ts,
+    'NON_STALE' AS actual_category
+  FROM `project.dataset.non_stale_table`
+)
+
+SELECT *,
+  CASE 
+    WHEN expected_ts < TIMESTAMP('2025-12-11') THEN 'STALE'
+    ELSE 'NON_STALE'
+  END AS expected_category
+FROM data
+WHERE actual_category != expected_category;
