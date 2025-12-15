@@ -2,9 +2,9 @@ WITH data AS (
   SELECT
     payload_json,
     COALESCE(
-      CAST(JSON_VALUE(payload_json, '$.MODIFIED_TIMESTAMP') AS TIMESTAMP),
-      CAST(JSON_VALUE(payload_json, '$.DB_TIMESTAMP') AS TIMESTAMP),
-      CAST(JSON_VALUE(payload_json, '$.CREATE_TIMESTAMP') AS TIMESTAMP)
+      SAFE.PARSE_TIMESTAMP('%Y-%m-%d-%H.%M.%S.%f', JSON_VALUE(payload_json, '$.MODIFIED_TIMESTAMP')),
+      SAFE.PARSE_TIMESTAMP('%Y-%m-%d-%H.%M.%S.%f', JSON_VALUE(payload_json, '$.DB_TIMESTAMP')),
+      SAFE.PARSE_TIMESTAMP('%Y-%m-%d-%H.%M.%S.%f', JSON_VALUE(payload_json, '$.CREATE_TIMESTAMP'))
     ) AS expected_ts,
     'STALE' AS actual_category
   FROM `project.dataset.stale_table`
@@ -14,9 +14,9 @@ WITH data AS (
   SELECT
     payload_json,
     COALESCE(
-      CAST(JSON_VALUE(payload_json, '$.MODIFIED_TIMESTAMP') AS TIMESTAMP),
-      CAST(JSON_VALUE(payload_json, '$.DB_TIMESTAMP') AS TIMESTAMP),
-      CAST(JSON_VALUE(payload_json, '$.CREATE_TIMESTAMP') AS TIMESTAMP)
+      SAFE.PARSE_TIMESTAMP('%Y-%m-%d-%H.%M.%S.%f', JSON_VALUE(payload_json, '$.MODIFIED_TIMESTAMP')),
+      SAFE.PARSE_TIMESTAMP('%Y-%m-%d-%H.%M.%S.%f', JSON_VALUE(payload_json, '$.DB_TIMESTAMP')),
+      SAFE.PARSE_TIMESTAMP('%Y-%m-%d-%H.%M.%S.%f', JSON_VALUE(payload_json, '$.CREATE_TIMESTAMP'))
     ) AS expected_ts,
     'NON_STALE' AS actual_category
   FROM `project.dataset.non_stale_table`
