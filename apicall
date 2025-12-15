@@ -20,12 +20,20 @@ WITH data AS (
     ) AS expected_ts,
     'NON_STALE' AS actual_category
   FROM `project.dataset.non_stale_table`
+),
+
+classified AS (
+  SELECT
+    payload_json,
+    expected_ts,
+    actual_category,
+    CASE 
+      WHEN expected_ts < TIMESTAMP('2025-12-11') THEN 'STALE'
+      ELSE 'NON_STALE'
+    END AS expected_category
+  FROM data
 )
 
-SELECT *,
-  CASE 
-    WHEN expected_ts < TIMESTAMP('2025-12-11') THEN 'STALE'
-    ELSE 'NON_STALE'
-  END AS expected_category
-FROM data
+SELECT *
+FROM classified
 WHERE actual_category != expected_category;
