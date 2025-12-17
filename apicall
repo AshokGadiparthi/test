@@ -1,362 +1,202 @@
 <mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/27.0.9 Chrome/134.0.6998.205 Electron/35.4.0 Safari/537.36" version="27.0.9">
-  <diagram name="End-to-End-Flow" id="e2e-flow">
-    <mxGraphModel dx="1082" dy="744" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="2400" math="0" shadow="0">
+  <diagram name="High-Level-Architecture" id="arch-hl">
+    <mxGraphModel dx="1028" dy="707" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1000" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="title" value="&lt;font style=&quot;font-size: 28px&quot;&gt;&lt;b&gt;End-to-End MLOps Pipeline Flow&lt;/b&gt;&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size: 14px&quot;&gt;Complete Execution Sequence: Trigger → Train → Score → Validate → Deploy&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
-          <mxGeometry x="450" y="30" width="900" height="70" as="geometry" />
+        <mxCell id="title" value="&lt;font style=&quot;font-size: 26px&quot;&gt;&lt;b&gt;Kedro ML Platform - High-Level Architecture&lt;/b&gt;&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size: 13px&quot;&gt;Airflow + Dataproc/Kedro/Spark + BigQuery + MLflow/Domino&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="400" y="30" width="800" height="60" as="geometry" />
         </mxCell>
-        <mxCell id="phase1-container" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=3;arcSize=3;" parent="1" vertex="1">
-          <mxGeometry x="120" y="140" width="1560" height="280" as="geometry" />
+        <mxCell id="orch-layer" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF9C4;strokeColor=#F57F17;strokeWidth=3;arcSize=5;" parent="1" vertex="1">
+          <mxGeometry x="110" y="145" width="360" height="180" as="geometry" />
         </mxCell>
-        <mxCell id="phase1-title" value="&lt;b style=&quot;font-size: 18px&quot;&gt;&lt;font style=&quot;color: rgb(0, 0, 0);&quot;&gt;PHASE 1: ORCHESTRATION AND INFRASTRUCTURE (Airflow)&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=16;fontColor=#F57F17;" parent="1" vertex="1">
-          <mxGeometry x="150" y="155" width="700" height="30" as="geometry" />
+        <mxCell id="orch-title" value="&lt;b&gt;ORCHESTRATION LAYER&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=15;fontColor=#F57F17;" parent="1" vertex="1">
+          <mxGeometry x="140" y="145" width="250" height="30" as="geometry" />
         </mxCell>
-        <mxCell id="step1-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#E37400;strokeWidth=2;" parent="1" vertex="1">
-          <mxGeometry x="160" y="210" width="450" height="180" as="geometry" />
+        <mxCell id="airflow" value="&lt;b&gt;Apache Airflow&lt;/b&gt;&lt;br&gt;(Cloud Composer)&lt;br&gt;&lt;br&gt;• DAG Scheduling&lt;br&gt;• Task Dependencies&lt;br&gt;• Config Management&lt;br&gt;• XCom Params" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#E37400;strokeWidth=2;fontSize=12;align=left;verticalAlign=top;" parent="1" vertex="1">
+          <mxGeometry x="130" y="190" width="300" height="120" as="geometry" />
         </mxCell>
-        <mxCell id="step1-num" value="1" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=#E37400;strokeColor=#E37400;fontColor=#ffffff;fontSize=16;fontStyle=1;" parent="1" vertex="1">
-          <mxGeometry x="180" y="225" width="35" height="35" as="geometry" />
+        <mxCell id="compute-layer" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#1B5E20;strokeWidth=3;arcSize=5;" parent="1" vertex="1">
+          <mxGeometry x="620" y="130" width="610" height="470" as="geometry" />
         </mxCell>
-        <mxCell id="step1-title" value="&lt;b&gt;Schedule &amp;amp; Config&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontColor=#E37400;" parent="1" vertex="1">
-          <mxGeometry x="225" y="225" width="200" height="30" as="geometry" />
+        <mxCell id="compute-title" value="&lt;b&gt;COMPUTE &amp;amp; ML EXECUTION LAYER&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=15;fontColor=#1B5E20;" parent="1" vertex="1">
+          <mxGeometry x="780" y="145" width="350" height="30" as="geometry" />
         </mxCell>
-        <mxCell id="step1-comp" value="&lt;b&gt;Component:&lt;/b&gt; Airflow" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" parent="1" vertex="1">
-          <mxGeometry x="180" y="265" width="400" height="20" as="geometry" />
+        <mxCell id="dataproc" value="&lt;b&gt;Google Cloud Dataproc&lt;/b&gt;&lt;br&gt;Serverless Spark Clusters&lt;br&gt;&lt;br&gt;• Provisions on-demand&lt;br&gt;• Executes PySpark jobs&lt;br&gt;• Auto-scales &amp;amp; terminates" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#4285F4;strokeWidth=2;fontSize=12;align=left;verticalAlign=top;" parent="1" vertex="1">
+          <mxGeometry x="650" y="190" width="200" height="120" as="geometry" />
         </mxCell>
-        <mxCell id="step1-desc" value="&lt;b&gt;Action:&lt;/b&gt;&lt;br&gt;• DAG triggered on schedule/manual run&lt;br&gt;• Extract config params (dates, run_mode, table names)&lt;br&gt;• Push to XCom for downstream tasks" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=11;" parent="1" vertex="1">
-          <mxGeometry x="180" y="290" width="410" height="85" as="geometry" />
+        <mxCell id="kedro" value="&lt;b&gt;Kedro Framework&lt;/b&gt;&lt;br&gt;Pipeline Structure&lt;br&gt;&lt;br&gt;• Modular Nodes&lt;br&gt;• Data Catalog&lt;br&gt;• Config Management&lt;br&gt;• Reusable Pipelines" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#34A853;strokeWidth=2;fontSize=12;align=left;verticalAlign=top;" parent="1" vertex="1">
+          <mxGeometry x="910" y="270" width="200" height="120" as="geometry" />
         </mxCell>
-        <mxCell id="step2-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#4285F4;strokeWidth=2;" parent="1" vertex="1">
-          <mxGeometry x="650" y="210" width="450" height="180" as="geometry" />
+        <mxCell id="python" value="&lt;b&gt;Python/PySpark&lt;/b&gt;&lt;br&gt;Business Logic&lt;br&gt;&lt;br&gt;• Custom Transformations&lt;br&gt;• Model Validation&lt;br&gt;• Metadata Updates" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#FBBC04;strokeWidth=2;fontSize=12;align=left;verticalAlign=top;" parent="1" vertex="1">
+          <mxGeometry x="640" y="460" width="200" height="120" as="geometry" />
         </mxCell>
-        <mxCell id="step2-num" value="2" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=#4285F4;strokeColor=#4285F4;fontColor=#ffffff;fontSize=16;fontStyle=1;" parent="1" vertex="1">
-          <mxGeometry x="670" y="225" width="35" height="35" as="geometry" />
+        <mxCell id="tracking-layer" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=3;arcSize=5;" parent="1" vertex="1">
+          <mxGeometry x="610" y="690" width="480" height="320" as="geometry" />
         </mxCell>
-        <mxCell id="step2-title" value="&lt;b&gt;Data Validation&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontColor=#4285F4;" parent="1" vertex="1">
-          <mxGeometry x="715" y="225" width="200" height="30" as="geometry" />
+        <mxCell id="tracking-title" value="&lt;b&gt;TRACKING &amp;amp; METADATA LAYER&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=15;fontColor=#880E4F;" parent="1" vertex="1">
+          <mxGeometry x="795" y="705" width="350" height="30" as="geometry" />
         </mxCell>
-        <mxCell id="step2-comp" value="&lt;b&gt;Component:&lt;/b&gt; Airflow → BigQuery" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" parent="1" vertex="1">
-          <mxGeometry x="670" y="265" width="400" height="20" as="geometry" />
+        <mxCell id="mlflow" value="&lt;b&gt;MLflow (Domino)&lt;/b&gt;&lt;br&gt;&lt;br&gt;• Experiment Tracking&lt;br&gt;• Model Registry&lt;br&gt;• Run Parameters&lt;br&gt;• Model Versioning" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#0277BD;strokeWidth=2;fontSize=12;align=left;verticalAlign=top;" parent="1" vertex="1">
+          <mxGeometry x="640" y="750" width="280" height="100" as="geometry" />
         </mxCell>
-        <mxCell id="step2-desc" value="&lt;b&gt;Action:&lt;/b&gt;&lt;br&gt;• BigQueryValueCheckOperator validates input data&lt;br&gt;• Confirms training/scoring datasets exist in BigQuery&lt;br&gt;• Checks for relevant run dates" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=11;" parent="1" vertex="1">
-          <mxGeometry x="670" y="290" width="410" height="85" as="geometry" />
+        <mxCell id="metadata" value="&lt;b&gt;Metadata Tables&lt;/b&gt;&lt;br&gt;&lt;br&gt;• Run Status Logs&lt;br&gt;• Model Performance&lt;br&gt;• Validation Results&lt;br&gt;• Quality Checks" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#5F6368;strokeWidth=2;fontSize=12;align=left;verticalAlign=top;" parent="1" vertex="1">
+          <mxGeometry x="630" y="890" width="290" height="100" as="geometry" />
         </mxCell>
-        <mxCell id="step3-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#34A853;strokeWidth=2;" parent="1" vertex="1">
-          <mxGeometry x="1140" y="210" width="500" height="180" as="geometry" />
+        <mxCell id="obs-layer" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EFEBE9;strokeColor=#3E2723;strokeWidth=3;arcSize=5;" parent="1" vertex="1">
+          <mxGeometry x="1766" y="150" width="280" height="600" as="geometry" />
         </mxCell>
-        <mxCell id="step3-num" value="3" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=#34A853;strokeColor=#34A853;fontColor=#ffffff;fontSize=16;fontStyle=1;" parent="1" vertex="1">
-          <mxGeometry x="1160" y="225" width="35" height="35" as="geometry" />
+        <mxCell id="obs-title" value="&lt;b&gt;OBSERVABILITY&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=15;fontColor=#3E2723;" parent="1" vertex="1">
+          <mxGeometry x="1786" y="165" width="240" height="30" as="geometry" />
         </mxCell>
-        <mxCell id="step3-title" value="&lt;b&gt;Resource Provisioning&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontColor=#34A853;" parent="1" vertex="1">
-          <mxGeometry x="1205" y="225" width="250" height="30" as="geometry" />
+        <mxCell id="logging" value="&lt;b&gt;Cloud Logging&lt;/b&gt;&lt;br&gt;Job Logs" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#4285F4;strokeWidth=2;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="1796" y="215" width="220" height="50" as="geometry" />
         </mxCell>
-        <mxCell id="step3-comp" value="&lt;b&gt;Component:&lt;/b&gt; Airflow → Dataproc" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" parent="1" vertex="1">
-          <mxGeometry x="1160" y="265" width="450" height="20" as="geometry" />
+        <mxCell id="monitoring" value="&lt;b&gt;Cloud Monitoring&lt;/b&gt;&lt;br&gt;Metrics &amp;amp; Alerts" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#34A853;strokeWidth=2;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="1796" y="285" width="220" height="50" as="geometry" />
         </mxCell>
-        <mxCell id="step3-desc" value="&lt;b&gt;Action:&lt;/b&gt;&lt;br&gt;• DataprocCreateClusterOperator provisions temp Spark cluster&lt;br&gt;• Configured with model&#39;s Docker image&lt;br&gt;• Contains Kedro + Python dependencies" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=11;" parent="1" vertex="1">
-          <mxGeometry x="1160" y="290" width="460" height="85" as="geometry" />
+        <mxCell id="lineage" value="&lt;b&gt;OpenLineage&lt;/b&gt;&lt;br&gt;Data Lineage" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#FBBC04;strokeWidth=2;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="1796" y="355" width="220" height="50" as="geometry" />
         </mxCell>
-        <mxCell id="arrow1-2" value="" style="endArrow=classic;html=1;strokeWidth=3;strokeColor=#F57F17;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="step1-box" target="step2-box" edge="1">
+        <mxCell id="expectations" value="&lt;b&gt;Great Expectations&lt;/b&gt;&lt;br&gt;Data Quality" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#EA4335;strokeWidth=2;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="1796" y="425" width="220" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="iam" value="&lt;b&gt;IAM &amp;amp; Security&lt;/b&gt;&lt;br&gt;Access Control" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#5F6368;strokeWidth=2;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="1796" y="495" width="220" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="notifications" value="&lt;b&gt;Email Notifications&lt;/b&gt;&lt;br&gt;Alerts &amp;amp; Reports" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9C27B0;strokeWidth=2;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="1796" y="565" width="220" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow-a2d" value="" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#E37400;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="airflow" target="dataproc" edge="1">
           <mxGeometry width="50" height="50" relative="1" as="geometry">
-            <mxPoint x="620" y="300" as="sourcePoint" />
-            <mxPoint x="650" y="300" as="targetPoint" />
+            <mxPoint x="480" y="240" as="sourcePoint" />
+            <mxPoint x="620" y="250" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="arrow2-3" value="" style="endArrow=classic;html=1;strokeWidth=3;strokeColor=#F57F17;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="step2-box" target="step3-box" edge="1">
-          <mxGeometry width="50" height="50" relative="1" as="geometry">
-            <mxPoint x="1110" y="300" as="sourcePoint" />
-            <mxPoint x="1140" y="300" as="targetPoint" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="phase2-container" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=3;arcSize=3;" parent="1" vertex="1">
-          <mxGeometry x="120" y="480" width="1560" height="560" as="geometry" />
-        </mxCell>
-        <mxCell id="phase2-title" value="&lt;b style=&quot;font-size: 18px&quot;&gt;&lt;font style=&quot;color: rgb(0, 0, 0);&quot;&gt;PHASE 2: ML EXECUTION AND DATA PROCESSING (Dataproc/Kedro/Spark)&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=16;fontColor=#1B5E20;" parent="1" vertex="1">
-          <mxGeometry x="150" y="495" width="850" height="30" as="geometry" />
-        </mxCell>
-        <mxCell id="step4-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#4285F4;strokeWidth=2;" parent="1" vertex="1">
-          <mxGeometry x="160" y="550" width="720" height="200" as="geometry" />
-        </mxCell>
-        <mxCell id="step4-num" value="4" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=#4285F4;strokeColor=#4285F4;fontColor=#ffffff;fontSize=16;fontStyle=1;" parent="1" vertex="1">
-          <mxGeometry x="180" y="565" width="35" height="35" as="geometry" />
-        </mxCell>
-        <mxCell id="step4-title" value="&lt;b&gt;Feature Engineering (Training)&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontColor=#4285F4;" parent="1" vertex="1">
-          <mxGeometry x="225" y="565" width="280" height="30" as="geometry" />
-        </mxCell>
-        <mxCell id="step4-comp" value="&lt;b&gt;Component:&lt;/b&gt; Dataproc (Spark) → Kedro" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" parent="1" vertex="1">
-          <mxGeometry x="180" y="605" width="400" height="20" as="geometry" />
-        </mxCell>
-        <mxCell id="step4-cmd" value="&lt;b&gt;Command:&lt;/b&gt; &lt;font face=&quot;Courier New&quot;&gt;cli_run.py run --pipeline=fe_training&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=#E8F5FE;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=11;" parent="1" vertex="1">
-          <mxGeometry x="180" y="635" width="680" height="25" as="geometry" />
-        </mxCell>
-        <mxCell id="step4-desc" value="&lt;b&gt;Actions:&lt;/b&gt;&lt;br&gt;1. PySpark code in Kedro&#39;s &lt;font face=&quot;Courier New&quot;&gt;create_fe_training_pipeline&lt;/font&gt;&lt;br&gt;2. Loads training data from BigQuery&lt;br&gt;3. Performs transformations (feature creation, aggregations)&lt;br&gt;4. Saves prepared data back to BigQuery (e.g., &lt;font face=&quot;Courier New&quot;&gt;etl_model_name_train&lt;/font&gt;)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=11;" parent="1" vertex="1">
-          <mxGeometry x="180" y="670" width="680" height="65" as="geometry" />
-        </mxCell>
-        <mxCell id="step5-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#EA4335;strokeWidth=2;" parent="1" vertex="1">
-          <mxGeometry x="920" y="550" width="720" height="200" as="geometry" />
-        </mxCell>
-        <mxCell id="step5-num" value="5" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=#EA4335;strokeColor=#EA4335;fontColor=#ffffff;fontSize=16;fontStyle=1;" parent="1" vertex="1">
-          <mxGeometry x="940" y="565" width="35" height="35" as="geometry" />
-        </mxCell>
-        <mxCell id="step5-title" value="&lt;b&gt;Model Training&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontColor=#EA4335;" parent="1" vertex="1">
-          <mxGeometry x="985" y="565" width="200" height="30" as="geometry" />
-        </mxCell>
-        <mxCell id="step5-comp" value="&lt;b&gt;Component:&lt;/b&gt; Dataproc (Spark) → Kedro" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" parent="1" vertex="1">
-          <mxGeometry x="940" y="605" width="400" height="20" as="geometry" />
-        </mxCell>
-        <mxCell id="step5-cmd" value="&lt;b&gt;Command:&lt;/b&gt; &lt;font face=&quot;Courier New&quot;&gt;cli_run.py run --pipeline=model_training&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=#FCE4EC;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=11;" parent="1" vertex="1">
-          <mxGeometry x="940" y="635" width="680" height="25" as="geometry" />
-        </mxCell>
-        <mxCell id="step5-desc" value="&lt;b&gt;Actions:&lt;/b&gt;&lt;br&gt;1. Uses &lt;font face=&quot;Courier New&quot;&gt;SparkModelTraining&lt;/font&gt; logic&lt;br&gt;2. Fits model (Classification or Regression) using Spark ML&lt;br&gt;3. Saves trained model (&lt;font face=&quot;Courier New&quot;&gt;model.pkl&lt;/font&gt;) to GCS (&lt;font face=&quot;Courier New&quot;&gt;output_bucket&lt;/font&gt;)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=11;" parent="1" vertex="1">
-          <mxGeometry x="940" y="670" width="680" height="65" as="geometry" />
-        </mxCell>
-        <mxCell id="arrow4-5" value="" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#1B5E20;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="step4-box" target="step5-box" edge="1">
-          <mxGeometry width="50" height="50" relative="1" as="geometry">
-            <mxPoint x="890" y="650" as="sourcePoint" />
-            <mxPoint x="920" y="650" as="targetPoint" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="step6-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#FBBC04;strokeWidth=2;" parent="1" vertex="1">
-          <mxGeometry x="160" y="800" width="720" height="200" as="geometry" />
-        </mxCell>
-        <mxCell id="step6-num" value="6" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=#FBBC04;strokeColor=#FBBC04;fontColor=#ffffff;fontSize=16;fontStyle=1;" parent="1" vertex="1">
-          <mxGeometry x="180" y="815" width="35" height="35" as="geometry" />
-        </mxCell>
-        <mxCell id="step6-title" value="&lt;b&gt;Feature Engineering (Scoring)&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontColor=#FBBC04;" parent="1" vertex="1">
-          <mxGeometry x="225" y="815" width="280" height="30" as="geometry" />
-        </mxCell>
-        <mxCell id="step6-comp" value="&lt;b&gt;Component:&lt;/b&gt; Dataproc (Spark) → Kedro" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" parent="1" vertex="1">
-          <mxGeometry x="180" y="855" width="400" height="20" as="geometry" />
-        </mxCell>
-        <mxCell id="step6-cmd" value="&lt;b&gt;Command:&lt;/b&gt; &lt;font face=&quot;Courier New&quot;&gt;cli_run.py run --pipeline=fe_scoring&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=#FFFDE7;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=11;" parent="1" vertex="1">
-          <mxGeometry x="180" y="885" width="680" height="25" as="geometry" />
-        </mxCell>
-        <mxCell id="step6-desc" value="&lt;b&gt;Actions:&lt;/b&gt;&lt;br&gt;1. Prepares production scoring data&lt;br&gt;2. Applies same transformations as training&lt;br&gt;3. Saves to BigQuery for current run date" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=11;" parent="1" vertex="1">
-          <mxGeometry x="180" y="920" width="680" height="65" as="geometry" />
-        </mxCell>
-        <mxCell id="step7-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9C27B0;strokeWidth=2;" parent="1" vertex="1">
-          <mxGeometry x="920" y="800" width="720" height="200" as="geometry" />
-        </mxCell>
-        <mxCell id="step7-num" value="7" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=#9C27B0;strokeColor=#9C27B0;fontColor=#ffffff;fontSize=16;fontStyle=1;" parent="1" vertex="1">
-          <mxGeometry x="940" y="815" width="35" height="35" as="geometry" />
-        </mxCell>
-        <mxCell id="step7-title" value="&lt;b&gt;Model Scoring&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontColor=#9C27B0;" parent="1" vertex="1">
-          <mxGeometry x="985" y="815" width="200" height="30" as="geometry" />
-        </mxCell>
-        <mxCell id="step7-comp" value="&lt;b&gt;Component:&lt;/b&gt; Dataproc (Spark) → Kedro" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" parent="1" vertex="1">
-          <mxGeometry x="940" y="855" width="400" height="20" as="geometry" />
-        </mxCell>
-        <mxCell id="step7-cmd" value="&lt;b&gt;Command:&lt;/b&gt; &lt;font face=&quot;Courier New&quot;&gt;cli_run.py run --pipeline=model_scoring&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=#F3E5F5;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=11;" parent="1" vertex="1">
-          <mxGeometry x="940" y="885" width="680" height="25" as="geometry" />
-        </mxCell>
-        <mxCell id="step7-desc" value="&lt;b&gt;Actions:&lt;/b&gt;&lt;br&gt;1. Uses fitted model to generate predictions&lt;br&gt;2. Stores final score table (e.g., &lt;font face=&quot;Courier New&quot;&gt;score_model_name&lt;/font&gt;)&lt;br&gt;3. Writes to BigQuery staging dataset" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=11;" parent="1" vertex="1">
-          <mxGeometry x="940" y="920" width="680" height="65" as="geometry" />
-        </mxCell>
-        <mxCell id="arrow6-7" value="" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#1B5E20;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="step6-box" target="step7-box" edge="1">
-          <mxGeometry width="50" height="50" relative="1" as="geometry">
-            <mxPoint x="890" y="900" as="sourcePoint" />
-            <mxPoint x="920" y="900" as="targetPoint" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="arrow-p1-p2" value="" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#000000;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="phase1-container" target="phase2-container" edge="1">
-          <mxGeometry width="50" height="50" relative="1" as="geometry">
-            <mxPoint x="900" y="450" as="sourcePoint" />
-            <mxPoint x="900" y="480" as="targetPoint" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="arrow-p1-p2-label" value="Cluster Ready" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=13;fontStyle=1;fontColor=#000000;labelBackgroundColor=#ffffff;" parent="arrow-p1-p2" vertex="1" connectable="0">
+        <mxCell id="arrow-a2d-label" value="Trigger Jobs" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=11;fontStyle=1;fontColor=#E37400;" parent="arrow-a2d" vertex="1" connectable="0">
           <mxGeometry x="-0.1" y="1" relative="1" as="geometry">
-            <mxPoint x="49" y="3" as="offset" />
+            <mxPoint y="-10" as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="phase3-container" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=3;arcSize=3;" parent="1" vertex="1">
-          <mxGeometry x="120" y="1100" width="1560" height="680" as="geometry" />
-        </mxCell>
-        <mxCell id="phase3-title" value="&lt;b style=&quot;font-size: 18px&quot;&gt;&lt;font style=&quot;color: rgb(0, 0, 0);&quot;&gt;PHASE 3: VALIDATION, PROMOTION, AND METADATA TRACKING&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=16;fontColor=#01579B;" parent="1" vertex="1">
-          <mxGeometry x="150" y="1115" width="850" height="30" as="geometry" />
-        </mxCell>
-        <mxCell id="step8-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#4285F4;strokeWidth=2;" parent="1" vertex="1">
-          <mxGeometry x="160" y="1170" width="720" height="150" as="geometry" />
-        </mxCell>
-        <mxCell id="step8-num" value="8" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=#4285F4;strokeColor=#4285F4;fontColor=#ffffff;fontSize=16;fontStyle=1;" parent="1" vertex="1">
-          <mxGeometry x="180" y="1185" width="35" height="35" as="geometry" />
-        </mxCell>
-        <mxCell id="step8-title" value="&lt;b&gt;Data Quality Check&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontColor=#4285F4;" parent="1" vertex="1">
-          <mxGeometry x="225" y="1185" width="250" height="30" as="geometry" />
-        </mxCell>
-        <mxCell id="step8-comp" value="&lt;b&gt;Component:&lt;/b&gt; Airflow → BigQuery" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" parent="1" vertex="1">
-          <mxGeometry x="180" y="1225" width="400" height="20" as="geometry" />
-        </mxCell>
-        <mxCell id="step8-desc" value="&lt;b&gt;Action:&lt;/b&gt;&lt;br&gt;• &lt;font face=&quot;Courier New&quot;&gt;score_count_check&lt;/font&gt; and &lt;font face=&quot;Courier New&quot;&gt;duplicate_check&lt;/font&gt;&lt;br&gt;• Confirms freshly scored table meets quality thresholds" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=11;" parent="1" vertex="1">
-          <mxGeometry x="180" y="1255" width="680" height="50" as="geometry" />
-        </mxCell>
-        <mxCell id="step9-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#34A853;strokeWidth=2;" parent="1" vertex="1">
-          <mxGeometry x="920" y="1170" width="720" height="150" as="geometry" />
-        </mxCell>
-        <mxCell id="step9-num" value="9" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=#34A853;strokeColor=#34A853;fontColor=#ffffff;fontSize=16;fontStyle=1;" parent="1" vertex="1">
-          <mxGeometry x="940" y="1185" width="35" height="35" as="geometry" />
-        </mxCell>
-        <mxCell id="step9-title" value="&lt;b&gt;Validation &amp;amp; Metadata Update&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontColor=#34A853;" parent="1" vertex="1">
-          <mxGeometry x="985" y="1185" width="350" height="30" as="geometry" />
-        </mxCell>
-        <mxCell id="step9-comp" value="&lt;b&gt;Component:&lt;/b&gt; Spark/Python → BigQuery" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" parent="1" vertex="1">
-          <mxGeometry x="940" y="1225" width="400" height="20" as="geometry" />
-        </mxCell>
-        <mxCell id="step9-desc" value="&lt;b&gt;Action:&lt;/b&gt; If training occurred:&lt;br&gt;• &lt;font face=&quot;Courier New&quot;&gt;model_validation&lt;/font&gt; compares new model (&lt;font face=&quot;Courier New&quot;&gt;new_score&lt;/font&gt;) vs current production (&lt;font face=&quot;Courier New&quot;&gt;old_score&lt;/font&gt;)&lt;br&gt;• Uses metrics (LIFT, RMSE). If better, runs SQL to decommission old model (&lt;font face=&quot;Courier New&quot;&gt;status_ind=&#39;o&#39;&lt;/font&gt;) and inserts new (&lt;font face=&quot;Courier New&quot;&gt;status_ind=&#39;c&#39;&lt;/font&gt;)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=11;" parent="1" vertex="1">
-          <mxGeometry x="940" y="1255" width="680" height="50" as="geometry" />
-        </mxCell>
-        <mxCell id="arrow8-9" value="" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#01579B;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="step8-box" target="step9-box" edge="1">
+        <mxCell id="arrow-d2k" value="" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#1B5E20;entryX=0;entryY=0.5;entryDx=0;entryDy=0;dashed=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;edgeStyle=orthogonalEdgeStyle;" parent="1" source="dataproc" target="kedro" edge="1">
           <mxGeometry width="50" height="50" relative="1" as="geometry">
-            <mxPoint x="890" y="1245" as="sourcePoint" />
-            <mxPoint x="920" y="1245" as="targetPoint" />
+            <mxPoint x="870" y="280" as="sourcePoint" />
+            <mxPoint x="880" y="250" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="step10-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#FBBC04;strokeWidth=2;" parent="1" vertex="1">
-          <mxGeometry x="160" y="1370" width="720" height="170" as="geometry" />
-        </mxCell>
-        <mxCell id="step10-num" value="10" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=#FBBC04;strokeColor=#FBBC04;fontColor=#ffffff;fontSize=15;fontStyle=1;" parent="1" vertex="1">
-          <mxGeometry x="180" y="1385" width="35" height="35" as="geometry" />
-        </mxCell>
-        <mxCell id="step10-title" value="&lt;b&gt;Score Promotion&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontColor=#FBBC04;" parent="1" vertex="1">
-          <mxGeometry x="225" y="1385" width="250" height="30" as="geometry" />
-        </mxCell>
-        <mxCell id="step10-comp" value="&lt;b&gt;Component:&lt;/b&gt; Airflow → BigQuery" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" parent="1" vertex="1">
-          <mxGeometry x="180" y="1425" width="400" height="20" as="geometry" />
-        </mxCell>
-        <mxCell id="step10-desc" value="&lt;b&gt;Action:&lt;/b&gt;&lt;br&gt;• &lt;font face=&quot;Courier New&quot;&gt;final_scores&lt;/font&gt; runs BQ INSERT/UPDATE queries&lt;br&gt;• Promotes scores from staging to final production table (&lt;font face=&quot;Courier New&quot;&gt;cust_acct_line_score&lt;/font&gt;)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=11;" parent="1" vertex="1">
-          <mxGeometry x="180" y="1455" width="680" height="50" as="geometry" />
-        </mxCell>
-        <mxCell id="step11-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#0277BD;strokeWidth=2;" parent="1" vertex="1">
-          <mxGeometry x="920" y="1370" width="720" height="170" as="geometry" />
-        </mxCell>
-        <mxCell id="step11-num" value="11" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=#0277BD;strokeColor=#0277BD;fontColor=#ffffff;fontSize=15;fontStyle=1;" parent="1" vertex="1">
-          <mxGeometry x="940" y="1385" width="35" height="35" as="geometry" />
-        </mxCell>
-        <mxCell id="step11-title" value="&lt;b&gt;MLOps/Experiment Tracking&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontColor=#0277BD;" parent="1" vertex="1">
-          <mxGeometry x="985" y="1385" width="350" height="30" as="geometry" />
-        </mxCell>
-        <mxCell id="step11-comp" value="&lt;b&gt;Component:&lt;/b&gt; Python → MLflow/Domino" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" parent="1" vertex="1">
-          <mxGeometry x="940" y="1425" width="400" height="20" as="geometry" />
-        </mxCell>
-        <mxCell id="step11-desc" value="&lt;b&gt;Action:&lt;/b&gt; The &lt;font face=&quot;Courier New&quot;&gt;register_model&lt;/font&gt; function:&lt;br&gt;1. Uses env variables (&lt;font face=&quot;Courier New&quot;&gt;DOMINO_USER_API_KEY, MLFLOW_TRACKING_URI&lt;/font&gt;)&lt;br&gt;2. Connects to external MLflow server (hosted on Domino)&lt;br&gt;3. Logs run params, model object, metrics to experiment (&lt;font face=&quot;Courier New&quot;&gt;score_model_id&lt;/font&gt;)&lt;br&gt;4. Registers model version" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=11;" parent="1" vertex="1">
-          <mxGeometry x="940" y="1455" width="680" height="50" as="geometry" />
-        </mxCell>
-        <mxCell id="arrow10-11" value="" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#01579B;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="step10-box" target="step11-box" edge="1">
-          <mxGeometry width="50" height="50" relative="1" as="geometry">
-            <mxPoint x="890" y="1445" as="sourcePoint" />
-            <mxPoint x="920" y="1445" as="targetPoint" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="step12-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#5F6368;strokeWidth=2;" parent="1" vertex="1">
-          <mxGeometry x="150" y="1585" width="1480" height="150" as="geometry" />
-        </mxCell>
-        <mxCell id="step12-num" value="12" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=#5F6368;strokeColor=#5F6368;fontColor=#ffffff;fontSize=15;fontStyle=1;" parent="1" vertex="1">
-          <mxGeometry x="180" y="1594" width="35" height="35" as="geometry" />
-        </mxCell>
-        <mxCell id="step12-title" value="&lt;b&gt;Run Status Entry&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontColor=#5F6368;" parent="1" vertex="1">
-          <mxGeometry x="225" y="1594" width="250" height="30" as="geometry" />
-        </mxCell>
-        <mxCell id="step12-comp" value="&lt;b&gt;Component:&lt;/b&gt; Airflow → BigQuery" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;" parent="1" vertex="1">
-          <mxGeometry x="180" y="1634" width="400" height="20" as="geometry" />
-        </mxCell>
-        <mxCell id="step12-desc" value="&lt;b&gt;Action:&lt;/b&gt;&lt;br&gt;• &lt;font face=&quot;Courier New&quot;&gt;ModelRunStatusEntryOperator&lt;/font&gt; logs final run status (success/fail)&lt;br&gt;• Writes to MLOps internal metadata tables in BigQuery for audit trail" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=11;" parent="1" vertex="1">
-          <mxGeometry x="180" y="1664" width="1440" height="50" as="geometry" />
-        </mxCell>
-        <mxCell id="arrow-p2-p3" value="" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#000000;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="phase2-container" target="phase3-container" edge="1">
-          <mxGeometry width="50" height="50" relative="1" as="geometry">
-            <mxPoint x="900" y="1060" as="sourcePoint" />
-            <mxPoint x="900" y="1100" as="targetPoint" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="arrow-p2-p3-label" value="Models &amp;amp; Scores Ready" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=13;fontStyle=1;fontColor=#000000;labelBackgroundColor=#ffffff;" parent="arrow-p2-p3" vertex="1" connectable="0">
+        <mxCell id="arrow-d2k-label" value="Executes" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;fontStyle=1;fontColor=#1B5E20;" parent="arrow-d2k" vertex="1" connectable="0">
           <mxGeometry x="-0.1" y="1" relative="1" as="geometry">
-            <mxPoint x="84" y="3" as="offset" />
+            <mxPoint y="11" as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="phase4-container" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;strokeWidth=3;arcSize=3;fontColor=#333333;" parent="1" vertex="1">
-          <mxGeometry x="120" y="1840" width="1560" height="240" as="geometry" />
-        </mxCell>
-        <mxCell id="phase4-title" value="&lt;b style=&quot;font-size: 18px&quot;&gt;PHASE 4: CLEANUP&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=16;fontColor=#3E2723;" parent="1" vertex="1">
-          <mxGeometry x="150" y="1855" width="400" height="30" as="geometry" />
-        </mxCell>
-        <mxCell id="cleanup1-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#EA4335;strokeWidth=2;" parent="1" vertex="1">
-          <mxGeometry x="160" y="1910" width="720" height="130" as="geometry" />
-        </mxCell>
-        <mxCell id="cleanup1-title" value="&lt;b&gt;1. Delete Cluster&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=14;fontColor=#EA4335;" parent="1" vertex="1">
-          <mxGeometry x="180" y="1925" width="200" height="30" as="geometry" />
-        </mxCell>
-        <mxCell id="cleanup1-desc" value="&lt;b&gt;Action:&lt;/b&gt;&lt;br&gt;• The &lt;font face=&quot;Courier New&quot;&gt;delete_cluster&lt;/font&gt; task ensures Dataproc cluster is terminated&lt;br&gt;• Saves costs, regardless of pipeline outcome" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=11;" parent="1" vertex="1">
-          <mxGeometry x="180" y="1960" width="680" height="65" as="geometry" />
-        </mxCell>
-        <mxCell id="cleanup2-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#34A853;strokeWidth=2;" parent="1" vertex="1">
-          <mxGeometry x="920" y="1910" width="720" height="130" as="geometry" />
-        </mxCell>
-        <mxCell id="cleanup2-title" value="&lt;b&gt;2. End Email&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=14;fontColor=#34A853;" parent="1" vertex="1">
-          <mxGeometry x="940" y="1925" width="200" height="30" as="geometry" />
-        </mxCell>
-        <mxCell id="cleanup2-desc" value="&lt;b&gt;Action:&lt;/b&gt;&lt;br&gt;• &lt;font face=&quot;Courier New&quot;&gt;end_email&lt;/font&gt; sends completion notification&lt;br&gt;• Alerts stakeholders of success/failure" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=11;" parent="1" vertex="1">
-          <mxGeometry x="940" y="1960" width="680" height="65" as="geometry" />
-        </mxCell>
-        <mxCell id="arrow-cleanup" value="" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#3E2723;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="cleanup1-box" target="cleanup2-box" edge="1">
+        <mxCell id="arrow-k2p" value="" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#FBBC04;entryX=0.5;entryY=0;entryDx=0;entryDy=0;dashed=1;edgeStyle=orthogonalEdgeStyle;" parent="1" source="kedro" target="python" edge="1">
           <mxGeometry width="50" height="50" relative="1" as="geometry">
-            <mxPoint x="890" y="1975" as="sourcePoint" />
-            <mxPoint x="920" y="1975" as="targetPoint" />
+            <mxPoint x="1080" y="310" as="sourcePoint" />
+            <mxPoint x="880" y="340" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="1010" y="410" />
+              <mxPoint x="740" y="410" />
+            </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="arrow-p3-p4" value="" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#000000;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="phase3-container" target="phase4-container" edge="1">
+        <mxCell id="arrow-p2m" value="" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#0277BD;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;edgeStyle=orthogonalEdgeStyle;" parent="1" source="python" target="mlflow" edge="1">
           <mxGeometry width="50" height="50" relative="1" as="geometry">
-            <mxPoint x="900" y="1800" as="sourcePoint" />
-            <mxPoint x="900" y="1840" as="targetPoint" />
+            <mxPoint x="980" y="480" as="sourcePoint" />
+            <mxPoint x="850" y="635" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="arrow-p3-p4-label" value="Pipeline Complete" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=13;fontStyle=1;fontColor=#000000;labelBackgroundColor=#ffffff;" parent="arrow-p3-p4" vertex="1" connectable="0">
+        <mxCell id="arrow-p2m-label" value="Register Models" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=11;fontStyle=1;fontColor=#0277BD;" parent="arrow-p2m" vertex="1" connectable="0">
           <mxGeometry x="-0.1" y="1" relative="1" as="geometry">
-            <mxPoint x="69" y="3" as="offset" />
+            <mxPoint x="45" y="-21" as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="summary-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E0F2F1;strokeColor=#004D40;strokeWidth=3;" parent="1" vertex="1">
-          <mxGeometry x="120" y="2140" width="1560" height="200" as="geometry" />
+        <mxCell id="arrow-a2m" value="" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#5F6368;exitX=1;exitY=0.75;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;edgeStyle=orthogonalEdgeStyle;" parent="1" source="airflow" target="metadata" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="450" y="290" as="sourcePoint" />
+            <mxPoint x="880" y="660" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="540" y="280" />
+              <mxPoint x="540" y="940" />
+            </Array>
+          </mxGeometry>
         </mxCell>
-        <mxCell id="summary-title" value="&lt;b style=&quot;font-size: 18px&quot;&gt;&lt;font style=&quot;color: rgb(0, 0, 0);&quot;&gt;SUMMARY: TECHNOLOGY COMPONENTS&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=16;fontColor=#004D40;" parent="1" vertex="1">
-          <mxGeometry x="150" y="2155" width="1500" height="30" as="geometry" />
+        <mxCell id="arrow-a2m-label" value="Log Status" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;fontStyle=1;fontColor=#5F6368;" parent="arrow-a2m" vertex="1" connectable="0">
+          <mxGeometry x="-0.1" y="1" relative="1" as="geometry">
+            <mxPoint x="-51" y="5" as="offset" />
+          </mxGeometry>
         </mxCell>
-        <mxCell id="sum1" value="• &lt;b&gt;Orchestrator:&lt;/b&gt; Apache Airflow (Cloud Composer)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=13;" parent="1" vertex="1">
-          <mxGeometry x="180" y="2200" width="460" height="25" as="geometry" />
+        <mxCell id="legend-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F1F3F4;strokeColor=#5F6368;strokeWidth=2;" parent="1" vertex="1">
+          <mxGeometry x="1300" y="860" width="430" height="120" as="geometry" />
         </mxCell>
-        <mxCell id="sum2" value="• &lt;b&gt;Compute:&lt;/b&gt; Google Cloud Dataproc (Spark)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=13;" parent="1" vertex="1">
-          <mxGeometry x="180" y="2230" width="460" height="25" as="geometry" />
+        <mxCell id="legend-title" value="&lt;b&gt;EXECUTION PATTERN&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=13;fontColor=#3E2723;" parent="1" vertex="1">
+          <mxGeometry x="1330" y="865" width="200" height="25" as="geometry" />
         </mxCell>
-        <mxCell id="sum3" value="• &lt;b&gt;ML Code Structure:&lt;/b&gt; Kedro Framework" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=13;" parent="1" vertex="1">
-          <mxGeometry x="180" y="2260" width="460" height="25" as="geometry" />
+        <mxCell id="legend1" value="1. Airflow DAG triggers Dataproc job with config params" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="1340" y="895" width="420" height="20" as="geometry" />
         </mxCell>
-        <mxCell id="sum4" value="• &lt;b&gt;ML Framework:&lt;/b&gt; Spark ML" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=13;" parent="1" vertex="1">
-          <mxGeometry x="180" y="2290" width="460" height="25" as="geometry" />
+        <mxCell id="legend2" value="2. Dataproc executes: cli_run.py run --pipeline=[pipeline_name]" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="1340" y="920" width="420" height="20" as="geometry" />
         </mxCell>
-        <mxCell id="sum5" value="• &lt;b&gt;Data Lake/Warehouse:&lt;/b&gt; Google BigQuery" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=13;" parent="1" vertex="1">
-          <mxGeometry x="710" y="2200" width="460" height="25" as="geometry" />
+        <mxCell id="legend3" value="3. Kedro loads pipeline, Spark ML processes data, Python logs to MLflow" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="1340" y="945" width="420" height="20" as="geometry" />
         </mxCell>
-        <mxCell id="sum6" value="• &lt;b&gt;Artifact/Model Storage:&lt;/b&gt; GCS (Cloud Storage)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=13;" parent="1" vertex="1">
-          <mxGeometry x="710" y="2230" width="460" height="25" as="geometry" />
+        <mxCell id="footer" value="&lt;font style=&quot;font-size: 10px&quot;&gt;High-Level Architecture | Version 1.0 | Kedro + Airflow + Dataproc + Spark ML&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontColor=#5F6368;" parent="1" vertex="1">
+          <mxGeometry x="400" y="1050" width="800" height="20" as="geometry" />
         </mxCell>
-        <mxCell id="sum7" value="• &lt;b&gt;ML Metadata/Tracking:&lt;/b&gt; MLflow (Domino)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=13;" parent="1" vertex="1">
-          <mxGeometry x="710" y="2260" width="460" height="25" as="geometry" />
+        <mxCell id="rfjQb3k0rs9mbO_K_oNA-1" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1F5FE;strokeColor=#01579B;strokeWidth=3;arcSize=5;" vertex="1" parent="1">
+          <mxGeometry x="1330" y="305" width="380" height="295" as="geometry" />
         </mxCell>
-        <mxCell id="sum8" value="• &lt;b&gt;Execution:&lt;/b&gt; cli_run.py run --pipeline=[name]" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=13;" parent="1" vertex="1">
-          <mxGeometry x="710" y="2290" width="460" height="25" as="geometry" />
+        <mxCell id="rfjQb3k0rs9mbO_K_oNA-2" value="&lt;b&gt;DATA &amp;amp; STORAGE LAYER&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=15;fontColor=#01579B;" vertex="1" parent="1">
+          <mxGeometry x="1500" y="310" width="280" height="30" as="geometry" />
         </mxCell>
-        <mxCell id="sum9" value="• &lt;b&gt;Pattern:&lt;/b&gt; Batch-First (Large-scale Spark Jobs)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=13;" parent="1" vertex="1">
-          <mxGeometry x="1240" y="2215" width="380" height="25" as="geometry" />
+        <mxCell id="rfjQb3k0rs9mbO_K_oNA-3" value="&lt;b&gt;Google BigQuery&lt;/b&gt;&lt;br&gt;&lt;br&gt;• Training Data&lt;br&gt;• Scoring Datasets&lt;br&gt;• Feature Tables&lt;br&gt;• Final Score Tables&lt;br&gt;• MLOps Metadata" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#4285F4;strokeWidth=2;fontSize=12;align=left;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="1340" y="355" width="300" height="115" as="geometry" />
         </mxCell>
-        <mxCell id="sum10" value="• &lt;b&gt;Observability:&lt;/b&gt; Cloud Logging, Monitoring" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=13;" parent="1" vertex="1">
-          <mxGeometry x="1240" y="2245" width="380" height="25" as="geometry" />
+        <mxCell id="rfjQb3k0rs9mbO_K_oNA-4" value="&lt;b&gt;Cloud Storage (GCS)&lt;/b&gt;&lt;br&gt;&lt;br&gt;• Model Binaries (.pkl)&lt;br&gt;• Training Artifacts" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#34A853;strokeWidth=2;fontSize=12;align=left;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="1350" y="495" width="140" height="75" as="geometry" />
         </mxCell>
-        <mxCell id="sum11" value="• &lt;b&gt;Governance:&lt;/b&gt; OpenLineage, IAM" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=13;" parent="1" vertex="1">
-          <mxGeometry x="1240" y="2275" width="380" height="25" as="geometry" />
+        <mxCell id="rfjQb3k0rs9mbO_K_oNA-5" value="" style="endArrow=classic;startArrow=classic;html=1;strokeWidth=2;strokeColor=#4285F4;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="rfjQb3k0rs9mbO_K_oNA-3" target="dataproc">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="1600" y="395" as="sourcePoint" />
+            <mxPoint x="1800" y="250" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="1490" y="250" />
+            </Array>
+          </mxGeometry>
         </mxCell>
-        <mxCell id="footer" value="&lt;font style=&quot;font-size: 10px&quot;&gt;End-to-End MLOps Pipeline | Version 1.0 | 12-Step Execution Flow | Airflow → Dataproc → Kedro → Spark ML → BigQuery → MLflow&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontColor=#5F6368;" parent="1" vertex="1">
-          <mxGeometry x="400" y="2370" width="1000" height="20" as="geometry" />
+        <mxCell id="rfjQb3k0rs9mbO_K_oNA-6" value="Read/Write Data" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=11;fontStyle=1;fontColor=#4285F4;" vertex="1" connectable="0" parent="rfjQb3k0rs9mbO_K_oNA-5">
+          <mxGeometry x="-0.1" y="1" relative="1" as="geometry">
+            <mxPoint x="30" y="-11" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="rfjQb3k0rs9mbO_K_oNA-7" value="" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#EA4335;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" target="rfjQb3k0rs9mbO_K_oNA-4" source="rfjQb3k0rs9mbO_K_oNA-9">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="1800" y="400" as="sourcePoint" />
+            <mxPoint x="1440" y="512" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="1290" y="520" />
+              <mxPoint x="1290" y="533" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="rfjQb3k0rs9mbO_K_oNA-8" value="Save Models" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;fontStyle=1;fontColor=#EA4335;" vertex="1" connectable="0" parent="rfjQb3k0rs9mbO_K_oNA-7">
+          <mxGeometry x="-0.1" y="1" relative="1" as="geometry">
+            <mxPoint x="56" y="26" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="rfjQb3k0rs9mbO_K_oNA-9" value="&lt;b&gt;Spark ML&lt;/b&gt;&lt;br&gt;Machine Learning&lt;br&gt;&lt;br&gt;• Feature Engineering&lt;br&gt;• Model Training&lt;br&gt;• Batch Scoring" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#EA4335;strokeWidth=2;fontSize=12;align=left;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="910" y="460" width="200" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="rfjQb3k0rs9mbO_K_oNA-10" value="" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#34A853;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;dashed=1;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" target="rfjQb3k0rs9mbO_K_oNA-9" source="kedro">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="1190" y="320" as="sourcePoint" />
+            <mxPoint x="1160" y="350" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="rfjQb3k0rs9mbO_K_oNA-11" value="Uses" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;fontStyle=1;fontColor=#34A853;" vertex="1" connectable="0" parent="rfjQb3k0rs9mbO_K_oNA-10">
+          <mxGeometry x="-0.1" y="1" relative="1" as="geometry">
+            <mxPoint x="49" y="-4" as="offset" />
+          </mxGeometry>
         </mxCell>
       </root>
     </mxGraphModel>
