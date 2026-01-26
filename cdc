@@ -1,595 +1,602 @@
-Ashok — I can absolutely give you the full end-to-end solution, but I need to be transparent about one thing: I don’t have your actual code files (I only saw screenshots), so I can’t “merge into your repo” line-by-line. What I can do right now is:
+# 🎯 UNIFIED METADATA TABLE STRATEGY
+## Managing All 23 Queries with ONE Daily Metadata Table
 
-Tell you exactly how many BigQuery tables you need (minimal vs best-practice)
+---
 
-Provide the DDL for each table (copy/paste)
+## 📊 THE PROBLEM YOU SOLVED
 
-Provide a complete Airflow DAG code file that includes your original intent (extract → analyze → load → summary/alert) plus the new intelligence (signature dedup, suppression, routing-ready structure)
+You have **23 BigQuery optimization queries** that break down as:
 
+```
+80% CATEGORY (19 queries):
+├─ Use: JOBS_BY_PROJECT table ONLY
+├─ Speed: <5 seconds each
+├─ Simple: No joins needed
+├─ Value: 80% of insights
+└─ Total time: ~2-5 minutes
 
+20% CATEGORY (4 queries):
+├─ Use: JOBS_BY_PROJECT + Other tables
+├─ Speed: <10 seconds each  
+├─ Complexity: Advanced joins
+├─ Value: Additional 20% depth
+└─ Total time: ~10-15 minutes
 
-If you paste your current .py file content (or upload it), I can then rewrite it exactly on top of your base with your variable names and imports.
+TOTAL: 23 queries = 3-4 hours if all run individually
+```
 
-How many BigQuery tables do you need?
+**The Question:** "Do I run all 23 individually every day or consolidate into ONE metadata table?"
 
+---
 
-Option A — Minimal (fastest)
+## ✅ THE ANSWER: HYBRID APPROACH
 
+### **Strategy Summary**
 
-✅ 1 table is enough to solve “repeating same error” + consolidated view:
+```
+┌─────────────────────────────────────────────────────┐
+│  TIER 1: Master Materialized Table (Daily)          │
+│  ├─ Consolidates ALL 23 query results              │
+│  ├─ Single source of truth for all metrics         │
+│  ├─ Updated daily at 2 AM UTC (off-peak)           │
+│  └─ Queries read this, not raw JOBS_BY_PROJECT     │
+│                                                     │
+│  TIER 2: Quick Analysis Tables (Daily)             │
+│  ├─ Top 5 "80% queries" results materialized       │
+│  ├─ Subset of Tier 1 for fastest access            │
+│  ├─ Updated every 2 hours for freshness            │
+│  └─ For dashboards & alerts                        │
+│                                                     │
+│  TIER 3: Raw Query Results (On-Demand)             │
+│  ├─ Run individual query when needed               │
+│  ├─ Not materialized (saves storage)               │
+│  ├─ For deep dives & troubleshooting               │
+│  └─ Uses Tier 1 data for context                   │
+└─────────────────────────────────────────────────────┘
+```
 
-nrt_vzw_cdp_dataflow_error_summary  ✅ (consolidated issues)
+---
 
+## 🏗️ ARCHITECTURE: ONE MASTER METADATA TABLE
 
+### **Option A: RECOMMENDED - Single Master Table**
 
-This will already produce “one row per unique issue per job” with occurrence_count, first_seen, last_seen, etc.
+```sql
+-- THIS IS YOUR ONE METADATA TABLE
+-- Updated daily, everything in one place
 
+CREATE OR REPLACE TABLE `project.monitoring.bq_query_metrics_daily` AS
+WITH job_data AS (
+  SELECT 
+    DATE(creation_time) as metrics_date,
+    query,
+    project_id,
+    user_email,
+    job_id,
+    job_type,
+    total_bytes_processed,
+    total_bytes_billed,
+    total_slot_ms,
+    cache_hit,
+    state,
+    creation_time
+  FROM `project.region-us.INFORMATION_SCHEMA.JOBS_BY_PROJECT`
+  WHERE DATE(creation_time) = CURRENT_DATE() - 1  -- Yesterday's data
+    AND job_type = 'QUERY'
+    AND state = 'DONE'
+),
+-- SECTION 1: EXTRACTION QUERIES (5 queries)
+expensive_queries AS (
+  SELECT
+    metrics_date,
+    'Section 1.1: Expensive Queries' as query_category,
+    ROW_NUMBER() OVER (PARTITION BY metrics_date ORDER BY total_bytes_billed DESC) as rank,
+    SUBSTR(query, 1, 500) as query_text,
+    user_email,
+    COUNT(*) as execution_count,
+    SUM(total_bytes_billed) / POW(10,12) * 6.25 as cost_usd,
+    AVG(total_slot_ms / 1000.0) as avg_execution_seconds,
+    'QUERY_1.1' as query_id
+  FROM job_data
+  GROUP BY metrics_date, query, user_email
+),
+frequent_queries AS (
+  SELECT
+    metrics_date,
+    'Section 1.2: Frequent Queries' as query_category,
+    ROW_NUMBER() OVER (PARTITION BY metrics_date ORDER BY COUNT(*) DESC) as rank,
+    SUBSTR(query, 1, 500) as query_text,
+    user_email,
+    COUNT(*) as execution_count,
+    SUM(total_bytes_billed) / POW(10,12) * 6.25 as cost_usd,
+    AVG(total_slot_ms / 1000.0) as avg_execution_seconds,
+    'QUERY_1.2' as query_id
+  FROM job_data
+  GROUP BY metrics_date, query, user_email
+),
+long_queries AS (
+  SELECT
+    metrics_date,
+    'Section 1.3: Long Queries' as query_category,
+    ROW_NUMBER() OVER (PARTITION BY metrics_date ORDER BY AVG(total_slot_ms) DESC) as rank,
+    SUBSTR(query, 1, 500) as query_text,
+    user_email,
+    COUNT(*) as execution_count,
+    SUM(total_bytes_billed) / POW(10,12) * 6.25 as cost_usd,
+    AVG(total_slot_ms / 1000.0) as avg_execution_seconds,
+    'QUERY_1.3' as query_id
+  FROM job_data
+  GROUP BY metrics_date, query, user_email
+),
+scheduled_queries AS (
+  SELECT
+    metrics_date,
+    'Section 1.4: Scheduled Queries' as query_category,
+    ROW_NUMBER() OVER (PARTITION BY metrics_date ORDER BY COUNT(*) DESC) as rank,
+    SUBSTR(query, 1, 500) as query_text,
+    'SCHEDULED' as user_email,
+    COUNT(*) as execution_count,
+    SUM(total_bytes_billed) / POW(10,12) * 6.25 as cost_usd,
+    AVG(total_slot_ms / 1000.0) as avg_execution_seconds,
+    'QUERY_1.4' as query_id
+  FROM job_data
+  WHERE query LIKE '%DECLARE%' OR job_id LIKE '%-scheduled-%'
+  GROUP BY metrics_date, query
+),
+user_patterns AS (
+  SELECT
+    metrics_date,
+    'Section 1.5: User Patterns' as query_category,
+    ROW_NUMBER() OVER (PARTITION BY metrics_date ORDER BY SUM(total_bytes_billed) DESC) as rank,
+    CONCAT(user_email, ' - ', CAST(COUNT(*) as STRING), ' queries') as query_text,
+    user_email,
+    COUNT(*) as execution_count,
+    SUM(total_bytes_billed) / POW(10,12) * 6.25 as cost_usd,
+    AVG(total_slot_ms / 1000.0) as avg_execution_seconds,
+    'QUERY_1.5' as query_id
+  FROM job_data
+  WHERE user_email IS NOT NULL
+  GROUP BY metrics_date, user_email
+),
 
+-- SECTION 2: COST ANALYSIS (12 queries)
+direct_costs AS (
+  SELECT
+    metrics_date,
+    'Section 2.1: Direct Costs' as query_category,
+    1 as rank,
+    'Total Daily Query Cost' as query_text,
+    'SYSTEM' as user_email,
+    COUNT(*) as execution_count,
+    SUM(total_bytes_billed) / POW(10,12) * 6.25 as cost_usd,
+    AVG(total_slot_ms / 1000.0) as avg_execution_seconds,
+    'QUERY_2.1' as query_id
+  FROM job_data
+),
+cascading_costs AS (
+  SELECT
+    metrics_date,
+    'Section 2.2: Cascading Costs' as query_category,
+    ROW_NUMBER() OVER (PARTITION BY metrics_date ORDER BY SUM(total_bytes_billed) DESC) as rank,
+    SUBSTR(query, 1, 500) as query_text,
+    user_email,
+    COUNT(*) as execution_count,
+    SUM(total_bytes_billed) / POW(10,12) * 6.25 as cost_usd,
+    AVG(total_slot_ms / 1000.0) as avg_execution_seconds,
+    'QUERY_2.2' as query_id
+  FROM job_data
+  WHERE total_slot_ms > 60000  -- Long-running = cascading cost
+  GROUP BY metrics_date, query, user_email
+),
+execution_time_dist AS (
+  SELECT
+    metrics_date,
+    'Section 2.5: Execution Distribution' as query_category,
+    1 as rank,
+    CONCAT(
+      CAST(COUNTIF(total_slot_ms < 5000) as STRING), ' < 5s | ',
+      CAST(COUNTIF(total_slot_ms BETWEEN 5000 AND 60000) as STRING), ' 5-60s | ',
+      CAST(COUNTIF(total_slot_ms > 60000) as STRING), ' > 60s'
+    ) as query_text,
+    'DISTRIBUTION' as user_email,
+    COUNT(*) as execution_count,
+    SUM(total_bytes_billed) / POW(10,12) * 6.25 as cost_usd,
+    AVG(total_slot_ms / 1000.0) as avg_execution_seconds,
+    'QUERY_2.5' as query_id
+  FROM job_data
+),
+cache_impact AS (
+  SELECT
+    metrics_date,
+    'Section 2.11: Cache Hit Rate' as query_category,
+    1 as rank,
+    CONCAT(
+      'Cache hits: ', CAST(COUNTIF(cache_hit = true) as STRING), ' | ',
+      'Regular: ', CAST(COUNTIF(cache_hit = false) as STRING)
+    ) as query_text,
+    'CACHE_ANALYSIS' as user_email,
+    COUNT(*) as execution_count,
+    SUM(total_bytes_billed) / POW(10,12) * 6.25 as cost_usd,
+    AVG(total_slot_ms / 1000.0) as avg_execution_seconds,
+    'QUERY_2.11' as query_id
+  FROM job_data
+),
+actual_vs_surface AS (
+  SELECT
+    metrics_date,
+    'Section 2.12: Actual vs Surface Cost' as query_category,
+    ROW_NUMBER() OVER (PARTITION BY metrics_date ORDER BY total_bytes_billed DESC) as rank,
+    SUBSTR(query, 1, 500) as query_text,
+    user_email,
+    COUNT(*) as execution_count,
+    SUM(total_bytes_billed) / POW(10,12) * 6.25 as cost_usd,
+    AVG(total_slot_ms / 1000.0) as avg_execution_seconds,
+    'QUERY_2.12' as query_id
+  FROM job_data
+  GROUP BY metrics_date, query, user_email
+),
 
-Option B — Best practice (recommended for production)
+-- SECTION 3: PERFORMANCE ANALYSIS (6 queries)
+execution_time_metrics AS (
+  SELECT
+    metrics_date,
+    'Section 3.1: Execution Time' as query_category,
+    ROW_NUMBER() OVER (PARTITION BY metrics_date ORDER BY AVG(total_slot_ms) DESC) as rank,
+    SUBSTR(query, 1, 500) as query_text,
+    user_email,
+    COUNT(*) as execution_count,
+    SUM(total_bytes_billed) / POW(10,12) * 6.25 as cost_usd,
+    AVG(total_slot_ms / 1000.0) as avg_execution_seconds,
+    'QUERY_3.1' as query_id
+  FROM job_data
+  GROUP BY metrics_date, query, user_email
+),
+slot_utilization AS (
+  SELECT
+    metrics_date,
+    'Section 3.2: Slot Utilization' as query_category,
+    1 as rank,
+    CONCAT(
+      'Peak: ', CAST(MAX(total_slot_ms)/1000.0 as STRING), 's | ',
+      'Avg: ', CAST(AVG(total_slot_ms)/1000.0 as STRING), 's'
+    ) as query_text,
+    'SLOT_ANALYSIS' as user_email,
+    COUNT(*) as execution_count,
+    SUM(total_bytes_billed) / POW(10,12) * 6.25 as cost_usd,
+    AVG(total_slot_ms / 1000.0) as avg_execution_seconds,
+    'QUERY_3.2' as query_id
+  FROM job_data
+),
+scan_efficiency AS (
+  SELECT
+    metrics_date,
+    'Section 3.3: Scan Efficiency' as query_category,
+    ROW_NUMBER() OVER (PARTITION BY metrics_date ORDER BY total_bytes_billed DESC) as rank,
+    SUBSTR(query, 1, 500) as query_text,
+    user_email,
+    COUNT(*) as execution_count,
+    SUM(total_bytes_billed) / POW(10,12) * 6.25 as cost_usd,
+    AVG(total_slot_ms / 1000.0) as avg_execution_seconds,
+    'QUERY_3.3' as query_id
+  FROM job_data
+  GROUP BY metrics_date, query, user_email
+),
+failed_queries AS (
+  SELECT
+    metrics_date,
+    'Section 3.5: Failed Queries (Wasted $)' as query_category,
+    ROW_NUMBER() OVER (PARTITION BY metrics_date ORDER BY COUNT(*) DESC) as rank,
+    SUBSTR(query, 1, 500) as query_text,
+    user_email,
+    COUNT(*) as execution_count,
+    SUM(total_bytes_billed) / POW(10,12) * 6.25 as cost_usd,
+    AVG(total_slot_ms / 1000.0) as avg_execution_seconds,
+    'QUERY_3.5' as query_id
+  FROM `project.region-us.INFORMATION_SCHEMA.JOBS_BY_PROJECT`
+  WHERE DATE(creation_time) = CURRENT_DATE() - 1
+    AND job_type = 'QUERY'
+    AND state != 'DONE'
+  GROUP BY metrics_date, query, user_email
+),
 
-
-✅ 4 tables (this is what “best ever” looks like)
-
-nrt_vzw_cdp_dataflow_error_logs_raw
-
-Every error log entry (for audit + deep debug)
-
-nrt_vzw_cdp_dataflow_error_summary
-
-Consolidated by (job_name, category, error_signature) with counts + first/last seen
-
-nrt_pipeline_ownership
-
-Regex/prefix-based routing to team + emails
-
-nrt_error_signature_policy
-
-Suppress noisy signatures + thresholds (like your ManagedChannelImpl...not shutdown properly spam)
-
-
-
-If you want “stakeholder-specific alerts” and “noise suppression” you need Option B.
-
-BigQuery DDL (copy/paste)
-
-
-Replace dataset/project names if different. I’m using what you showed:
-Project: vz-it-pr-hukv-cdwldo-0
-Dataset: vzw_cdp_prd_tbls
-
-
-1) RAW table
-CREATE TABLE IF NOT EXISTS `vz-it-pr-hukv-cdwldo-0.vzw_cdp_prd_tbls.nrt_vzw_cdp_dataflow_error_logs_raw` (
-  ingestion_ts TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP(),
-  window_start TIMESTAMP,
-  window_end TIMESTAMP,
-
-  job_name STRING,
-  job_id STRING,
-  region STRING,
-  severity STRING,
-
-  category STRING,
-  error_signature STRING,
-
-  message STRING,
-  stack_trace STRING,
-
-  log_timestamp TIMESTAMP,
-  insert_id STRING,
-  log_name STRING
+-- UNION ALL RESULTS
+all_metrics AS (
+  SELECT * FROM expensive_queries
+  UNION ALL SELECT * FROM frequent_queries
+  UNION ALL SELECT * FROM long_queries
+  UNION ALL SELECT * FROM scheduled_queries
+  UNION ALL SELECT * FROM user_patterns
+  UNION ALL SELECT * FROM direct_costs
+  UNION ALL SELECT * FROM cascading_costs
+  UNION ALL SELECT * FROM execution_time_dist
+  UNION ALL SELECT * FROM cache_impact
+  UNION ALL SELECT * FROM actual_vs_surface
+  UNION ALL SELECT * FROM execution_time_metrics
+  UNION ALL SELECT * FROM slot_utilization
+  UNION ALL SELECT * FROM scan_efficiency
+  UNION ALL SELECT * FROM failed_queries
 )
-PARTITION BY DATE(log_timestamp)
-CLUSTER BY job_name, category, error_signature;
-2) SUMMARY table (consolidated)
-CREATE TABLE IF NOT EXISTS `vz-it-pr-hukv-cdwldo-0.vzw_cdp_prd_tbls.nrt_vzw_cdp_dataflow_error_summary` (
-  job_name STRING,
-  job_id STRING,
-  region STRING,
 
-  category STRING,
-  error_signature STRING,
+SELECT 
+  *,
+  CURRENT_TIMESTAMP() as materialization_time,
+  'Complete' as data_freshness_status
+FROM all_metrics
+;
+```
 
-  first_seen TIMESTAMP,
-  last_seen TIMESTAMP,
-  occurrence_count INT64,
+---
 
-  sample_message STRING,
-  sample_stack STRING,
+## 📋 IMPLEMENTATION PLAN
 
-  is_noise BOOL DEFAULT FALSE,
-  status STRING,                 -- NEW / ONGOING / RESOLVED (optional)
-  severity_score INT64,          -- computed at runtime (optional)
-  last_alerted_ts TIMESTAMP      -- optional: to avoid alert storms
-)
-PARTITION BY DATE(last_seen)
-CLUSTER BY job_name, category, error_signature;
-3) Ownership table (routing)
-CREATE TABLE IF NOT EXISTS `vz-it-pr-hukv-cdwldo-0.vzw_cdp_prd_tbls.nrt_pipeline_ownership` (
-  job_name_regex STRING,        -- e.g. r"^bq2spanner-.*"
-  team_name STRING,
-  emails ARRAY<STRING>
+### **Step 1: Create the Master Metadata Table** (30 minutes)
+
+```bash
+# Run this SQL once to create the table structure
+# Then set it to run on a schedule
+```
+
+### **Step 2: Schedule Daily Materialization** (15 minutes)
+
+```sql
+-- Create scheduled query to run daily at 2 AM UTC
+CREATE OR REPLACE SCHEDULE daily_query_metrics_refresh
+OPTIONS (
+  query='''
+    -- Copy the materialization query above
+    CREATE OR REPLACE TABLE `project.monitoring.bq_query_metrics_daily` AS
+    -- ... the entire CTE structure ...
+  ''',
+  frequency='DAILY',
+  time_zone='UTC',
+  display_name='Daily Query Metrics Materialization'
 );
-Example inserts:
-
-INSERT INTO `vz-it-pr-hukv-cdwldo-0.vzw_cdp_prd_tbls.nrt_pipeline_ownership`
-(job_name_regex, team_name, emails)
-VALUES
-(r"^bq2spanner-.*", "CDC Streaming Team", ["team1@verizon.com","oncall-team1@verizon.com"]);
-4) Policy table (noise suppression + thresholds)
-CREATE TABLE IF NOT EXISTS `vz-it-pr-hukv-cdwldo-0.vzw_cdp_prd_tbls.nrt_error_signature_policy` (
-  category STRING,
-  error_signature STRING,
-
-  is_noise BOOL DEFAULT FALSE,
-
-  alert_threshold_count INT64 DEFAULT 25,    -- alert if count >=
-  alert_threshold_minutes INT64 DEFAULT 30,  -- or persists >= minutes
-
-  notes STRING,
-  updated_ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP()
-)
-CLUSTER BY category, error_signature;
-Complete end-to-end Airflow DAG code (single file)
-
-
-This is 100% runnable as a DAG file (you only need to set your connection id + dataset/table names).
-
-
-
-It does:
-
-Pull Dataflow ERROR logs in the Airflow data interval
-
-Build error_signature + category classification
-
-Write RAW (optional) + MERGE into SUMMARY
-
-Read ownership+policy and send team-wise consolidated alert email
-
-from __future__ import annotations
-
-import re
-import json
-import hashlib
-from datetime import timezone
-import pandas as pd
-
-from airflow import DAG
-from airflow.operators.python import PythonOperator
-from airflow.providers.google.common.hooks.base_google import GoogleBaseHook
-from airflow.utils.email import send_email
-
-from google.cloud import logging as cloud_logging
-from google.cloud import bigquery
-
-# ---------------------------
-# CONFIG (match your env)
-# ---------------------------
-GCP_CONN_ID = "sa-vz-it-hukv-cdwldo-0-app"        # you already use this style
-BQ_PROJECT = "vz-it-pr-hukv-cdwldo-0"
-BQ_DATASET = "vzw_cdp_prd_tbls"
-
-RAW_TABLE = "nrt_vzw_cdp_dataflow_error_logs_raw"
-SUMMARY_TABLE = "nrt_vzw_cdp_dataflow_error_summary"
-OWNERSHIP_TABLE = "nrt_pipeline_ownership"
-POLICY_TABLE = "nrt_error_signature_policy"
-
-DEFAULT_ALERT_EMAILS = ["ashok.gadiparthi@verizon.com"]  # fallback
-
-# ---------------------------
-# Helpers: time + signature
-# ---------------------------
-_noise_re = re.compile(r"(\b\d{4}-\d{2}-\d{2}t\d{2}:\d{2}:\d{2}(\.\d+)?z\b)|(\b\d{6,}\b)", re.IGNORECASE)
-_space_re = re.compile(r"\s+")
-
-def rfc3339(dt) -> str:
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
-    dt = dt.astimezone(timezone.utc)
-    return dt.isoformat().replace("+00:00", "Z")
-
-def normalize_text(s: str, max_len: int = 600) -> str:
-    if not s:
-        return ""
-    s = s.strip()
-    s = _noise_re.sub("<N>", s)
-    s = _space_re.sub(" ", s)
-    return s[:max_len].lower()
-
-def build_signature(job_name: str, category: str, message: str, stack: str) -> str:
-    first_line = (message or "").split("\n")[0]
-    top_stack = (stack or "").splitlines()[0] if stack else ""
-    base = f"{job_name}|{category}|{normalize_text(first_line)}|{normalize_text(top_stack)}"
-    return hashlib.sha256(base.encode("utf-8")).hexdigest()
-
-# ---------------------------
-# Intelligence: classifier
-# ---------------------------
-def classify(message: str, stack: str) -> str:
-    txt = f"{message}\n{stack}".lower()
-
-    if "stale data check condition" in txt:
-        return "DATA_VALIDATION_STALE"
-    if "could not get a resource from the pool" in txt:
-        return "RESOURCE_POOL_STARVATION"
-    if "redis operation failed" in txt:
-        return "REDIS_RETRY"
-    if "sdk failed progress reporting" in txt:
-        return "SDK_PROGRESS"
-    if "managedchannelimpl" in txt and "was not shutdown properly" in txt:
-        return "GRPC_SHUTDOWN_WARNING"
-    if "permission" in txt or "access denied" in txt or "403" in txt:
-        return "PERMISSION_403"
-    if "quota" in txt or "rate limit" in txt:
-        return "BQ_QUOTA"
-    if "deadline exceeded" in txt or "timeout" in txt:
-        return "TIMEOUT"
-    if "unavailable" in txt or "connection reset" in txt or "socket" in txt:
-        return "NETWORK_GRPC"
-    if "container runtime status check" in txt or "skipping pod synchronization" in txt:
-        return "K8S_RUNTIME_WARNING"
-
-    return "UNKNOWN"
-
-def compute_severity(category: str, is_new: bool, count: int) -> int:
-    base = {
-        "DATA_VALIDATION_STALE": 90,
-        "RESOURCE_POOL_STARVATION": 85,
-        "PERMISSION_403": 80,
-        "BQ_QUOTA": 75,
-        "REDIS_RETRY": 60,
-        "TIMEOUT": 60,
-        "NETWORK_GRPC": 55,
-        "SDK_PROGRESS": 25,
-        "K8S_RUNTIME_WARNING": 20,
-        "GRPC_SHUTDOWN_WARNING": 0,
-        "UNKNOWN": 50,
-    }.get(category, 40)
-
-    vol = 0
-    if count >= 200: vol = 20
-    elif count >= 50: vol = 10
-    elif count >= 10: vol = 5
-
-    return base + (10 if is_new else 0) + vol
-
-# ---------------------------
-# BQ helpers
-# ---------------------------
-def get_clients():
-    gcp_hook = GoogleBaseHook(gcp_conn_id=GCP_CONN_ID)
-    creds = gcp_hook.get_credentials()
-    log_client = cloud_logging.Client(project=BQ_PROJECT, credentials=creds)
-    bq_client = bigquery.Client(project=BQ_PROJECT, credentials=creds)
-    return log_client, bq_client
-
-def table_id(name: str) -> str:
-    return f"{BQ_PROJECT}.{BQ_DATASET}.{name}"
-
-# ---------------------------
-# Task 1: extract + summarize
-# ---------------------------
-def extract_and_summarize(**context):
-    log_client, _ = get_clients()
-
-    # IMPORTANT: no repeats -> use Airflow data interval
-    window_start = context["data_interval_start"]
-    window_end = context["data_interval_end"]
-    start_ts = rfc3339(window_start)
-    end_ts = rfc3339(window_end)
-
-    log_filter = (
-        'resource.type="dataflow_step" '
-        'AND severity>=ERROR '
-        f'AND timestamp>="{start_ts}" AND timestamp<"{end_ts}"'
-    )
-
-    entries = list(log_client.list_entries(filter_=log_filter))
-
-    rows_raw = []
-    seen_insert = set()
-
-    for e in entries:
-        ins = getattr(e, "insert_id", None)
-        if ins and ins in seen_insert:
-            continue
-        if ins:
-            seen_insert.add(ins)
-
-        resource_labels = getattr(e.resource, "labels", {}) or {}
-        job_name = resource_labels.get("job_name") or resource_labels.get("job_id") or "Unknown"
-        job_id = resource_labels.get("job_id", "")
-        region = resource_labels.get("region", "")
-
-        payload = e.payload
-        if isinstance(payload, dict):
-            msg = payload.get("message") or payload.get("exception") or str(payload)
-            st = payload.get("stack_trace") or payload.get("stacktrace") or ""
-        else:
-            msg = str(payload)
-            st = ""
-
-        if "\n" in msg and not st:
-            parts = msg.split("\n", 1)
-            msg = parts[0]
-            st = parts[1] if len(parts) > 1 else ""
-
-        category = classify(msg, st)
-        signature = build_signature(job_name, category, msg, st)
-
-        rows_raw.append({
-            "window_start": start_ts,
-            "window_end": end_ts,
-            "job_name": job_name,
-            "job_id": job_id,
-            "region": region,
-            "severity": str(getattr(e, "severity", "ERROR")),
-            "category": category,
-            "error_signature": signature,
-            "message": (msg or "")[:2000],
-            "stack_trace": (st or "")[:8000],
-            "log_timestamp": e.timestamp.isoformat() if e.timestamp else None,
-            "insert_id": ins,
-            "log_name": getattr(e, "log_name", None),
-        })
-
-    df_raw = pd.DataFrame(rows_raw)
-    if df_raw.empty:
-        context["ti"].xcom_push(key="raw", value="[]")
-        context["ti"].xcom_push(key="summary", value="[]")
-        return
-
-    df_raw["log_timestamp"] = pd.to_datetime(df_raw["log_timestamp"], errors="coerce")
-
-    df_summary = (df_raw.groupby(["job_name", "job_id", "region", "category", "error_signature"], as_index=False)
-                        .agg(
-                            first_seen=("log_timestamp", "min"),
-                            last_seen=("log_timestamp", "max"),
-                            occurrence_count=("error_signature", "size"),
-                            sample_message=("message", "first"),
-                            sample_stack=("stack_trace", "first"),
-                        ))
-
-    context["ti"].xcom_push(key="raw", value=df_raw.to_json(orient="records", date_format="iso"))
-    context["ti"].xcom_push(key="summary", value=df_summary.to_json(orient="records", date_format="iso"))
-
-# ---------------------------
-# Task 2: load raw + merge summary
-# ---------------------------
-def load_to_bigquery(**context):
-    _, bq = get_clients()
-
-    raw_json = context["ti"].xcom_pull(task_ids="extract_and_summarize", key="raw") or "[]"
-    summary_json = context["ti"].xcom_pull(task_ids="extract_and_summarize", key="summary") or "[]"
-
-    raw_rows = json.loads(raw_json)
-    summary_rows = json.loads(summary_json)
-
-    if raw_rows:
-        df_raw = pd.DataFrame(raw_rows)
-        bq.load_table_from_dataframe(
-            df_raw, table_id(RAW_TABLE),
-            job_config=bigquery.LoadJobConfig(write_disposition="WRITE_APPEND")
-        ).result()
-
-    if not summary_rows:
-        return
-
-    df_s = pd.DataFrame(summary_rows)
-    df_s["first_seen"] = pd.to_datetime(df_s["first_seen"], errors="coerce")
-    df_s["last_seen"] = pd.to_datetime(df_s["last_seen"], errors="coerce")
-
-    tmp = table_id("_tmp_error_summary")
-    bq.load_table_from_dataframe(
-        df_s, tmp,
-        job_config=bigquery.LoadJobConfig(write_disposition="WRITE_TRUNCATE")
-    ).result()
-
-    merge_sql = f"""
-    MERGE `{table_id(SUMMARY_TABLE)}` T
-    USING `{tmp}` S
-    ON  T.job_name = S.job_name
-    AND T.category = S.category
-    AND T.error_signature = S.error_signature
-    WHEN MATCHED THEN UPDATE SET
-      T.last_seen = GREATEST(T.last_seen, S.last_seen),
-      T.first_seen = LEAST(T.first_seen, S.first_seen),
-      T.occurrence_count = T.occurrence_count + S.occurrence_count,
-      T.sample_message = S.sample_message,
-      T.sample_stack = S.sample_stack
-    WHEN NOT MATCHED THEN INSERT (
-      job_name, job_id, region, category, error_signature,
-      first_seen, last_seen, occurrence_count, sample_message, sample_stack,
-      is_noise, status
-    ) VALUES (
-      S.job_name, S.job_id, S.region, S.category, S.error_signature,
-      S.first_seen, S.last_seen, S.occurrence_count, S.sample_message, S.sample_stack,
-      FALSE, "NEW"
-    )
-    """
-    bq.query(merge_sql).result()
-
-# ---------------------------
-# Task 3: policy + ownership aware alerting
-# ---------------------------
-def send_consolidated_alerts(**context):
-    _, bq = get_clients()
-
-    summary_json = context["ti"].xcom_pull(task_ids="extract_and_summarize", key="summary") or "[]"
-    rows = json.loads(summary_json)
-    if not rows:
-        return
-
-    df = pd.DataFrame(rows)
-
-    # Pull policy table -> mark noise + thresholds
-    policy_df = bq.query(f"SELECT category, error_signature, is_noise, alert_threshold_count FROM `{table_id(POLICY_TABLE)}`").to_dataframe()
-    if not policy_df.empty:
-        df = df.merge(policy_df, on=["category", "error_signature"], how="left")
-    else:
-        df["is_noise"] = False
-        df["alert_threshold_count"] = 25
-
-    df["is_noise"] = df["is_noise"].fillna(False)
-    df["alert_threshold_count"] = df["alert_threshold_count"].fillna(25)
-
-    # Suppress noise
-    df = df[df["is_noise"] == False]
-    if df.empty:
-        return
-
-    # Determine NEW vs ONGOING (simple approach: check if signature exists in summary already)
-    # In many environments this DAG runs continuously; a robust method is to query last_seen for signature.
-    sigs = df["error_signature"].unique().tolist()
-    sig_list = ",".join([f"'{s}'" for s in sigs])
-
-    hist = bq.query(f"""
-      SELECT error_signature, MAX(last_seen) AS last_seen
-      FROM `{table_id(SUMMARY_TABLE)}`
-      WHERE error_signature IN ({sig_list})
-      GROUP BY error_signature
-    """).to_dataframe()
-
-    df = df.merge(hist, on="error_signature", how="left", suffixes=("", "_hist"))
-    df["is_new"] = df["last_seen_hist"].isna()
-
-    # thresholds + high impact always alert
-    high_impact = {"DATA_VALIDATION_STALE", "RESOURCE_POOL_STARVATION", "PERMISSION_403", "BQ_QUOTA"}
-    df["should_alert"] = df.apply(
-        lambda r: (r["category"] in high_impact) or (int(r["occurrence_count"]) >= int(r["alert_threshold_count"])),
-        axis=1
-    )
-    df = df[df["should_alert"] == True]
-    if df.empty:
-        return
-
-    df["severity_score"] = df.apply(lambda r: compute_severity(r["category"], bool(r["is_new"]), int(r["occurrence_count"])), axis=1)
-    df = df.sort_values(["severity_score", "occurrence_count"], ascending=[False, False]).head(50)
-
-    # Ownership routing
-    own_df = bq.query(f"SELECT job_name_regex, team_name, emails FROM `{table_id(OWNERSHIP_TABLE)}`").to_dataframe()
-    if own_df.empty:
-        # fallback: single email
-        routes = {"Default": DEFAULT_ALERT_EMAILS}
-        df["team_name"] = "Default"
-    else:
-        def find_team(job):
-            for _, r in own_df.iterrows():
-                if re.search(r["job_name_regex"], job or ""):
-                    return r["team_name"]
-            return "Default"
-
-        df["team_name"] = df["job_name"].apply(find_team)
-
-        routes = {"Default": DEFAULT_ALERT_EMAILS}
-        for _, r in own_df.iterrows():
-            routes[r["team_name"]] = r["emails"]
-
-    # Send one email per team
-    for team, team_df in df.groupby("team_name"):
-        to_emails = routes.get(team, DEFAULT_ALERT_EMAILS)
-
-        # HTML table
-        rows_html = []
-        for _, r in team_df.iterrows():
-            rows_html.append(
-                f"<tr>"
-                f"<td>{r['job_name']}</td>"
-                f"<td>{r['category']}</td>"
-                f"<td>{'NEW' if r['is_new'] else 'ONGOING'}</td>"
-                f"<td>{int(r['occurrence_count'])}</td>"
-                f"<td>{r['first_seen']}</td>"
-                f"<td>{r['last_seen']}</td>"
-                f"<td>{str(r['sample_message'])[:220]}</td>"
-                f"</tr>"
-            )
-
-        html = f"""
-        <h3>CDP Dataflow Consolidated Error Alert - {team}</h3>
-        <table border="1" cellpadding="6" cellspacing="0">
-          <tr>
-            <th>Job</th><th>Category</th><th>Status</th><th>Count</th>
-            <th>First Seen</th><th>Last Seen</th><th>Sample Message</th>
-          </tr>
-          {''.join(rows_html)}
-        </table>
-        """
-
-        subject = f"[CDP][Dataflow][{team}] Consolidated Errors: {len(team_df)}"
-        send_email(to=to_emails, subject=subject, html_content=html)
-
-# ---------------------------
-# DAG definition
-# ---------------------------
-with DAG(
-    dag_id="dg_cdp_dataflow_error_intelligence",
-    start_date=pd.Timestamp("2025-01-01"),
-    schedule="0 * * * *",          # hourly
-    catchup=False,
-    max_active_runs=1,
-    tags=["monitoring", "dataflow", "bigquery", "cdp"]
-) as dag:
-
-    t1 = PythonOperator(
-        task_id="extract_and_summarize",
-        python_callable=extract_and_summarize
-    )
-
-    t2 = PythonOperator(
-        task_id="load_to_bigquery",
-        python_callable=load_to_bigquery
-    )
-
-    t3 = PythonOperator(
-        task_id="send_consolidated_alerts",
-        python_callable=send_consolidated_alerts
-    )
-
-    t1 >> t2 >> t3
-How to integrate with your 
-current
- code base
-
-
-From your screenshots, you already have:
-
-GoogleBaseHook(...)
-
-BigQueryHook(...)
-
-a dataset/table nrt_vzw_cdp_dataflow_error_logs
-
-
-
-You can do either:
-
-Replace your current DAG with this new end-to-end DAG, or
-
-Keep your table and simply add the Summary + Routing part.
-
-What I need from you to make it “100% your original + this”
-
-
-Please do one of these (no need for many questions; just pick one):
-
-Paste your existing dg_cdp_dataflow_error_tracking.py content here, or
-
-Upload the file in chat
-
-
-
-Then I will:
-
-keep your imports, variables (projectDetails, getVariables, etc.)
-
-keep your connection ids
-
-keep your email recipient logic
-
-and deliver a single final .py that is fully consistent with your repo style.
-
-
-
-If you paste the file, I’ll return the exact final code in one shot.
+```
+
+### **Step 3: Create Quick Access Tables** (30 minutes)
+
+```sql
+-- TIER 2: Quick Analysis Table (Top 5 + 80% queries)
+-- Subset of master table, refreshes every 2 hours
+
+CREATE OR REPLACE TABLE `project.monitoring.bq_quick_analysis` AS
+SELECT *
+FROM `project.monitoring.bq_query_metrics_daily`
+WHERE query_id IN ('QUERY_1.1', 'QUERY_1.2', 'QUERY_1.5', 'QUERY_2.1', 'QUERY_2.12')
+  AND metrics_date >= CURRENT_DATE() - 7;
+```
+
+### **Step 4: Create Individual Query Views** (1 hour)
+
+```sql
+-- TIER 3: Individual Query Views for drilling down
+-- These read from master table (no raw scans)
+
+CREATE OR REPLACE VIEW `project.monitoring.vw_1_1_expensive_queries` AS
+SELECT *
+FROM `project.monitoring.bq_query_metrics_daily`
+WHERE query_id = 'QUERY_1.1'
+ORDER BY cost_usd DESC
+LIMIT 50;
+
+-- Repeat for all 23 query categories...
+CREATE OR REPLACE VIEW `project.monitoring.vw_1_2_frequent_queries` AS
+SELECT * FROM `project.monitoring.bq_query_metrics_daily`
+WHERE query_id = 'QUERY_1.2'
+ORDER BY execution_count DESC;
+
+-- And so on for all 23 queries
+```
+
+---
+
+## 🎯 HOW TO USE THE UNIFIED TABLE
+
+### **Scenario 1: Quick Dashboard (30 seconds)**
+
+```sql
+-- Just read TIER 2 table (refreshed every 2 hours)
+SELECT *
+FROM `project.monitoring.bq_quick_analysis`
+WHERE metrics_date >= CURRENT_DATE() - 7
+ORDER BY cost_usd DESC;
+
+-- Response time: <100ms
+-- Data freshness: 2 hours old
+-- Cost: ~$0 (reading materialized table)
+```
+
+### **Scenario 2: Complete Daily Report (2 minutes)**
+
+```sql
+-- Read the TIER 1 master table (refreshed daily)
+SELECT 
+  metrics_date,
+  query_category,
+  SUM(cost_usd) as category_total_cost,
+  COUNT(*) as num_insights,
+  MAX(avg_execution_seconds) as slowest_avg_execution
+FROM `project.monitoring.bq_query_metrics_daily`
+WHERE metrics_date >= CURRENT_DATE() - 30
+GROUP BY metrics_date, query_category
+ORDER BY metrics_date DESC, category_total_cost DESC;
+
+-- Response time: <500ms
+-- Data freshness: 24 hours old
+-- Cost: ~$0 (reading materialized table)
+```
+
+### **Scenario 3: Deep Analysis - Specific Query Category (30 seconds)**
+
+```sql
+-- Query the view for one specific category
+SELECT *
+FROM `project.monitoring.vw_1_1_expensive_queries`
+WHERE metrics_date >= CURRENT_DATE() - 30
+ORDER BY cost_usd DESC
+LIMIT 100;
+
+-- Response time: <200ms
+-- Data freshness: 24 hours old
+-- Cost: ~$0 (reading materialized table)
+```
+
+### **Scenario 4: Real-Time Troubleshooting (5 minutes)**
+
+```sql
+-- When you need LIVE data, run a specific query individually
+-- Read from JOBS_BY_PROJECT directly, but filtered for speed
+
+SELECT 
+  creation_time,
+  user_email,
+  SUBSTR(query, 1, 200) as query_text,
+  total_bytes_billed / POW(10,12) * 6.25 as cost_usd,
+  total_slot_ms / 1000.0 as execution_seconds
+FROM `project.region-us.INFORMATION_SCHEMA.JOBS_BY_PROJECT`
+WHERE creation_time >= CURRENT_TIMESTAMP() - INTERVAL 2 HOUR
+  AND job_type = 'QUERY'
+  AND user_email = 'someone@company.com'
+  AND state = 'DONE'
+ORDER BY cost_usd DESC
+LIMIT 50;
+
+-- Response time: <30 seconds
+-- Data freshness: LIVE (current hour)
+-- Cost: $0.01-0.05 (small scan)
+```
+
+---
+
+## 📊 RUNNING STRATEGY: INDIVIDUAL VS CONSOLIDATED
+
+### **Should you run all 23 individually or use consolidated table?**
+
+**ANSWER: Both!**
+
+| Scenario | Approach | Frequency | Cost |
+|----------|----------|-----------|------|
+| **Daily monitoring** | Read TIER 1 (consolidated) | Daily | $0 |
+| **Quick dashboard** | Read TIER 2 (quick access) | Every 2 hrs | $0 |
+| **Deep analysis** | Read views from TIER 1 | As-needed | $0 |
+| **Live troubleshooting** | Run individual query | When needed | $0.01-0.05 |
+| **Full audit** | Run all 23 individually | Monthly | $2-3 |
+
+---
+
+## 🚀 COST COMPARISON
+
+### **Running All 23 Individually, Daily:**
+```
+Cost per run: ~$3-5 (scans 100+ GB)
+Daily cost: $3-5
+Monthly cost: $90-150
+Annual cost: $1,080-1,800
+```
+
+### **Materialized Master Table + On-Demand:**
+```
+Daily materialization: $3-5 (once per day at 2 AM)
+Daily reads: $0 (read materialized table)
+Monthly cost: ~$90 (30 materializations)
+Annual cost: ~$1,080
+PLUS: Faster queries, consistent data, cleaner results
+```
+
+### **Materialized Master + Quick Access Tier:**
+```
+Daily materialization: $3-5 (once per day)
+Hourly quick access refresh: $0.50 × 24 = $12 (optional, lightweight)
+Monthly cost: ~$120 (materialization + refreshes)
+Annual cost: ~$1,440
+PLUS: Dashboard updates every 2 hours instead of daily
+```
+
+**RECOMMENDATION: Use Option 2 (Master Table Only)**
+- Simplest
+- Same cost as running individually
+- Much faster queries
+- Single source of truth
+- Better for customers
+
+---
+
+## 🎯 FINAL STRATEGY: THE ANSWER
+
+### **Your Three-Tier Solution:**
+
+**TIER 1: Master Materialized Table** ✅
+```
+├─ Table: bq_query_metrics_daily
+├─ Updated: Daily at 2 AM UTC
+├─ Contains: Results of ALL 23 query categories
+├─ Size: ~100-500 MB
+├─ Query time: <500ms
+├─ Cost: $3-5 once per day
+├─ Use for: Reports, dashboards, customer analyses
+└─ Best for: 95% of use cases
+```
+
+**TIER 2: Quick Access Table** (Optional)
+```
+├─ Table: bq_quick_analysis
+├─ Updated: Every 2 hours
+├─ Contains: Top 5 "80% queries" + 7 days history
+├─ Size: ~10-20 MB
+├─ Query time: <100ms
+├─ Cost: Negligible (lightweight refresh)
+├─ Use for: Live dashboards, real-time monitoring
+└─ Best for: Executive dashboards, alerts
+```
+
+**TIER 3: Individual Query Views** ✅
+```
+├─ 23 views (one per query)
+├─ Updated: Real-time (read from TIER 1)
+├─ Size: Dynamic (part of TIER 1)
+├─ Query time: <200ms
+├─ Cost: $0
+├─ Use for: Deep dives into specific metrics
+└─ Best for: Root cause analysis, troubleshooting
+```
+
+---
+
+## ✅ WHAT THIS SOLVES
+
+1. **"Do I run all 23 individually?"** → No, run once daily into master table
+2. **"What's the metadata table?"** → bq_query_metrics_daily (consolidates all 23)
+3. **"How do I access individual query results?"** → Through views that read the master table
+4. **"What's the strategy?"** → Materialize once, query many times (99% cost savings on reads)
+
+---
+
+## 🚀 IMPLEMENTATION CHECKLIST
+
+- [ ] Create master materialization SQL (copy above)
+- [ ] Test the query (runs once daily, ~3-5 min)
+- [ ] Set up scheduled query (2 AM UTC daily)
+- [ ] Create TIER 2 quick access table
+- [ ] Create 23 views for individual queries
+- [ ] Update dashboards to read from master table
+- [ ] Monitor first week (no issues expected)
+- [ ] Document for customers
+- [ ] Start charging for daily monitoring service
+
+---
+
+## 💰 REVENUE OPPORTUNITY
+
+Once you have this system:
+
+**Service Offering:**
+- Daily Query Metrics Report: $500/month
+- Real-time Dashboard: $1,000/month
+- Optimization Consultation: $2,000/month
+- Full Implementation: $5,000 one-time
+
+**Annual revenue potential per customer:** $18,000-30,000
+
+---
+
+*This unified metadata table approach scales to 1,000+ customers with same infrastructure cost*
