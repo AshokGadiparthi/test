@@ -1,18 +1,18 @@
-(venv) ashok@ubuntu:~/work/latest/kedro-ml-engine-integrated$ kedro run
-[01/29/26 18:01:00] INFO     Using                                                                       __init__.py:269
+(venv) ashok@ubuntu:~/work/latest/kedro-ml-engine-integrated$ kedro run --pipeline phase3
+[01/29/26 19:34:30] INFO     Using                                                                       __init__.py:269
                              '/home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/sit                
                              e-packages/kedro/framework/project/rich_logging.yml' as logging                            
                              configuration.                                                                             
-[01/29/26 18:01:00] INFO     Kedro project kedro-ml-engine-integrated                                     session.py:330
+[01/29/26 19:34:31] INFO     Kedro project kedro-ml-engine-integrated                                     session.py:330
 ✅ Multi-table loader imported successfully
-[01/29/26 18:01:04] INFO     ✅ Phase 1a (data_loading) imported successfully                    pipeline_registry.py:62
+[01/29/26 19:34:33] INFO     ✅ Phase 1a (data_loading) imported successfully                    pipeline_registry.py:62
                     INFO     ✅ Phase 1b (data_validation) imported successfully                 pipeline_registry.py:69
                     INFO     ✅ Phase 1c (data_cleaning with PATH B feature scaling) imported    pipeline_registry.py:76
                              successfully                                                                               
                     INFO     ✅ Phase 2a (feature_engineering) imported successfully             pipeline_registry.py:87
                     INFO     ✅ Phase 2b (feature_selection) imported successfully               pipeline_registry.py:94
                     INFO     ✅ Phase 3 (model_training with PATH A+B) imported successfully    pipeline_registry.py:108
-[01/29/26 18:01:05] INFO     ✅ Phase 4 (phase4_algorithms with PATH A+B+C ready) imported      pipeline_registry.py:126
+[01/29/26 19:34:34] INFO     ✅ Phase 4 (phase4_algorithms with PATH A+B+C ready) imported      pipeline_registry.py:126
                              successfully                                                                               
                     INFO     ✅ Phase 6 (ensemble_methods) imported successfully                pipeline_registry.py:139
                     INFO     ✅ Phase 5a (training_strategies) module available                 pipeline_registry.py:166
@@ -158,480 +158,17 @@
                              create a `.telemetry` file in the current working directory with the contents              
                              `consent: false`. To hide this message, explicitly grant or deny consent.                  
                              Read more at https://docs.kedro.org/en/stable/about/telemetry/                             
+                    WARNING  Workflow tracking is disabled during partial pipeline runs (executed using run_hooks.py:135
+                             --from-nodes, --to-nodes, --tags, --pipeline, and more).                                   
+                             `.viz/kedro_pipeline_events.json` will be created only during a full kedro                 
+                             run. See issue https://github.com/kedro-org/kedro-viz/issues/2443 for more                 
+                             details.                                                                                   
                     INFO     Using synchronous mode for loading and saving data. Use the --async sequential_runner.py:59
                              flag for potential performance gains.                                                      
                              https://docs.kedro.org/en/stable/nodes_and_pipelines/run_a_pipeline                        
                              .html#load-and-save-asynchronously                                                         
-                    INFO     Loading data from raw_data (CSVDataset)...                             data_catalog.py:1048
-                    INFO     Loading data from params:data_processing.handle_missing                data_catalog.py:1048
-                             (MemoryDataset)...                                                                         
-                    INFO     Running node: clean_data_node: clean_data() ->                                  node.py:420
-                    INFO     🧹 Cleaning data...                                                     data_cleaning.py:27
-                    INFO     ======================================================================= data_cleaning.py:36
-                             =========                                                                                  
-                    INFO     🔍 STARTING OUTLIER DETECTION (PATH A)                                  data_cleaning.py:37
-                    INFO     ======================================================================= data_cleaning.py:38
-                             =========                                                                                  
-                    INFO     Found 6 numeric columns for outlier detection                           data_cleaning.py:41
-[01/29/26 18:01:06] INFO       Column 'age': 143 outliers (bounds: [-2.00, 78.00])                   data_cleaning.py:60
-                    INFO       Column 'fnlwgt': 992 outliers (bounds: [-61009.00, 415887.00])        data_cleaning.py:60
-                    INFO       Column 'education.num': 1198 outliers (bounds: [4.50, 16.50])         data_cleaning.py:60
-                    INFO       Column 'capital.gain': 2712 outliers (bounds: [0.00, 0.00])           data_cleaning.py:60
-                    INFO       Column 'capital.loss': 1519 outliers (bounds: [0.00, 0.00])           data_cleaning.py:60
-                    INFO       Column 'hours.per.week': 9008 outliers (bounds: [32.50, 52.50])       data_cleaning.py:60
-                    INFO     Total outliers found: 15572 across 6 columns                            data_cleaning.py:62
-                    INFO     Capping outliers to reasonable bounds...                                data_cleaning.py:64
-                    INFO     ✅ Outliers capped successfully                                         data_cleaning.py:74
-                    INFO     ----------------------------------------------------------------------- data_cleaning.py:83
-                             ---------                                                                                  
-                    INFO     🔍 DUPLICATE DETECTION                                                  data_cleaning.py:84
-                    INFO     ----------------------------------------------------------------------- data_cleaning.py:85
-                             ---------                                                                                  
-                    INFO     Initial rows: 32561                                                     data_cleaning.py:93
-                    INFO     ✅ Duplicates removed. Final rows: 32510                                data_cleaning.py:94
-                    INFO        Rows deleted: 51                                                     data_cleaning.py:95
-                    INFO     ---------------------------------------------------------------------- data_cleaning.py:103
-                             ----------                                                                                 
-                    INFO     📊 HANDLING MISSING VALUES                                             data_cleaning.py:104
-                    INFO     ---------------------------------------------------------------------- data_cleaning.py:105
-                             ----------                                                                                 
-                    INFO        Handling missing values with 'mean' strategy                        data_cleaning.py:107
-                    INFO     ---------------------------------------------------------------------- data_cleaning.py:145
-                             ----------                                                                                 
-                    INFO     📈 FEATURE SCALING (PATH B)                                            data_cleaning.py:146
-                    INFO     ====================================================================== data_cleaning.py:147
-                             ==========                                                                                 
-                    INFO     Scaling 6 numeric columns with StandardScaler...                       data_cleaning.py:151
-                    INFO     ✅ Feature scaling applied to:                                         data_cleaning.py:157
-                    INFO        1. age                                                              data_cleaning.py:159
-                    INFO        2. fnlwgt                                                           data_cleaning.py:159
-                    INFO        3. education.num                                                    data_cleaning.py:159
-                    INFO        4. capital.gain                                                     data_cleaning.py:159
-                    INFO        5. capital.loss                                                     data_cleaning.py:159
-                    INFO        6. hours.per.week                                                   data_cleaning.py:159
-                    INFO     ✅ All numeric features normalized to mean=0, std=1                    data_cleaning.py:164
-                    INFO     ====================================================================== data_cleaning.py:168
-                             ==========                                                                                 
-                    INFO        ✅ Cleaned data shape: (32510, 15)                                  data_cleaning.py:173
-                    INFO     ====================================================================== data_cleaning.py:174
-                             ==========                                                                                 
-                    INFO     Saving data to cleaned_data (CSVDataset)...                            data_catalog.py:1008
-                    INFO     Saving data to data_cleaning_report (MemoryDataset)...                 data_catalog.py:1008
-                    INFO     Completed node: clean_data_node                                               runner.py:245
-                    INFO     Completed 1 out of 20 tasks                                                   runner.py:246
-                    INFO     Loading data from X_train (CSVDataset)...                              data_catalog.py:1048
-[01/29/26 18:01:10] INFO     Loading data from X_test (CSVDataset)...                               data_catalog.py:1048
-[01/29/26 18:01:11] INFO     Loading data from params:feature_engineering (MemoryDataset)...        data_catalog.py:1048
-                    INFO     Running node: engineer_features:                                                node.py:420
-                             engineer_features([X_train;X_test;params:feature_engineering]) ->                          
-                             [X_train_final;X_test_final]                                                               
-
-
-================================================================================
-🏗️  PRODUCTION FEATURE ENGINEERING PIPELINE (100% CORRECTED)
-================================================================================
-
-================================================================================
-🔍 DETECTING ID COLUMNS (Permanent Fix #1)
-================================================================================
-   ✓ Detected ID column: SK_ID_CURR
-      Cardinality: 100.0% (246008 unique values)
-   ✓ Detected ID column: DAYS_ID_PUBLISH
-      Cardinality: 2.5% (6145 unique values)
-
-   🎯 Dropping 2 ID columns: ['SK_ID_CURR', 'DAYS_ID_PUBLISH']
-================================================================================
-
-
-📊 After dropping IDs: Train 178 features, Test 178 features
-
-   Numeric columns: 162
-   Categorical columns: 16
-
-================================================================================
-📈 PROCESSING NUMERIC FEATURES
-================================================================================
-   ✓ Scaled 162 numeric features
-     Train shape: (246008, 162)
-     Test shape: (61503, 162)
-
-================================================================================
-📦 SMART CATEGORICAL ENCODING (Permanent Fix #2) - FIX #1
-================================================================================
-
-   Configuration:
-      Max categories per column: 10
-      Max total features from encoding: 100
-
-   Analyzing categorical columns:
-      NAME_CONTRACT_TYPE: 2 unique values
-         → One-hot encode
-      CODE_GENDER: 3 unique values
-         → One-hot encode
-      FLAG_OWN_CAR: 2 unique values
-         → One-hot encode
-      FLAG_OWN_REALTY: 2 unique values
-         → One-hot encode
-      NAME_TYPE_SUITE: 7 unique values
-         → One-hot encode
-      NAME_INCOME_TYPE: 8 unique values
-         → One-hot encode
-      NAME_EDUCATION_TYPE: 5 unique values
-         → One-hot encode
-      NAME_FAMILY_STATUS: 6 unique values
-         → One-hot encode
-      NAME_HOUSING_TYPE: 6 unique values
-         → One-hot encode
-      OCCUPATION_TYPE: 18 unique values
-         → Label encode
-      WEEKDAY_APPR_PROCESS_START: 7 unique values
-         → One-hot encode
-      ORGANIZATION_TYPE: 58 unique values
-         → DROP (high cardinality)
-      FONDKAPREMONT_MODE: 4 unique values
-         → One-hot encode
-      HOUSETYPE_MODE: 3 unique values
-         → One-hot encode
-      WALLSMATERIAL_MODE: 7 unique values
-         → One-hot encode
-      EMERGENCYSTATE_MODE: 2 unique values
-         → One-hot encode
-
-   One-hot encoding 14 columns...
-      ✓ Created 55 features from one-hot encoding
-      ✓ Train encoded shape: (246008, 55)
-      ✓ Test encoded shape: (61503, 55)
-
-   Label encoding 1 columns...
-      ✓ Label encoded 1 features
-
-   Result:
-      Dropped: 1 columns
-      Train encoded shape: (246008, 56)
-      Test encoded shape: (61503, 56)
-================================================================================
-
-
-📊 After combining features:
-   Train shape: (246008, 218)
-   Test shape: (61503, 218)
-
-================================================================================
-⚡ POLYNOMIAL FEATURES (Permanent Fix #3) - FIX #2
-================================================================================
-
-   ✓ Polynomial features: DISABLED
-================================================================================
-
-📊 After polynomial:
-   Train shape: (246008, 218)
-   Test shape: (61503, 218)
-
-================================================================================
-🔬 VARIANCE FILTERING (Permanent Fix #4) - FIX #3
-================================================================================
-
-   Configuration:
-      Variance threshold: 0.01
-
-   Result:
-      Features before: 218
-      Train filtered shape: (246008, 202)
-      Test filtered shape: (61503, 202)
-      Removed: 16 low-variance features
-      Removed columns: ['CODE_GENDER_XNA', 'NAME_TYPE_SUITE_Group of people', 'NAME_TYPE_SUITE_Other_A', 'NAME_TYPE_SUITE_Other_B', 'NAME_TYPE_SUITE_nan']...
-================================================================================
-
-📊 After variance filter:
-   Train shape: (246008, 202)
-   Test shape: (61503, 202)
-
-================================================================================
-🔧 FILLING NaN VALUES (NEW FIX FOR FEATURE SELECTION)
-================================================================================
-
-   NaN values before imputation:
-      Train: 9897118
-      Test: 2479711
-
-   NaN values after imputation:
-      Train: 0
-      Test: 0
-================================================================================
-
-📊 After NaN imputation:
-   Train shape: (246008, 202)
-   Test shape: (61503, 202)
-
-================================================================================
-✔️  FEATURE EXPLOSION SAFETY CHECK (Permanent Fix #5)
-================================================================================
-
-   Train features: 202
-   Test features: 202
-   Max allowed: 500
-
-   ✓ Feature count is safe
-   ✓ Train and test shapes match!
-================================================================================
-
-
-
-================================================================================
-✅ FEATURE ENGINEERING COMPLETE - 100% WORKING
-================================================================================
-
-   Input shapes:
-      Train: (246008, 180)
-      Test: (61503, 180)
-
-   Output shapes:
-      Train: (246008, 202)
-      Test: (61503, 202)
-
-   Features: 180 → 202
-
-   Steps applied:
-      ✓ Dropped ID columns
-      ✓ Encoded categoricals smartly (fit once)
-      ✓ Scaled numeric features (fit once)
-      ✓ Filtered low-variance features (fit once)
-      ✓ Filled remaining NaN values (fit once)
-      ✓ Validated against feature explosion
-
-   ✅ TRAIN AND TEST SHAPES MATCH: True
-   ✅ NO NaN VALUES: True
-
-================================================================================
-
-[01/29/26 18:01:22] INFO     Saving data to X_train_final (CSVDataset)...                           data_catalog.py:1008
-[01/29/26 18:02:05] INFO     Saving data to X_test_final (CSVDataset)...                            data_catalog.py:1008
-[01/29/26 18:02:15] INFO     Completed node: engineer_features                                             runner.py:245
-                    INFO     Completed 2 out of 20 tasks                                                   runner.py:246
-                    INFO     Loading data from params:data_loading (MemoryDataset)...               data_catalog.py:1048
-                    INFO     Running node: load_data_node: load_data_auto() ->                               node.py:420
-                             [X_train_raw;X_test_raw;y_train_raw;y_test_raw]                                            
-                    INFO                                                                             data_loading.py:154
-                             =======================================================================                    
-                             =========                                                                                  
-                    INFO     📊 DATA LOADING - MODE: MULTI                                           data_loading.py:155
-                    INFO     ======================================================================= data_loading.py:156
-                             =========                                                                                  
-                                                                                                                        
-                    INFO     🔗 Multi-Table Mode Activated                                           data_loading.py:163
-                    INFO                                                                  data_loading_multitable.py:124
-                             ============================================================                               
-                             ====================                                                                       
-
-================================================================================
-                    INFO     📂 LOADING TABLES                                            data_loading_multitable.py:124
-📂 LOADING TABLES
-                    INFO     ============================================================ data_loading_multitable.py:124
-                             ====================                                                                       
-                                                                                                                        
-================================================================================
-
-                    INFO     Loading application...                                       data_loading_multitable.py:124
-Loading application... [01/29/26 18:02:17] INFO     ✅ (307,511 rows × 122 cols)                                 data_loading_multitable.py:124
-✅ (307,511 rows × 122 cols)
-                    INFO     Loading bureau...                                            data_loading_multitable.py:124
-Loading bureau... [01/29/26 18:02:19] INFO     ✅ (1,716,428 rows × 17 cols)                                data_loading_multitable.py:124
-✅ (1,716,428 rows × 17 cols)
-                    INFO     Loading previous_application...                              data_loading_multitable.py:124
-Loading previous_application... [01/29/26 18:02:23] INFO     ✅ (1,670,214 rows × 37 cols)                                data_loading_multitable.py:124
-✅ (1,670,214 rows × 37 cols)
-                    INFO     Loading pos_cash...                                          data_loading_multitable.py:124
-Loading pos_cash... [01/29/26 18:02:28] INFO     ✅ (10,001,358 rows × 8 cols)                                data_loading_multitable.py:124
-✅ (10,001,358 rows × 8 cols)
-                    INFO     Loading credit_card...                                       data_loading_multitable.py:124
-Loading credit_card... [01/29/26 18:02:34] INFO     ✅ (3,840,312 rows × 23 cols)                                data_loading_multitable.py:124
-✅ (3,840,312 rows × 23 cols)
-                    INFO     Loading installments...                                      data_loading_multitable.py:124
-Loading installments... [01/29/26 18:02:40] INFO     ✅ (13,605,401 rows × 8 cols)                                data_loading_multitable.py:124
-✅ (13,605,401 rows × 8 cols)
-                    INFO                                                                  data_loading_multitable.py:124
-                             ============================================================                               
-                             ====================                                                                       
-
-================================================================================
-                    INFO     🔄 AGGREGATING MANY-TO-ONE RELATIONSHIPS                     data_loading_multitable.py:124
-🔄 AGGREGATING MANY-TO-ONE RELATIONSHIPS
-                    INFO     ============================================================ data_loading_multitable.py:124
-                             ====================                                                                       
-                                                                                                                        
-================================================================================
-
-                    INFO     Aggregating bureau...                                        data_loading_multitable.py:124
-Aggregating bureau...
-                    INFO       ✅ Aggregated from 1,716,428 to 305,811 rows               data_loading_multitable.py:124
-  ✅ Aggregated from 1,716,428 to 305,811 rows
-                    INFO          Features created: 8                                     data_loading_multitable.py:124
-     Features created: 8
-                    INFO     Aggregating previous_application...                          data_loading_multitable.py:124
-Aggregating previous_application...
-[01/29/26 18:02:41] INFO       ✅ Aggregated from 1,670,214 to 338,857 rows               data_loading_multitable.py:124
-  ✅ Aggregated from 1,670,214 to 338,857 rows
-                    INFO          Features created: 6                                     data_loading_multitable.py:124
-     Features created: 6
-                    INFO     Aggregating pos_cash...                                      data_loading_multitable.py:124
-Aggregating pos_cash...
-[01/29/26 18:02:42] INFO       ✅ Aggregated from 10,001,358 to 337,252 rows              data_loading_multitable.py:124
-  ✅ Aggregated from 10,001,358 to 337,252 rows
-                    INFO          Features created: 3                                     data_loading_multitable.py:124
-     Features created: 3
-                    INFO     Aggregating credit_card...                                   data_loading_multitable.py:124
-Aggregating credit_card...
-                    INFO       ✅ Aggregated from 3,840,312 to 103,558 rows               data_loading_multitable.py:124
-  ✅ Aggregated from 3,840,312 to 103,558 rows
-                    INFO          Features created: 5                                     data_loading_multitable.py:124
-     Features created: 5
-                    INFO     Aggregating installments...                                  data_loading_multitable.py:124
-Aggregating installments...
-[01/29/26 18:02:43] INFO       ✅ Aggregated from 13,605,401 to 339,587 rows              data_loading_multitable.py:124
-  ✅ Aggregated from 13,605,401 to 339,587 rows
-                    INFO          Features created: 4                                     data_loading_multitable.py:124
-     Features created: 4
-                    INFO                                                                  data_loading_multitable.py:124
-                             ============================================================                               
-                             ====================                                                                       
-
-================================================================================
-                    INFO     🔗 JOINING TABLES                                            data_loading_multitable.py:124
-🔗 JOINING TABLES
-                    INFO     ============================================================ data_loading_multitable.py:124
-                             ====================                                                                       
-                                                                                                                        
-================================================================================
-
-                    INFO     Starting with application: (307511, 122)                     data_loading_multitable.py:124
-Starting with application: (307511, 122)
-                    INFO                                                                  data_loading_multitable.py:124
-                             Joining application ← bureau                                                               
-
-Joining application ← bureau
-                    INFO       Type: left                                                 data_loading_multitable.py:124
-  Type: left
-                    INFO       On: application.SK_ID_CURR = bureau.SK_ID_CURR             data_loading_multitable.py:124
-  On: application.SK_ID_CURR = bureau.SK_ID_CURR
-                    INFO       Result: 307,511 rows × 140 cols                            data_loading_multitable.py:124
-  Result: 307,511 rows × 140 cols
-                    INFO                                                                  data_loading_multitable.py:124
-                             Joining application ← previous_application                                                 
-
-Joining application ← previous_application
-                    INFO       Type: left                                                 data_loading_multitable.py:124
-  Type: left
-                    INFO       On: application.SK_ID_CURR =                               data_loading_multitable.py:124
-                             previous_application.SK_ID_CURR                                                            
-  On: application.SK_ID_CURR = previous_application.SK_ID_CURR
-                    INFO       Result: 307,511 rows × 152 cols                            data_loading_multitable.py:124
-  Result: 307,511 rows × 152 cols
-                    INFO                                                                  data_loading_multitable.py:124
-                             Joining application ← pos_cash                                                             
-
-Joining application ← pos_cash
-                    INFO       Type: left                                                 data_loading_multitable.py:124
-  Type: left
-                    INFO       On: application.SK_ID_CURR = pos_cash.SK_ID_CURR           data_loading_multitable.py:124
-  On: application.SK_ID_CURR = pos_cash.SK_ID_CURR
-                    INFO       Result: 307,511 rows × 159 cols                            data_loading_multitable.py:124
-  Result: 307,511 rows × 159 cols
-                    INFO                                                                  data_loading_multitable.py:124
-                             Joining application ← credit_card                                                          
-
-Joining application ← credit_card
-                    INFO       Type: left                                                 data_loading_multitable.py:124
-  Type: left
-                    INFO       On: application.SK_ID_CURR = credit_card.SK_ID_CURR        data_loading_multitable.py:124
-  On: application.SK_ID_CURR = credit_card.SK_ID_CURR
-                    INFO       Result: 307,511 rows × 171 cols                            data_loading_multitable.py:124
-  Result: 307,511 rows × 171 cols
-                    INFO                                                                  data_loading_multitable.py:124
-                             Joining application ← installments                                                         
-
-Joining application ← installments
-                    INFO       Type: left                                                 data_loading_multitable.py:124
-  Type: left
-                    INFO       On: application.SK_ID_CURR = installments.SK_ID_CURR       data_loading_multitable.py:124
-  On: application.SK_ID_CURR = installments.SK_ID_CURR
-                    INFO       Result: 307,511 rows × 181 cols                            data_loading_multitable.py:124
-  Result: 307,511 rows × 181 cols
-                    INFO                                                                  data_loading_multitable.py:124
-                             ============================================================                               
-                             ====================                                                                       
-
-================================================================================
-                    INFO     ✅ DATA LOADING COMPLETE                                     data_loading_multitable.py:124
-✅ DATA LOADING COMPLETE
-                    INFO     ============================================================ data_loading_multitable.py:124
-                             ====================                                                                       
-================================================================================
-                    INFO     Final shape: 307,511 rows × 181 columns                      data_loading_multitable.py:124
-Final shape: 307,511 rows × 181 columns
-                    INFO     🎯 Separating target column: TARGET                                      data_loading.py:89
-                    INFO     ✅ Features: (307511, 180) | Target: (307511,)                           data_loading.py:97
-                    INFO     📊 Splitting data (test_size=0.2)                                       data_loading.py:121
-[01/29/26 18:02:44] INFO     ✅ Train: (246008, 180) | Test: (61503, 180)                            data_loading.py:132
-                    INFO                                                                             data_loading.py:185
-                             =======================================================================                    
-                             =========                                                                                  
-                    INFO     ✅ DATA LOADING COMPLETE                                                data_loading.py:186
-                    INFO        Train: (246008, 180) | Test: (61503, 180)                            data_loading.py:187
-                    INFO     ======================================================================= data_loading.py:188
-                             =========                                                                                  
-                                                                                                                        
-                    INFO     Saving data to X_train_raw (CSVDataset)...                             data_catalog.py:1008
-[01/29/26 18:02:57] INFO     Saving data to X_test_raw (CSVDataset)...                              data_catalog.py:1008
-[01/29/26 18:03:01] INFO     Saving data to y_train_raw (PickleDataset)...                          data_catalog.py:1008
-                    INFO     Saving data to y_test_raw (PickleDataset)...                           data_catalog.py:1008
-                    INFO     Completed node: load_data_node                                                runner.py:245
-                    INFO     Completed 3 out of 20 tasks                                                   runner.py:246
-                    INFO     Loading data from raw_data (CSVDataset)...                             data_catalog.py:1048
-                    INFO     Running node: validate_data_quality_node: validate_data_quality() ->            node.py:420
-                    INFO     🔍 Validating data quality...                                         data_validation.py:20
-                    INFO        Rows: 32561                                                        data_validation.py:24
-                    INFO        Columns: 15                                                        data_validation.py:25
-                    INFO        Memory: 17.65 MB                                                   data_validation.py:26
-                    WARNING     ⚠️  24 duplicate rows found                                        data_validation.py:34
-                    INFO        ✅ Validation passed                                               data_validation.py:37
-                    INFO     Saving data to data_validation_report (MemoryDataset)...               data_catalog.py:1008
-                    INFO     Completed node: validate_data_quality_node                                    runner.py:245
-                    INFO     Completed 4 out of 20 tasks                                                   runner.py:246
-                    INFO     Loading data from X_train_final (CSVDataset)...                        data_catalog.py:1048
-[01/29/26 18:03:07] INFO     Loading data from X_test_final (CSVDataset)...                         data_catalog.py:1048
-[01/29/26 18:03:08] INFO     Loading data from y_train (PickleDataset)...                           data_catalog.py:1048
-                    INFO     Loading data from params:feature_selection (MemoryDataset)...          data_catalog.py:1048
-                    INFO     Running node: feature_selection:                                                node.py:420
-                             feature_selection([X_train_final;X_test_final;y_train;params:feature_selection]            
-                             ) -> [X_train_selected;X_test_selected]                                                    
-
-================================================================================
-🎯 FEATURE SELECTION NODE (100% WORKING)
-================================================================================
-
-   Input features:
-      Train: (246008, 202)
-      Test: (61503, 202)
-   Selecting: 56 features
-   Problem type: Classification
-
-   Transforming test data with selected features...
-
-   ✅ Selected 56 features:
-      ['AMT_CREDIT_scaled', 'AMT_GOODS_PRICE_scaled', 'REGION_POPULATION_RELATIVE_scaled', 'DAYS_BIRTH_scaled', 'DAYS_EMPLOYED_scaled', 'DAYS_REGISTRATION_scaled', 'FLAG_EMP_PHONE_scaled', 'FLAG_WORK_PHONE_scaled', 'REGION_RATING_CLIENT_scaled', 'REGION_RATING_CLIENT_W_CITY_scaled', 'REG_CITY_NOT_LIVE_CITY_scaled', 'REG_CITY_NOT_WORK_CITY_scaled', 'LIVE_CITY_NOT_WORK_CITY_scaled', 'EXT_SOURCE_1_scaled', 'EXT_SOURCE_2_scaled', 'EXT_SOURCE_3_scaled', 'FLOORSMAX_AVG_scaled', 'FLOORSMAX_MODE_scaled', 'FLOORSMAX_MEDI_scaled', 'DEF_30_CNT_SOCIAL_CIRCLE_scaled', 'DEF_60_CNT_SOCIAL_CIRCLE_scaled', 'DAYS_LAST_PHONE_CHANGE_scaled', 'FLAG_DOCUMENT_3_scaled', 'FLAG_DOCUMENT_6_scaled', "BUREAU_('DAYS_CREDIT', 'min')_scaled", "BUREAU_('DAYS_CREDIT', 'max')_scaled", "BUREAU_('DAYS_CREDIT', 'mean')_scaled", "BUREAU_('DAYS_CREDIT_ENDDATE', 'min')_scaled", "BUREAU_('DAYS_CREDIT_ENDDATE', 'max')_scaled", "PREV_('DAYS_DECISION', 'min')_scaled", "PREV_('NAME_CONTRACT_STATUS', 'nunique')_scaled", "POS_('MONTHS_BALANCE', 'count')_scaled", "POS_('MONTHS_BALANCE', 'min')_scaled", "CC_('MONTHS_BALANCE', 'count')_scaled", "CC_('MONTHS_BALANCE', 'min')_scaled", "CC_('AMT_BALANCE', 'mean')_scaled", "CC_('AMT_BALANCE', 'max')_scaled", "CC_('AMT_DRAWINGS_ATM_CURRENT', 'mean')_scaled", "CC_('CNT_DRAWINGS_CURRENT', 'sum')_scaled", "CC_('CNT_DRAWINGS_CURRENT', 'mean')_scaled", "INSTALL_('DAYS_ENTRY_PAYMENT', 'min')_scaled", "INSTALL_('DAYS_ENTRY_PAYMENT', 'mean')_scaled", 'NAME_CONTRACT_TYPE_Revolving loans', 'CODE_GENDER_M', 'NAME_INCOME_TYPE_Pensioner', 'NAME_INCOME_TYPE_Working', 'NAME_EDUCATION_TYPE_Higher education', 'NAME_EDUCATION_TYPE_Secondary / secondary special', 'NAME_FAMILY_STATUS_Single / not married', 'NAME_HOUSING_TYPE_House / apartment', 'NAME_HOUSING_TYPE_With parents', 'FONDKAPREMONT_MODE_nan', 'HOUSETYPE_MODE_nan', 'WALLSMATERIAL_MODE_Panel', 'WALLSMATERIAL_MODE_nan', 'EMERGENCYSTATE_MODE_nan']
-
-   Output shapes:
-      X_train_selected: (246008, 56)
-      X_test_selected: (61503, 56)
-      ✅ SHAPES MATCH: False
-================================================================================
-
-[01/29/26 18:03:09] INFO     Saving data to X_train_selected (CSVDataset)...                        data_catalog.py:1008
-[01/29/26 18:03:20] INFO     Saving data to X_test_selected (CSVDataset)...                         data_catalog.py:1008
-[01/29/26 18:03:23] INFO     Completed node: feature_selection                                             runner.py:245
-                    INFO     Completed 5 out of 20 tasks                                                   runner.py:246
                     INFO     Loading data from X_train_selected (CSVDataset)...                     data_catalog.py:1048
-[01/29/26 18:03:24] INFO     Loading data from X_test_selected (CSVDataset)...                      data_catalog.py:1048
+[01/29/26 19:34:36] INFO     Loading data from X_test_selected (CSVDataset)...                      data_catalog.py:1048
                     INFO     Loading data from y_train (PickleDataset)...                           data_catalog.py:1048
                     INFO     Running node: phase3_scale_features:                                            node.py:420
                              scale_features([X_train_selected;X_test_selected;y_train]) ->                              
@@ -653,26 +190,26 @@ Final shape: 307,511 rows × 181 columns
                     INFO     🎯 OPTION D: HANDLING CLASS IMBALANCE WITH SMOTE                       model_training.py:98
                     INFO     ====================================================================== model_training.py:99
                              ==========                                                                                 
-[01/29/26 18:03:25] INFO     Detected classification problem (2 classes)                           model_training.py:107
+[01/29/26 19:34:37] INFO     Detected classification problem (2 classes)                           model_training.py:107
                     INFO     Before SMOTE:                                                         model_training.py:111
                     INFO        Class 0: 226148 samples (91.9%)                                    model_training.py:113
                     INFO        Class 1: 19860 samples (8.1%)                                      model_training.py:113
                     INFO                                                                           model_training.py:116
                              Applying SMOTE to balance classes...                                                       
-[01/29/26 18:03:26] INFO     After SMOTE:                                                          model_training.py:124
+[01/29/26 19:34:38] INFO     After SMOTE:                                                          model_training.py:124
                     INFO        Class 0: 226148 samples (50.0%)                                    model_training.py:127
                     INFO        Class 1: 226148 samples (50.0%)                                    model_training.py:127
                     INFO     ✅ Classes balanced with SMOTE!                                       model_training.py:129
                     INFO     ===================================================================== model_training.py:140
                              ===========                                                                                
                     INFO     Saving data to X_train_scaled (CSVDataset)...                          data_catalog.py:1008
-[01/29/26 18:03:51] INFO     Saving data to X_test_scaled (CSVDataset)...                           data_catalog.py:1008
-[01/29/26 18:03:55] INFO     Saving data to y_train_balanced (PickleDataset)...                     data_catalog.py:1008
+[01/29/26 19:35:01] INFO     Saving data to X_test_scaled (CSVDataset)...                           data_catalog.py:1008
+[01/29/26 19:35:04] INFO     Saving data to y_train_balanced (PickleDataset)...                     data_catalog.py:1008
                     INFO     Saving data to scalers (PickleDataset)...                              data_catalog.py:1008
                     INFO     Completed node: phase3_scale_features                                         runner.py:245
-                    INFO     Completed 6 out of 20 tasks                                                   runner.py:246
+                    INFO     Completed 1 out of 7 tasks                                                    runner.py:246
                     INFO     Loading data from X_train_scaled (CSVDataset)...                       data_catalog.py:1048
-[01/29/26 18:03:57] INFO     Loading data from y_train_balanced (PickleDataset)...                  data_catalog.py:1048
+[01/29/26 19:35:06] INFO     Loading data from y_train_balanced (PickleDataset)...                  data_catalog.py:1048
                     INFO     Loading data from params:problem_type (MemoryDataset)...               data_catalog.py:1048
                     INFO     Running node: phase3_train_baseline:                                            node.py:420
                              train_baseline_model([X_train_scaled;y_train_balanced;params:problem_type]) ->             
@@ -683,16 +220,16 @@ Final shape: 307,511 rows × 181 columns
                              ===========                                                                                
                     INFO     Detected problem type: classification                                 model_training.py:187
                     INFO     Using LogisticRegression as baseline                                  model_training.py:191
-[01/29/26 18:04:23] INFO     ✅ Baseline trained with score: 0.6915                                model_training.py:199
+[01/29/26 19:35:27] INFO     ✅ Baseline trained with score: 0.6915                                model_training.py:199
                     INFO     ===================================================================== model_training.py:200
                              ===========                                                                                
                     INFO     Saving data to baseline_model (PickleDataset)...                       data_catalog.py:1008
                     INFO     Saving data to baseline_metrics (PickleDataset)...                     data_catalog.py:1008
                     INFO     Saving data to problem_type (TextDataset)...                           data_catalog.py:1008
                     INFO     Completed node: phase3_train_baseline                                         runner.py:245
-                    INFO     Completed 7 out of 20 tasks                                                   runner.py:246
+                    INFO     Completed 2 out of 7 tasks                                                    runner.py:246
                     INFO     Loading data from X_train_scaled (CSVDataset)...                       data_catalog.py:1048
-[01/29/26 18:04:26] INFO     Loading data from y_train_balanced (PickleDataset)...                  data_catalog.py:1048
+[01/29/26 19:35:29] INFO     Loading data from y_train_balanced (PickleDataset)...                  data_catalog.py:1048
                     INFO     Loading data from problem_type (TextDataset)...                        data_catalog.py:1048
                     INFO     Loading data from params:feature_selection (MemoryDataset)...          data_catalog.py:1048
                     INFO     Running node: phase3_hyperparameter_tuning:                                     node.py:420
@@ -705,7 +242,7 @@ Final shape: 307,511 rows × 181 columns
                              ===========                                                                                
                     INFO     🎯 Classification: RandomForestClassifier (DEFAULT PARAMS)            model_training.py:228
                     INFO     Training model with default parameters...                             model_training.py:239
-[01/29/26 18:04:50] INFO     ✅ Model trained successfully                                         model_training.py:244
+[01/29/26 19:35:48] INFO     ✅ Model trained successfully                                         model_training.py:244
                     INFO     ✅ Training score: 0.8329                                             model_training.py:245
                     INFO     ===================================================================== model_training.py:283
                              ===========                                                                                
@@ -713,96 +250,81 @@ Final shape: 307,511 rows × 181 columns
                     INFO     Saving data to best_model (PickleDataset)...                           data_catalog.py:1008
                     INFO     Saving data to tuning_info (PickleDataset)...                          data_catalog.py:1008
                     INFO     Completed node: phase3_hyperparameter_tuning                                  runner.py:245
-                    INFO     Completed 8 out of 20 tasks                                                   runner.py:246
-                    INFO     Loading data from X_train_selected (CSVDataset)...                     data_catalog.py:1048
-[01/29/26 18:04:51] INFO     Loading data from X_test_selected (CSVDataset)...                      data_catalog.py:1048
-[01/29/26 18:04:52] INFO     Loading data from y_train (PickleDataset)...                           data_catalog.py:1048
-                    INFO     Loading data from y_test (PickleDataset)...                            data_catalog.py:1048
-                    INFO     Loading data from problem_type (TextDataset)...                        data_catalog.py:1048
-                    INFO     Loading data from params:problem_type (MemoryDataset)...               data_catalog.py:1048
-                    INFO     Running node: phase4_train_all:                                                 node.py:420
-                             phase4_train_all_algorithms([X_train_selected;X_test_selected;y_train;y_test;pr            
-                             oblem_type;params:problem_type]) ->                                                        
-                    INFO     ================================================================== phase4_algorithms.py:228
-                             ==============                                                                             
-                    INFO     🚀 TRAINING ALL ALGORITHMS (50+)                                   phase4_algorithms.py:229
-                    INFO     ================================================================== phase4_algorithms.py:230
-                             ==============                                                                             
-                    INFO     Problem type: classification                                       phase4_algorithms.py:233
-                    INFO     Loading classification algorithms...                               phase4_algorithms.py:126
-                    INFO     ✅ XGBClassifier loaded                                            phase4_algorithms.py:166
-                    INFO     ✅ LGBMClassifier loaded                                           phase4_algorithms.py:180
-                    INFO     ✅ CatBoostClassifier loaded                                       phase4_algorithms.py:193
-                    INFO     ✅ Loaded 21 classification algorithms                             phase4_algorithms.py:210
-                    INFO     Training LogisticRegression...                                     phase4_algorithms.py:245
-[01/29/26 18:04:59] INFO       ✅ LogisticRegression: Train=0.9192, Test=0.9194                 phase4_algorithms.py:259
-                    INFO     Training RidgeClassifier...                                        phase4_algorithms.py:245
-[01/29/26 18:05:00] INFO       ✅ RidgeClassifier: Train=0.9193, Test=0.9193                    phase4_algorithms.py:259
-                    INFO     Training SGDClassifier...                                          phase4_algorithms.py:245
-[01/29/26 18:05:01] INFO       ✅ SGDClassifier: Train=0.9193, Test=0.9193                      phase4_algorithms.py:259
-                    INFO     Training PassiveAggressiveClassifier...                            phase4_algorithms.py:245
-[01/29/26 18:05:02] INFO       ✅ PassiveAggressiveClassifier: Train=0.8925, Test=0.8924        phase4_algorithms.py:259
-                    INFO     Training Perceptron...                                             phase4_algorithms.py:245
-[01/29/26 18:05:03] INFO       ✅ Perceptron: Train=0.8421, Test=0.8445                         phase4_algorithms.py:259
-                    INFO     Training DecisionTreeClassifier...                                 phase4_algorithms.py:245
-[01/29/26 18:05:07] INFO       ✅ DecisionTreeClassifier: Train=0.9231, Test=0.9160             phase4_algorithms.py:259
-                    INFO     Training RandomForestClassifier...                                 phase4_algorithms.py:245
-[01/29/26 18:05:25] INFO       ✅ RandomForestClassifier: Train=0.9999, Test=0.9193             phase4_algorithms.py:259
-                    INFO     Training ExtraTreesClassifier...                                   phase4_algorithms.py:245
-[01/29/26 18:05:37] INFO       ✅ ExtraTreesClassifier: Train=1.0000, Test=0.9194               phase4_algorithms.py:259
-                    INFO     Training GradientBoostingClassifier...                             phase4_algorithms.py:245
-[01/29/26 18:07:29] INFO       ✅ GradientBoostingClassifier: Train=0.9199, Test=0.9196         phase4_algorithms.py:259
-                    INFO     Training AdaBoostClassifier...                                     phase4_algorithms.py:245
-[01/29/26 18:08:14] INFO       ✅ AdaBoostClassifier: Train=0.9193, Test=0.9195                 phase4_algorithms.py:259
-                    INFO     Training BaggingClassifier...                                      phase4_algorithms.py:245
-[01/29/26 18:11:21] INFO       ✅ BaggingClassifier: Train=1.0000, Test=0.9192                  phase4_algorithms.py:259
-                    INFO     Training LinearSVC...                                              phase4_algorithms.py:245
-[01/29/26 18:11:31] INFO       ✅ LinearSVC: Train=0.9193, Test=0.9193                          phase4_algorithms.py:259
-                    INFO     Training GaussianNB...                                             phase4_algorithms.py:245
-                    INFO       ✅ GaussianNB: Train=0.7850, Test=0.7875                         phase4_algorithms.py:259
-                    INFO     Training MultinomialNB...                                          phase4_algorithms.py:245
-                    WARNING    ❌ MultinomialNB failed: Negative values in data passed to       phase4_algorithms.py:262
-                             MultinomialNB (input X).                                                                   
-                    INFO     Training BernoulliNB...                                            phase4_algorithms.py:245
-[01/29/26 18:11:32] INFO       ✅ BernoulliNB: Train=0.8457, Test=0.8481                        phase4_algorithms.py:259
-                    INFO     Training ComplementNB...                                           phase4_algorithms.py:245
-                    WARNING    ❌ ComplementNB failed: Negative values in data passed to        phase4_algorithms.py:262
-                             ComplementNB (input X).                                                                    
-                    INFO     Training CategoricalNB...                                          phase4_algorithms.py:245
-                    WARNING    ❌ CategoricalNB failed: Negative values in data passed to       phase4_algorithms.py:262
-                             CategoricalNB (input X).                                                                   
-                    INFO     Training KNeighborsClassifier...                                   phase4_algorithms.py:245
-[01/29/26 18:12:39] INFO       ✅ KNeighborsClassifier: Train=0.9237, Test=0.9138               phase4_algorithms.py:259
-                    INFO     Training XGBClassifier...                                          phase4_algorithms.py:245
-[01/29/26 18:12:41] INFO       ✅ XGBClassifier: Train=0.9251, Test=0.9186                      phase4_algorithms.py:259
-                    INFO     Training LGBMClassifier...                                         phase4_algorithms.py:245
-[LightGBM] [Fatal] Do not support special JSON characters in feature name.
-[01/29/26 18:12:42] WARNING    ❌ LGBMClassifier failed: Do not support special JSON characters phase4_algorithms.py:262
-                             in feature name.                                                                           
-                    INFO     Training CatBoostClassifier...                                     phase4_algorithms.py:245
-[01/29/26 18:12:44] INFO       ✅ CatBoostClassifier: Train=0.9232, Test=0.9188                 phase4_algorithms.py:259
-                    INFO                                                                        phase4_algorithms.py:267
-                             ✅ Trained 17 algorithms                                                                   
-                    INFO                                                                        phase4_algorithms.py:268
-                             Top 5 Algorithms:                                                                          
-                    INFO       GradientBoostingClassifier: 0.9196                               phase4_algorithms.py:270
-                    INFO       AdaBoostClassifier: 0.9195                                       phase4_algorithms.py:270
-                    INFO       ExtraTreesClassifier: 0.9194                                     phase4_algorithms.py:270
-                    INFO       LogisticRegression: 0.9194                                       phase4_algorithms.py:270
-                    INFO       RidgeClassifier: 0.9193                                          phase4_algorithms.py:270
-                    INFO     ================================================================== phase4_algorithms.py:272
-                             ==============                                                                             
-                    INFO     Saving data to phase4_trained_models (PickleDataset)...                data_catalog.py:1008
-[01/29/26 18:12:46] INFO     Saving data to phase4_results (CSVDataset)...                          data_catalog.py:1008
-                    INFO     Completed node: phase4_train_all                                              runner.py:245
-                    INFO     Completed 9 out of 20 tasks                                                   runner.py:246
+                    INFO     Completed 3 out of 7 tasks                                                    runner.py:246
                     INFO     Loading data from best_model (PickleDataset)...                        data_catalog.py:1048
                     INFO     Loading data from X_train_scaled (CSVDataset)...                       data_catalog.py:1048
-[01/29/26 18:12:49] INFO     Loading data from y_train_balanced (PickleDataset)...                  data_catalog.py:1048
+[01/29/26 19:35:50] INFO     Loading data from y_train_balanced (PickleDataset)...                  data_catalog.py:1048
                     INFO     Loading data from problem_type (TextDataset)...                        data_catalog.py:1048
                     INFO     Running node: phase3_cross_validation: cross_validation() ->                    node.py:420
                     INFO     ===================================================================== model_training.py:382
                              ===========                                                                                
                     INFO     📊 RUNNING 5-FOLD CROSS-VALIDATION (PATH A)                           model_training.py:383
                     INFO     ===================================================================== model_training.py:384
-                             ===========        
+                             ===========                                                                                
+[01/29/26 19:37:01] INFO     Cross-validation scores: ['0.8296', '0.8276', '0.8241', '0.8310',     model_training.py:396
+                             '0.8295']                                                                                  
+                    INFO     Mean CV Score: 0.8284                                                 model_training.py:397
+                    INFO     Std Dev: 0.0024                                                       model_training.py:398
+                    INFO     Confidence Interval: 0.8284 (±0.0024)                                 model_training.py:399
+                    INFO     ===================================================================== model_training.py:400
+                             ===========                                                                                
+                    INFO     Saving data to cross_validation_results (PickleDataset)...             data_catalog.py:1008
+                    INFO     Completed node: phase3_cross_validation                                       runner.py:245
+                    INFO     Completed 4 out of 7 tasks                                                    runner.py:246
+                    INFO     Loading data from best_model (PickleDataset)...                        data_catalog.py:1048
+[01/29/26 19:37:02] INFO     Loading data from X_train_scaled (CSVDataset)...                       data_catalog.py:1048
+[01/29/26 19:37:05] INFO     Loading data from X_test_scaled (CSVDataset)...                        data_catalog.py:1048
+                    INFO     Loading data from y_train_balanced (PickleDataset)...                  data_catalog.py:1048
+                    INFO     Loading data from y_test (PickleDataset)...                            data_catalog.py:1048
+                    INFO     Loading data from problem_type (TextDataset)...                        data_catalog.py:1048
+                    INFO     Running node: phase3_evaluate_model: evaluate_model() ->                        node.py:420
+                    INFO     ===================================================================== model_training.py:302
+                             ===========                                                                                
+                    INFO     📈 PHASE 3.4: MODEL EVALUATION                                        model_training.py:303
+                    INFO     ===================================================================== model_training.py:304
+                             ===========                                                                                
+[01/29/26 19:37:06] INFO     ROC-AUC: 0.7132                                                       model_training.py:338
+                    INFO     ✅ Classification Metrics:                                            model_training.py:340
+                    INFO        Train Score: 0.8329                                                model_training.py:341
+                    INFO        Test Score: 0.7906                                                 model_training.py:342
+                    INFO        Accuracy: 0.7906                                                   model_training.py:343
+                    INFO        Precision: 0.8815                                                  model_training.py:344
+                    INFO        Recall: 0.7906                                                     model_training.py:345
+                    INFO        F1-Score: 0.8277                                                   model_training.py:346
+                    INFO     ===================================================================== model_training.py:365
+                             ===========                                                                                
+                    INFO     Saving data to model_evaluation (PickleDataset)...                     data_catalog.py:1008
+                    INFO     Completed node: phase3_evaluate_model                                         runner.py:245
+                    INFO     Completed 5 out of 7 tasks                                                    runner.py:246
+                    INFO     Loading data from best_model (PickleDataset)...                        data_catalog.py:1048
+                    INFO     Loading data from X_test_scaled (CSVDataset)...                        data_catalog.py:1048
+                    INFO     Loading data from y_test (PickleDataset)...                            data_catalog.py:1048
+                    INFO     Loading data from problem_type (TextDataset)...                        data_catalog.py:1048
+                    INFO     Running node: phase3_make_predictions: make_predictions() ->                    node.py:420
+                    INFO     ===================================================================== model_training.py:456
+                             ===========                                                                                
+                    INFO     PHASE 3.6: MAKING PREDICTIONS                                         model_training.py:457
+                    INFO     ===================================================================== model_training.py:458
+                             ===========                                                                                
+[01/29/26 19:37:07] INFO     ✅ Prediction accuracy: 0.7906                                        model_training.py:472
+                    INFO     ✅ Predictions saved: data/07_model_output/phase3_predictions.csv     model_training.py:489
+                    INFO     Saving data to phase3_predictions (CSVDataset)...                      data_catalog.py:1008
+                    INFO     Completed node: phase3_make_predictions                                       runner.py:245
+                    INFO     Completed 6 out of 7 tasks                                                    runner.py:246
+                    INFO     Loading data from best_model (PickleDataset)...                        data_catalog.py:1048
+                    INFO     Loading data from model_evaluation (PickleDataset)...                  data_catalog.py:1048
+                    INFO     Loading data from problem_type (TextDataset)...                        data_catalog.py:1048
+                    INFO     Running node: phase3_save_model: save_model_and_evaluation() ->                 node.py:420
+                    INFO     ===================================================================== model_training.py:421
+                             ===========                                                                                
+                    INFO     PHASE 3.5: SAVING MODEL & EVALUATION METRICS                          model_training.py:422
+                    INFO     ===================================================================== model_training.py:423
+                             ===========                                                                                
+                    INFO     ✅ Model saved: data/06_models/best_model_classification.pkl          model_training.py:432
+                    INFO     ✅ Evaluation saved:                                                  model_training.py:438
+                             data/06_models/model_evaluation_classification.json                                        
+                    INFO     Saving data to phase3_save_status (TextDataset)...                     data_catalog.py:1008
+                    INFO     Completed node: phase3_save_model                                             runner.py:245
+                    INFO     Completed 7 out of 7 tasks                                                    runner.py:246
+                    INFO     Pipeline execution completed successfully in 152.4 sec.                       runner.py:119
+(venv) ashok@ubuntu:~/work/latest/kedro-ml-engine-integrated$ 
