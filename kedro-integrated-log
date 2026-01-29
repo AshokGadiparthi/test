@@ -1,0 +1,929 @@
+(venv) ashok@ubuntu:~/work/latest/kedro-ml-engine-integrated$ kedro run
+[01/29/26 02:20:52] INFO     Using                                                                       __init__.py:269
+                             '/home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/sit                
+                             e-packages/kedro/framework/project/rich_logging.yml' as logging                            
+                             configuration.                                                                             
+[01/29/26 02:20:53] INFO     Kedro project kedro-ml-engine-integrated                                     session.py:330
+[01/29/26 02:20:54] INFO     ✅ Phase 1a (data_loading) imported successfully                    pipeline_registry.py:62
+                    INFO     ✅ Phase 1b (data_validation) imported successfully                 pipeline_registry.py:69
+                    INFO     ✅ Phase 1c (data_cleaning with PATH B feature scaling) imported    pipeline_registry.py:76
+                             successfully                                                                               
+                    INFO     ✅ Phase 2a (feature_engineering) imported successfully             pipeline_registry.py:87
+                    INFO     ✅ Phase 2b (feature_selection) imported successfully               pipeline_registry.py:94
+                    INFO     ✅ Phase 3 (model_training with PATH A+B) imported successfully    pipeline_registry.py:108
+                    INFO     ✅ Phase 4 (phase4_algorithms with PATH A+B+C ready) imported      pipeline_registry.py:126
+                             successfully                                                                               
+                    INFO     ✅ Phase 6 (ensemble_methods) imported successfully                pipeline_registry.py:139
+                    INFO     ✅ Phase 5a (training_strategies) module available                 pipeline_registry.py:166
+                    INFO     ✅ Phase 5b (evaluation_metrics) module available                  pipeline_registry.py:174
+                    INFO     ✅ Phase 5c (cross_validation_strategies) module available         pipeline_registry.py:182
+                    INFO     ✅ Phase 5d (model_comparison) module available                    pipeline_registry.py:190
+                    INFO     ✅ Phase 5e (visualization_manager) module available               pipeline_registry.py:198
+                    INFO     ✅ Phase 5f (hyperparameter_analysis) module available             pipeline_registry.py:206
+                    INFO     ✅ Phase 5g (report_generator) module available                    pipeline_registry.py:214
+                    INFO                                                                        pipeline_registry.py:247
+                             ==================================================================                         
+                             ==============                                                                             
+                    INFO     REGISTERING PIPELINES - PATH A, B, C + PHASE 5                     pipeline_registry.py:248
+                    INFO     ================================================================== pipeline_registry.py:249
+                             ==============                                                                             
+                    INFO     ✅ Phase 1 pipeline created (data loading + validation + cleaning) pipeline_registry.py:267
+                    INFO     ✅ Phase 2 pipeline created (feature engineering + selection)      pipeline_registry.py:275
+                    INFO     ✅ Phase 1+2 pipeline created (complete data processing)           pipeline_registry.py:281
+                    INFO     ✅ Phase 3 pipeline created (model training with PATH A+B)         pipeline_registry.py:289
+                    INFO     ✅ Phase 4 pipeline created (algorithms with PATH A+B+C ready)     pipeline_registry.py:297
+                    INFO                                                                 phase6_ensemble_pipeline.py:319
+                             ===========================================================                                
+                             =====================                                                                      
+                    INFO     🔧 CREATING PHASE 6 PIPELINE                                phase6_ensemble_pipeline.py:320
+                    INFO     =========================================================== phase6_ensemble_pipeline.py:321
+                             =====================                                                                      
+                    INFO     ✅ Phase 6 Pipeline created successfully                    phase6_ensemble_pipeline.py:345
+                    INFO     =========================================================== phase6_ensemble_pipeline.py:346
+                             =====================                                                                      
+                                                                                                                        
+                    INFO     ✅ Phase 6 pipeline created (ensemble methods)                     pipeline_registry.py:306
+                    INFO     ✅ Complete Pipeline created (Phase 1-6)                           pipeline_registry.py:349
+                    INFO     ================================================================== pipeline_registry.py:351
+                             ==============                                                                             
+                    INFO     ✅ COMPLETE PIPELINE CREATED (Phase 1-4)                           pipeline_registry.py:352
+                    INFO        Phases included: 4                                              pipeline_registry.py:353
+                    INFO        Path A (outlier detection, CV, ensemble): ✅                    pipeline_registry.py:354
+                    INFO        Path B (feature scaling, tuning, ROC): ✅                       pipeline_registry.py:355
+                    INFO        Path C (learning curves, SHAP, stats): ✅ (optional)            pipeline_registry.py:356
+                    INFO        Expected accuracy: 89-90%                                       pipeline_registry.py:357
+                    INFO     ================================================================== pipeline_registry.py:358
+                             ==============                                                                             
+                    INFO     ✅ Available pipelines: ['phase1', 'data_loading',                 pipeline_registry.py:359
+                             'data_validation', 'data_cleaning', 'phase2',                                              
+                             'feature_engineering', 'phase1_2', 'data_processing', 'phase3',                            
+                             'model_training', 'phase4', 'algorithms', 'phase6', 'ensemble',                            
+                             'ensemble_methods', 'complete', 'all', 'end_to_end', 'a_b_c',                              
+                             '__default__', 'complete_1_6', 'all_with_ensemble',                                        
+                             'end_to_end_full']                                                                         
+                    INFO     ================================================================== pipeline_registry.py:360
+                             ==============                                                                             
+                    INFO                                                                        pipeline_registry.py:389
+                             ==================================================================                         
+                             ==============                                                                             
+                    INFO     🆕 PHASE 5: ADVANCED ANALYSIS MODULES (Available for manual use)   pipeline_registry.py:390
+                    INFO     ================================================================== pipeline_registry.py:391
+                             ==============                                                                             
+                    INFO     Input: Phase 4 outputs (load from disk after pipeline runs)        pipeline_registry.py:392
+                    INFO     Process: 7 modules with classes for analysis and reporting         pipeline_registry.py:393
+                    INFO     Output: Use in Python code for metrics, visualizations, reports    pipeline_registry.py:394
+                    INFO     ================================================================== pipeline_registry.py:395
+                             ==============                                                                             
+                    INFO     ✅ Phase 5a (training_strategies) - Available                      pipeline_registry.py:400
+                    INFO     ✅ Phase 5b (evaluation_metrics) - Available                       pipeline_registry.py:406
+                    INFO     ✅ Phase 5c (cross_validation_strategies) - Available              pipeline_registry.py:412
+                    INFO     ✅ Phase 5d (model_comparison) - Available                         pipeline_registry.py:418
+                    INFO     ✅ Phase 5e (visualization_manager) - Available                    pipeline_registry.py:424
+                    INFO     ✅ Phase 5f (hyperparameter_analysis) - Available                  pipeline_registry.py:430
+                    INFO     ✅ Phase 5g (report_generator) - Available                         pipeline_registry.py:436
+                    INFO                                                                        pipeline_registry.py:441
+                             🆕 PHASE 6 (Ensemble Methods):                                                             
+                    INFO       ✅ Phase 6 available (ensemble methods)                          pipeline_registry.py:443
+                    INFO          Methods: Stacking, Blending, Weighted Voting                  pipeline_registry.py:444
+                    INFO          Can be run: kedro run --pipeline phase6                       pipeline_registry.py:445
+                    INFO          Or as part: kedro run --pipeline complete_1_6                 pipeline_registry.py:446
+                    INFO                                                                        pipeline_registry.py:450
+                             Phase 5 modules available: 7/7                                                             
+                    INFO                                                                        pipeline_registry.py:451
+                             Phase 5 Usage Examples:                                                                    
+                    INFO       from ml_engine.pipelines.evaluation_metrics import               pipeline_registry.py:452
+                             ComprehensiveMetricsCalculator                                                             
+                    INFO       calc = ComprehensiveMetricsCalculator()                          pipeline_registry.py:453
+                    INFO       metrics = calc.evaluate_classification(y_test, y_pred, y_proba)  pipeline_registry.py:454
+                    INFO                                                                        pipeline_registry.py:455
+                               from ml_engine.pipelines.visualization_manager import                                    
+                             VisualizationManager                                                                       
+                    INFO       viz = VisualizationManager()                                     pipeline_registry.py:456
+                    INFO       viz.plot_confusion_matrix(y_test, y_pred, 'output.png')          pipeline_registry.py:457
+                    INFO                                                                        pipeline_registry.py:458
+                               from ml_engine.pipelines.report_generator import                                         
+                             ComprehensiveReportManager                                                                 
+                    INFO       report = ComprehensiveReportManager('MyModel')                   pipeline_registry.py:459
+                    INFO       reports = report.generate_all_reports('./data/08_reporting')     pipeline_registry.py:460
+                    INFO     ================================================================== pipeline_registry.py:461
+                             ==============                                                                             
+                    INFO                                                                        pipeline_registry.py:467
+                             ==================================================================                         
+                             ==============                                                                             
+                    INFO     📊 PIPELINE REGISTRY COMPLETE & FIXED!                             pipeline_registry.py:468
+                    INFO     ================================================================== pipeline_registry.py:469
+                             ==============                                                                             
+                    INFO     Total pipelines registered: 23                                     pipeline_registry.py:470
+                    INFO                                                                        pipeline_registry.py:471
+                             📈 Phase 1-4 (Kedro Pipelines): ✅ All working                                             
+                    INFO       • __default__ (Phase 1-4, 100% backward compatible)              pipeline_registry.py:472
+                    INFO       • complete, all, end_to_end, a_b_c                               pipeline_registry.py:473
+                    INFO       • phase1, phase2, phase3, phase4                                 pipeline_registry.py:474
+                    INFO       • data_loading, feature_engineering, model_training, algorithms  pipeline_registry.py:475
+                    INFO       • phase1_2, data_processing                                      pipeline_registry.py:476
+                    INFO                                                                        pipeline_registry.py:478
+                             🆕 Phase 5 (Python Classes): ✅ 7/7 modules                                                
+                    INFO       • training_strategies (multiple training approaches)             pipeline_registry.py:479
+                    INFO       • evaluation_metrics (40+ automatic metrics)                     pipeline_registry.py:480
+                    INFO       • cross_validation_strategies (6 CV approaches)                  pipeline_registry.py:481
+                    INFO       • model_comparison (statistical testing)                         pipeline_registry.py:482
+                    INFO       • visualization_manager (10+ plot types)                         pipeline_registry.py:483
+                    INFO       • hyperparameter_analysis (sensitivity analysis)                 pipeline_registry.py:484
+                    INFO       • report_generator (HTML/JSON/PDF/Model Cards)                   pipeline_registry.py:485
+                    INFO                                                                        pipeline_registry.py:487
+                             ✅ PHASE 1-4: Automated via Kedro | PHASE 5: Manual Python classes                         
+                    INFO     ✅ NO IMPORT ERRORS | NO CONFLICTS | FULLY WORKING                 pipeline_registry.py:488
+                    INFO                                                                        pipeline_registry.py:490
+                             🎯 How to use:                                                                             
+                    INFO       Phase 1-4 (Automated via Kedro):                                 pipeline_registry.py:491
+                    INFO         $ kedro run                                                    pipeline_registry.py:492
+                    INFO         $ kedro run --pipeline __default__                             pipeline_registry.py:493
+                    INFO         $ kedro run --pipeline complete                                pipeline_registry.py:494
+                    INFO                                                                        pipeline_registry.py:495
+                               Phase 5 (Manual in Python - after Phase 1-4 completes):                                  
+                    INFO         from ml_engine.pipelines.evaluation_metrics import             pipeline_registry.py:496
+                             ComprehensiveMetricsCalculator                                                             
+                    INFO         calc = ComprehensiveMetricsCalculator()                        pipeline_registry.py:497
+                    INFO         metrics = calc.evaluate_classification(y_test, y_pred,         pipeline_registry.py:498
+                             y_proba)                                                                                   
+                    INFO                                                                        pipeline_registry.py:499
+                               That's it! No errors, no conflicts, everything working!                                  
+                    INFO     ================================================================== pipeline_registry.py:500
+                             ==============                                                                             
+                                                                                                                        
+                    INFO     Kedro is sending anonymous usage data with the sole purpose of improving the  plugin.py:242
+                             product. No personal data or IP addresses are stored on our side. To opt out,              
+                             set the `KEDRO_DISABLE_TELEMETRY` or `DO_NOT_TRACK` environment variables, or              
+                             create a `.telemetry` file in the current working directory with the contents              
+                             `consent: false`. To hide this message, explicitly grant or deny consent.                  
+                             Read more at https://docs.kedro.org/en/stable/about/telemetry/                             
+                    INFO     Using synchronous mode for loading and saving data. Use the --async sequential_runner.py:59
+                             flag for potential performance gains.                                                      
+                             https://docs.kedro.org/en/stable/nodes_and_pipelines/run_a_pipeline                        
+                             .html#load-and-save-asynchronously                                                         
+                    INFO     Loading data from X_train (CSVDataset)...                              data_catalog.py:1048
+                    INFO     Loading data from X_test (CSVDataset)...                               data_catalog.py:1048
+                    INFO     Loading data from params:feature_engineering (MemoryDataset)...        data_catalog.py:1048
+                    INFO     Running node: engineer_features:                                                node.py:420
+                             engineer_features([X_train;X_test;params:feature_engineering]) ->                          
+                             [X_train_final;X_test_final]                                                               
+
+
+================================================================================
+🏗️  PRODUCTION FEATURE ENGINEERING PIPELINE
+================================================================================
+
+================================================================================
+🔍 DETECTING ID COLUMNS (Permanent Fix #1)
+================================================================================
+
+   ℹ️  No ID columns detected
+================================================================================
+
+
+📊 After dropping IDs: 14 features
+
+   Numeric columns: 6
+   Categorical columns: 8
+
+================================================================================
+📈 PROCESSING NUMERIC FEATURES
+================================================================================
+   ✓ Scaled 6 numeric features
+
+================================================================================
+📦 SMART CATEGORICAL ENCODING (Permanent Fix #2)
+================================================================================
+
+   Configuration:
+      Max categories per column: 10
+      Max total features from encoding: 100
+
+   Analyzing categorical columns:
+      workclass: 9 unique values
+         → One-hot encode
+      education: 16 unique values
+         → Label encode
+      marital.status: 7 unique values
+         → One-hot encode
+      occupation: 15 unique values
+         → Label encode
+      relationship: 6 unique values
+         → One-hot encode
+      race: 5 unique values
+         → One-hot encode
+      sex: 2 unique values
+         → One-hot encode
+      native.country: 42 unique values
+         → Label encode
+
+   One-hot encoding 5 columns...
+      ✓ Created 24 features from one-hot encoding
+
+   Label encoding 3 columns...
+      ✓ Label encoded 3 features
+
+   Result:
+      Dropped: 0 columns
+      Total encoded features: 27
+================================================================================
+
+
+================================================================================
+📦 SMART CATEGORICAL ENCODING (Permanent Fix #2)
+================================================================================
+
+   Configuration:
+      Max categories per column: 10
+      Max total features from encoding: 100
+
+   Analyzing categorical columns:
+      workclass: 9 unique values
+         → One-hot encode
+      education: 16 unique values
+         → Label encode
+      marital.status: 7 unique values
+         → One-hot encode
+      occupation: 15 unique values
+         → Label encode
+      relationship: 6 unique values
+         → One-hot encode
+      race: 5 unique values
+         → One-hot encode
+      sex: 2 unique values
+         → One-hot encode
+      native.country: 40 unique values
+         → Label encode
+
+   One-hot encoding 5 columns...
+      ✓ Created 24 features from one-hot encoding
+
+   Label encoding 3 columns...
+      ✓ Label encoded 3 features
+
+   Result:
+      Dropped: 0 columns
+      Total encoded features: 27
+================================================================================
+
+
+📊 After combining features: 33 features
+
+================================================================================
+⚡ POLYNOMIAL FEATURES (Permanent Fix #3)
+================================================================================
+
+   ✓ Polynomial features: DISABLED
+================================================================================
+
+
+================================================================================
+⚡ POLYNOMIAL FEATURES (Permanent Fix #3)
+================================================================================
+
+   ✓ Polynomial features: DISABLED
+================================================================================
+
+📊 After polynomial: 33 features
+
+================================================================================
+🔬 VARIANCE FILTERING (Permanent Fix #4)
+================================================================================
+
+   Configuration:
+      Variance threshold: 0.01
+
+   Result:
+      Features before: 33
+      Features after: 29
+      Removed: 4 low-variance features
+      Removed columns: ['workclass_Never-worked', 'workclass_Without-pay', 'marital.status_Married-AF-spouse', 'race_Other']
+================================================================================
+
+
+================================================================================
+🔬 VARIANCE FILTERING (Permanent Fix #4)
+================================================================================
+
+   Configuration:
+      Variance threshold: 0.01
+
+   Result:
+      Features before: 33
+      Features after: 29
+      Removed: 4 low-variance features
+      Removed columns: ['workclass_Never-worked', 'workclass_Without-pay', 'marital.status_Married-AF-spouse', 'race_Other']
+================================================================================
+
+📊 After variance filter: 29 features
+
+================================================================================
+✔️  FEATURE EXPLOSION SAFETY CHECK (Permanent Fix #5)
+================================================================================
+
+   Total features: 29
+   Max allowed: 500
+
+   ✓ Feature count is safe
+================================================================================
+
+
+
+================================================================================
+✅ FEATURE ENGINEERING COMPLETE
+================================================================================
+
+   Input shape: (26048, 14)
+   Output shape: (26048, 29)
+   Features created: 14 → 29
+
+   Steps applied:
+      ✓ Dropped ID columns
+      ✓ Encoded categoricals smartly
+      ✓ Scaled numeric features
+      ✓ Filtered low-variance features
+      ✓ Validated against feature explosion
+
+================================================================================
+
+                    INFO     Saving data to X_train_final (CSVDataset)...                           data_catalog.py:1008
+[01/29/26 02:20:55] INFO     Saving data to X_test_final (CSVDataset)...                            data_catalog.py:1008
+                    INFO     Completed node: engineer_features                                             runner.py:245
+                    INFO     Completed 1 out of 23 tasks                                                   runner.py:246
+                    INFO     Loading data from params:data_path (MemoryDataset)...                  data_catalog.py:1048
+                    INFO     Running node: load_raw_data: load_raw_data() ->                                 node.py:420
+                    INFO     📂 Loading raw data from: data/01_raw/data.csv                           data_loading.py:35
+                    INFO     ✅ Loaded: 32561 samples, 15 features                                    data_loading.py:44
+                    INFO     Saving data to raw_data (CSVDataset)...                                data_catalog.py:1008
+                    INFO     Completed node: load_raw_data                                                 runner.py:245
+                    INFO     Completed 2 out of 23 tasks                                                   runner.py:246
+                    INFO     Loading data from raw_data (CSVDataset)...                             data_catalog.py:1048
+                    INFO     Loading data from params:data_processing.handle_missing                data_catalog.py:1048
+                             (MemoryDataset)...                                                                         
+                    INFO     Running node: clean_data_node: clean_data() ->                                  node.py:420
+                    INFO     🧹 Cleaning data...                                                     data_cleaning.py:27
+                    INFO     ======================================================================= data_cleaning.py:36
+                             =========                                                                                  
+                    INFO     🔍 STARTING OUTLIER DETECTION (PATH A)                                  data_cleaning.py:37
+                    INFO     ======================================================================= data_cleaning.py:38
+                             =========                                                                                  
+                    INFO     Found 6 numeric columns for outlier detection                           data_cleaning.py:41
+                    INFO       Column 'age': 143 outliers (bounds: [-2.00, 78.00])                   data_cleaning.py:60
+                    INFO       Column 'fnlwgt': 992 outliers (bounds: [-61009.00, 415887.00])        data_cleaning.py:60
+                    INFO       Column 'education.num': 1198 outliers (bounds: [4.50, 16.50])         data_cleaning.py:60
+                    INFO       Column 'capital.gain': 2712 outliers (bounds: [0.00, 0.00])           data_cleaning.py:60
+                    INFO       Column 'capital.loss': 1519 outliers (bounds: [0.00, 0.00])           data_cleaning.py:60
+                    INFO       Column 'hours.per.week': 9008 outliers (bounds: [32.50, 52.50])       data_cleaning.py:60
+                    INFO     Total outliers found: 15572 across 6 columns                            data_cleaning.py:62
+                    INFO     Capping outliers to reasonable bounds...                                data_cleaning.py:64
+                    INFO     ✅ Outliers capped successfully                                         data_cleaning.py:74
+                    INFO     ----------------------------------------------------------------------- data_cleaning.py:83
+                             ---------                                                                                  
+                    INFO     🔍 DUPLICATE DETECTION                                                  data_cleaning.py:84
+                    INFO     ----------------------------------------------------------------------- data_cleaning.py:85
+                             ---------                                                                                  
+                    INFO     Initial rows: 32561                                                     data_cleaning.py:93
+                    INFO     ✅ Duplicates removed. Final rows: 32510                                data_cleaning.py:94
+                    INFO        Rows deleted: 51                                                     data_cleaning.py:95
+                    INFO     ---------------------------------------------------------------------- data_cleaning.py:103
+                             ----------                                                                                 
+                    INFO     📊 HANDLING MISSING VALUES                                             data_cleaning.py:104
+                    INFO     ---------------------------------------------------------------------- data_cleaning.py:105
+                             ----------                                                                                 
+                    INFO        Handling missing values with 'mean' strategy                        data_cleaning.py:107
+                    INFO     ---------------------------------------------------------------------- data_cleaning.py:145
+                             ----------                                                                                 
+                    INFO     📈 FEATURE SCALING (PATH B)                                            data_cleaning.py:146
+                    INFO     ====================================================================== data_cleaning.py:147
+                             ==========                                                                                 
+                    INFO     Scaling 6 numeric columns with StandardScaler...                       data_cleaning.py:151
+                    INFO     ✅ Feature scaling applied to:                                         data_cleaning.py:157
+                    INFO        1. age                                                              data_cleaning.py:159
+                    INFO        2. fnlwgt                                                           data_cleaning.py:159
+                    INFO        3. education.num                                                    data_cleaning.py:159
+                    INFO        4. capital.gain                                                     data_cleaning.py:159
+                    INFO        5. capital.loss                                                     data_cleaning.py:159
+                    INFO        6. hours.per.week                                                   data_cleaning.py:159
+                    INFO     ✅ All numeric features normalized to mean=0, std=1                    data_cleaning.py:164
+                    INFO     ====================================================================== data_cleaning.py:168
+                             ==========                                                                                 
+                    INFO        ✅ Cleaned data shape: (32510, 15)                                  data_cleaning.py:173
+                    INFO     ====================================================================== data_cleaning.py:174
+                             ==========                                                                                 
+                    INFO     Saving data to cleaned_data (CSVDataset)...                            data_catalog.py:1008
+                    INFO     Saving data to data_cleaning_report (MemoryDataset)...                 data_catalog.py:1008
+                    INFO     Completed node: clean_data_node                                               runner.py:245
+                    INFO     Completed 3 out of 23 tasks                                                   runner.py:246
+                    INFO     Loading data from raw_data (CSVDataset)...                             data_catalog.py:1048
+[01/29/26 02:20:56] INFO     Loading data from params:target_column (MemoryDataset)...              data_catalog.py:1048
+                    INFO     Running node: separate_target: separate_target() -> [X_raw;y_raw]               node.py:420
+                    INFO     🎯 Separating target column: 'income'                                    data_loading.py:62
+                    INFO     ✅ Features: 14, Target: 32561                                           data_loading.py:73
+                    INFO     Saving data to X_raw (MemoryDataset)...                                data_catalog.py:1008
+                    INFO     Saving data to y_raw (MemoryDataset)...                                data_catalog.py:1008
+                    INFO     Completed node: separate_target                                               runner.py:245
+                    INFO     Completed 4 out of 23 tasks                                                   runner.py:246
+                    INFO     Loading data from raw_data (CSVDataset)...                             data_catalog.py:1048
+                    INFO     Running node: validate_data_quality_node: validate_data_quality() ->            node.py:420
+                    INFO     🔍 Validating data quality...                                         data_validation.py:20
+                    INFO        Rows: 32561                                                        data_validation.py:24
+                    INFO        Columns: 15                                                        data_validation.py:25
+                    INFO        Memory: 17.65 MB                                                   data_validation.py:26
+                    WARNING     ⚠️  24 duplicate rows found                                        data_validation.py:34
+                    INFO        ✅ Validation passed                                               data_validation.py:37
+                    INFO     Saving data to data_validation_report (MemoryDataset)...               data_catalog.py:1008
+                    INFO     Completed node: validate_data_quality_node                                    runner.py:245
+                    INFO     Completed 5 out of 23 tasks                                                   runner.py:246
+                    INFO     Loading data from X_raw (MemoryDataset)...                             data_catalog.py:1048
+                    INFO     Loading data from y_raw (MemoryDataset)...                             data_catalog.py:1048
+                    INFO     Loading data from params:data_processing (MemoryDataset)...            data_catalog.py:1048
+                    INFO     Running node: critical_split_train_test:                                        node.py:420
+                             critical_split_train_test([X_raw;y_raw;params:data_processing]) ->                         
+                             [X_train_raw;X_test_raw;y_train;y_test]                                                    
+
+================================================================================
+🔐 CRITICAL: Train/Test Split BEFORE Preprocessing
+================================================================================
+
+Configuration:
+   Test size: 20.0%
+   Train size: 80.0%
+   Random state: 42
+   Stratification: None
+   Strategy: RANDOM SPLIT
+
+Results:
+   Training samples: 26048
+   Test samples: 6513
+   Total samples: 32561
+
+Class Distribution:
+   Training: {'<=50K': 19744, '>50K': 6304}
+   Test: {'<=50K': 4976, '>50K': 1537}
+
+⚠️  KEY PRINCIPLE:
+   All subsequent preprocessing will:
+   • FIT on training data ONLY (learn statistics from train)
+   • TRANSFORM both train AND test (apply learned statistics)
+
+   This ensures test metrics are REALISTIC!
+================================================================================
+
+                    INFO     ✅ Split complete: 26048 train, 6513 test                               data_loading.py:149
+                    INFO     Saving data to X_train_raw (CSVDataset)...                             data_catalog.py:1008
+                    INFO     Saving data to X_test_raw (CSVDataset)...                              data_catalog.py:1008
+                    INFO     Saving data to y_train (CSVDataset)...                                 data_catalog.py:1008
+                    INFO     Saving data to y_test (CSVDataset)...                                  data_catalog.py:1008
+                    INFO     Completed node: critical_split_train_test                                     runner.py:245
+                    INFO     Completed 6 out of 23 tasks                                                   runner.py:246
+                    INFO     Loading data from X_train_final (CSVDataset)...                        data_catalog.py:1048
+                    INFO     Loading data from X_test_final (CSVDataset)...                         data_catalog.py:1048
+                    INFO     Loading data from y_train (CSVDataset)...                              data_catalog.py:1048
+                    INFO     Loading data from params:feature_selection (MemoryDataset)...          data_catalog.py:1048
+                    INFO     Running node: feature_selection:                                                node.py:420
+                             feature_selection([X_train_final;X_test_final;y_train;params:feature_selection]            
+                             ) -> [X_train_selected;X_test_selected]                                                    
+
+================================================================================
+🎯 FEATURE SELECTION NODE
+================================================================================
+
+   Input features: 29
+   Selecting: 10 features
+   Problem type: Classification
+
+   Transforming test data with selected features...
+
+   ✅ Selected 10 features:
+      ['age_scaled', 'education.num_scaled', 'capital.gain_scaled', 'capital.loss_scaled', 'hours.per.week_scaled', 'marital.status_Married-civ-spouse', 'marital.status_Never-married', 'relationship_Not-in-family', 'relationship_Own-child', 'sex_Male']
+
+   Output shapes:
+      X_train_selected: (26048, 10)
+      X_test_selected: (6513, 10)
+================================================================================
+
+                    INFO     Saving data to X_train_selected (CSVDataset)...                        data_catalog.py:1008
+                    INFO     Saving data to X_test_selected (CSVDataset)...                         data_catalog.py:1008
+                    INFO     Completed node: feature_selection                                             runner.py:245
+                    INFO     Completed 7 out of 23 tasks                                                   runner.py:246
+                    INFO     Loading data from X_train_raw (CSVDataset)...                          data_catalog.py:1048
+                    INFO     Loading data from X_test_raw (CSVDataset)...                           data_catalog.py:1048
+                    INFO     Loading data from y_train (CSVDataset)...                              data_catalog.py:1048
+                    INFO     Loading data from y_test (CSVDataset)...                               data_catalog.py:1048
+                    INFO     Running node: log_split_summary:                                                node.py:420
+                             log_split_summary([X_train_raw;X_test_raw;y_train;y_test]) ->                              
+                    INFO                                                                             data_loading.py:180
+                             📊 Data Loading Summary:                                                                   
+                    INFO        Train: (26048, 14)                                                   data_loading.py:181
+                    INFO        Test: (6513, 14)                                                     data_loading.py:182
+                    INFO        Total: 32561 samples, 14 features                                    data_loading.py:183
+                    INFO     Saving data to split_summary (MemoryDataset)...                        data_catalog.py:1008
+                    INFO     Completed node: log_split_summary                                             runner.py:245
+                    INFO     Completed 8 out of 23 tasks                                                   runner.py:246
+                    INFO     Loading data from X_train_selected (CSVDataset)...                     data_catalog.py:1048
+                    INFO     Loading data from X_test_selected (CSVDataset)...                      data_catalog.py:1048
+                    INFO     Loading data from y_train (CSVDataset)...                              data_catalog.py:1048
+                    INFO     Running node: phase3_scale_features:                                            node.py:420
+                             scale_features([X_train_selected;X_test_selected;y_train]) ->                              
+                             [X_train_scaled;X_test_scaled;y_train_balanced;scalers]                                    
+                    INFO     ====================================================================== model_training.py:55
+                             ==========                                                                                 
+                    INFO     🔄 PHASE 3.0: FEATURE SCALING (PATH B) + SMOTE (OPTION D)              model_training.py:56
+                    INFO     ====================================================================== model_training.py:61
+                             ==========                                                                                 
+                    INFO     Found 10 numeric columns to scale                                      model_training.py:67
+                    INFO     Found 0 categorical columns (unchanged)                                model_training.py:68
+                    INFO     Using StandardScaler (default)                                         model_training.py:78
+                    INFO     ✅ Scaled 10 numeric columns                                           model_training.py:90
+                    INFO        Train shape: (26048, 10)                                            model_training.py:91
+                    INFO        Test shape: (6513, 10)                                              model_training.py:92
+                    INFO                                                                            model_training.py:97
+                             ======================================================================                     
+                             ==========                                                                                 
+                    INFO     🎯 OPTION D: HANDLING CLASS IMBALANCE WITH SMOTE                       model_training.py:98
+                    INFO     ====================================================================== model_training.py:99
+                             ==========                                                                                 
+                    WARNING  ⚠️  imbalanced-learn not installed - SMOTE skipped                    model_training.py:136
+                    WARNING     To enable SMOTE: pip install imbalanced-learn                      model_training.py:137
+                             --break-system-packages                                                                    
+                    INFO     ===================================================================== model_training.py:140
+                             ===========                                                                                
+                    INFO     Saving data to X_train_scaled (CSVDataset)...                          data_catalog.py:1008
+[01/29/26 02:20:57] INFO     Saving data to X_test_scaled (CSVDataset)...                           data_catalog.py:1008
+                    INFO     Saving data to y_train_balanced (PickleDataset)...                     data_catalog.py:1008
+                    INFO     Saving data to scalers (PickleDataset)...                              data_catalog.py:1008
+                    INFO     Completed node: phase3_scale_features                                         runner.py:245
+                    INFO     Completed 9 out of 23 tasks                                                   runner.py:246
+                    INFO     Loading data from X_train_scaled (CSVDataset)...                       data_catalog.py:1048
+                    INFO     Loading data from y_train_balanced (PickleDataset)...                  data_catalog.py:1048
+                    INFO     Loading data from params:problem_type (MemoryDataset)...               data_catalog.py:1048
+                    INFO     Running node: phase3_train_baseline:                                            node.py:420
+                             train_baseline_model([X_train_scaled;y_train_balanced;params:problem_type]) ->             
+                    INFO     ===================================================================== model_training.py:178
+                             ===========                                                                                
+                    INFO     📊 PHASE 3.2: TRAINING BASELINE MODEL                                 model_training.py:179
+                    INFO     ===================================================================== model_training.py:180
+                             ===========                                                                                
+                    INFO     Detected problem type: classification                                 model_training.py:187
+                    INFO     Using LogisticRegression as baseline                                  model_training.py:191
+                    INFO     ✅ Baseline trained with score: 0.8431                                model_training.py:199
+                    INFO     ===================================================================== model_training.py:200
+                             ===========                                                                                
+                    INFO     Saving data to baseline_model (PickleDataset)...                       data_catalog.py:1008
+                    INFO     Saving data to baseline_metrics (PickleDataset)...                     data_catalog.py:1008
+                    INFO     Saving data to problem_type (TextDataset)...                           data_catalog.py:1008
+                    INFO     Completed node: phase3_train_baseline                                         runner.py:245
+                    INFO     Completed 10 out of 23 tasks                                                  runner.py:246
+                    INFO     Loading data from X_train_scaled (CSVDataset)...                       data_catalog.py:1048
+                    INFO     Loading data from y_train_balanced (PickleDataset)...                  data_catalog.py:1048
+                    INFO     Loading data from problem_type (TextDataset)...                        data_catalog.py:1048
+                    INFO     Loading data from params:feature_selection (MemoryDataset)...          data_catalog.py:1048
+                    INFO     Running node: phase3_hyperparameter_tuning:                                     node.py:420
+                             hyperparameter_tuning([X_train_scaled;y_train_balanced;problem_type;params:feat            
+                             ure_selection]) ->                                                                         
+                    INFO     ===================================================================== model_training.py:224
+                             ===========                                                                                
+                    INFO     PHASE 3.3: OPTIMIZED HYPERPARAMETER TUNING WITH RANDOMIZEDSEARCHCV    model_training.py:225
+                             (PATH B)                                                                                   
+                    INFO     ===================================================================== model_training.py:226
+                             ===========                                                                                
+                    INFO     🎯 Classification: RandomForestClassifier (OPTIMIZED)                 model_training.py:233
+                    INFO     🔧 Parameter distribution:                                            model_training.py:246
+                    INFO        n_estimators: [50, 100, 150, 200, 300, 500]                        model_training.py:248
+                    INFO        max_depth: [5, 10, 15, 20]                                         model_training.py:248
+                    INFO        min_samples_split: [2, 5, 10]                                      model_training.py:248
+                    INFO        min_samples_leaf: [1, 2, 4]                                        model_training.py:248
+                    INFO        max_features: ['sqrt', 'log2', None]                               model_training.py:248
+                    INFO        bootstrap: [True, False]                                           model_training.py:248
+                    INFO                                                                           model_training.py:261
+                             =====================================================================                      
+                             ===========                                                                                
+                    INFO     ⏱️  STARTING RANDOMIZEDSEARCHCV (OPTIMIZED)                           model_training.py:262
+                    INFO        30 random combinations × 5-fold CV = 150 model fits                model_training.py:263
+                    INFO        Estimated time: 5-10 minutes (was 2+ hours)                        model_training.py:264
+                    INFO     ===================================================================== model_training.py:265
+                             ===========                                                                                
+                                                                                                                        
+Fitting 5 folds for each of 10 candidates, totalling 50 fits
+[01/29/26 02:21:56] INFO     ✅ Best params: {'n_estimators': 50, 'min_samples_split': 2,          model_training.py:269
+                             'min_samples_leaf': 2, 'max_features': 'log2', 'max_depth': 15,                            
+                             'bootstrap': False}                                                                        
+                    INFO     ✅ Best CV accuracy: 0.8591                                           model_training.py:270
+                    INFO     ===================================================================== model_training.py:330
+                             ===========                                                                                
+                    INFO     Saving data to best_model (PickleDataset)...                           data_catalog.py:1008
+                    INFO     Saving data to tuning_info (PickleDataset)...                          data_catalog.py:1008
+                    INFO     Completed node: phase3_hyperparameter_tuning                                  runner.py:245
+                    INFO     Completed 11 out of 23 tasks                                                  runner.py:246
+                    INFO     Loading data from X_train_selected (CSVDataset)...                     data_catalog.py:1048
+                    INFO     Loading data from X_test_selected (CSVDataset)...                      data_catalog.py:1048
+                    INFO     Loading data from y_train (CSVDataset)...                              data_catalog.py:1048
+                    INFO     Loading data from y_test (CSVDataset)...                               data_catalog.py:1048
+                    INFO     Loading data from problem_type (TextDataset)...                        data_catalog.py:1048
+                    INFO     Loading data from params:problem_type (MemoryDataset)...               data_catalog.py:1048
+                    INFO     Running node: phase4_train_all:                                                 node.py:420
+                             phase4_train_all_algorithms([X_train_selected;X_test_selected;y_train;y_test;pr            
+                             oblem_type;params:problem_type]) ->                                                        
+                    INFO     ================================================================== phase4_algorithms.py:243
+                             ==============                                                                             
+                    INFO     🚀 TRAINING ALL ALGORITHMS (50+)                                   phase4_algorithms.py:244
+                    INFO     ================================================================== phase4_algorithms.py:245
+                             ==============                                                                             
+                    INFO     Problem type: classification                                       phase4_algorithms.py:248
+                    INFO     Loading classification algorithms...                               phase4_algorithms.py:126
+                    WARNING  ⚠️ XGBoost not installed                                           phase4_algorithms.py:168
+                    WARNING  ⚠️ LightGBM not installed                                          phase4_algorithms.py:182
+                    WARNING  ⚠️ CatBoost not installed                                          phase4_algorithms.py:195
+                    INFO     ✅ StackingClassifier loaded                                       phase4_algorithms.py:211
+                    INFO     ✅ Loaded 21 classification algorithms                             phase4_algorithms.py:225
+                    INFO     Training LogisticRegression...                                     phase4_algorithms.py:260
+                    INFO       ✅ LogisticRegression: Train=0.8430, Test=0.8388                 phase4_algorithms.py:274
+                    INFO     Training RidgeClassifier...                                        phase4_algorithms.py:260
+                    INFO       ✅ RidgeClassifier: Train=0.8309, Test=0.8282                    phase4_algorithms.py:274
+                    INFO     Training SGDClassifier...                                          phase4_algorithms.py:260
+                    INFO       ✅ SGDClassifier: Train=0.8374, Test=0.8362                      phase4_algorithms.py:274
+                    INFO     Training PassiveAggressiveClassifier...                            phase4_algorithms.py:260
+                    INFO       ✅ PassiveAggressiveClassifier: Train=0.8275, Test=0.8253        phase4_algorithms.py:274
+                    INFO     Training Perceptron...                                             phase4_algorithms.py:260
+                    INFO       ✅ Perceptron: Train=0.8013, Test=0.8024                         phase4_algorithms.py:274
+                    INFO     Training DecisionTreeClassifier...                                 phase4_algorithms.py:260
+                    INFO       ✅ DecisionTreeClassifier: Train=0.8646, Test=0.8584             phase4_algorithms.py:274
+                    INFO     Training RandomForestClassifier...                                 phase4_algorithms.py:260
+[01/29/26 02:21:57] INFO       ✅ RandomForestClassifier: Train=0.9033, Test=0.8211             phase4_algorithms.py:274
+                    INFO     Training ExtraTreesClassifier...                                   phase4_algorithms.py:260
+[01/29/26 02:21:58] INFO       ✅ ExtraTreesClassifier: Train=0.9230, Test=0.8391               phase4_algorithms.py:274
+                    INFO     Training GradientBoostingClassifier...                             phase4_algorithms.py:260
+[01/29/26 02:21:59] INFO       ✅ GradientBoostingClassifier: Train=0.8628, Test=0.8623         phase4_algorithms.py:274
+                    INFO     Training AdaBoostClassifier...                                     phase4_algorithms.py:260
+[01/29/26 02:22:01] INFO       ✅ AdaBoostClassifier: Train=0.8527, Test=0.8526                 phase4_algorithms.py:274
+                    INFO     Training BaggingClassifier...                                      phase4_algorithms.py:260
+[01/29/26 02:22:03] INFO       ✅ BaggingClassifier: Train=0.9229, Test=0.8426                  phase4_algorithms.py:274
+                    INFO     Training SVC...                                                    phase4_algorithms.py:260
+[01/29/26 02:22:51] INFO       ✅ SVC: Train=0.7943, Test=0.7880                                phase4_algorithms.py:274
+                    INFO     Training LinearSVC...                                              phase4_algorithms.py:260
+                    INFO       ✅ LinearSVC: Train=0.8434, Test=0.8409                          phase4_algorithms.py:274
+                    INFO     Training NuSVC...                                                  phase4_algorithms.py:260
+                    WARNING    ❌ NuSVC failed: specified nu is infeasible                      phase4_algorithms.py:277
+                    INFO     Training GaussianNB...                                             phase4_algorithms.py:260
+                    INFO       ✅ GaussianNB: Train=0.8103, Test=0.8030                         phase4_algorithms.py:274
+                    INFO     Training MultinomialNB...                                          phase4_algorithms.py:260
+                    WARNING    ❌ MultinomialNB failed: Negative values in data passed to       phase4_algorithms.py:277
+                             MultinomialNB (input X).                                                                   
+                    INFO     Training BernoulliNB...                                            phase4_algorithms.py:260
+[01/29/26 02:22:52] INFO       ✅ BernoulliNB: Train=0.7629, Test=0.7562                        phase4_algorithms.py:274
+                    INFO     Training ComplementNB...                                           phase4_algorithms.py:260
+                    WARNING    ❌ ComplementNB failed: Negative values in data passed to        phase4_algorithms.py:277
+                             ComplementNB (input X).                                                                    
+                    INFO     Training CategoricalNB...                                          phase4_algorithms.py:260
+                    WARNING    ❌ CategoricalNB failed: Negative values in data passed to       phase4_algorithms.py:277
+                             CategoricalNB (input X).                                                                   
+                    INFO     Training KNeighborsClassifier...                                   phase4_algorithms.py:260
+                    INFO       ✅ KNeighborsClassifier: Train=0.8674, Test=0.8287               phase4_algorithms.py:274
+                    INFO     Training StackingClassifier...                                     phase4_algorithms.py:260
+[01/29/26 02:26:01] INFO       ✅ StackingClassifier: Train=0.8717, Test=0.8607                 phase4_algorithms.py:274
+                    INFO                                                                        phase4_algorithms.py:282
+                             ✅ Trained 17 algorithms                                                                   
+                    INFO                                                                        phase4_algorithms.py:283
+                             Top 5 Algorithms:                                                                          
+                    INFO       GradientBoostingClassifier: 0.8623                               phase4_algorithms.py:285
+                    INFO       StackingClassifier: 0.8607                                       phase4_algorithms.py:285
+                    INFO       DecisionTreeClassifier: 0.8584                                   phase4_algorithms.py:285
+                    INFO       AdaBoostClassifier: 0.8526                                       phase4_algorithms.py:285
+                    INFO       BaggingClassifier: 0.8426                                        phase4_algorithms.py:285
+                    INFO     ================================================================== phase4_algorithms.py:287
+                             ==============                                                                             
+                    INFO     Saving data to phase4_trained_models (PickleDataset)...                data_catalog.py:1008
+[01/29/26 02:26:02] INFO     Saving data to phase4_results (CSVDataset)...                          data_catalog.py:1008
+                    INFO     Completed node: phase4_train_all                                              runner.py:245
+                    INFO     Completed 12 out of 23 tasks                                                  runner.py:246
+                    INFO     Loading data from best_model (PickleDataset)...                        data_catalog.py:1048
+                    INFO     Loading data from X_train_scaled (CSVDataset)...                       data_catalog.py:1048
+                    INFO     Loading data from y_train_balanced (PickleDataset)...                  data_catalog.py:1048
+                    INFO     Loading data from problem_type (TextDataset)...                        data_catalog.py:1048
+                    INFO     Running node: phase3_cross_validation: cross_validation() ->                    node.py:420
+                    INFO     ===================================================================== model_training.py:429
+                             ===========                                                                                
+                    INFO     📊 RUNNING 5-FOLD CROSS-VALIDATION (PATH A)                           model_training.py:430
+                    INFO     ===================================================================== model_training.py:431
+                             ===========                                                                                
+[01/29/26 02:26:03] INFO     Cross-validation scores: ['0.8578', '0.8583', '0.8582', '0.8568',     model_training.py:443
+                             '0.8551']                                                                                  
+                    INFO     Mean CV Score: 0.8572                                                 model_training.py:444
+                    INFO     Std Dev: 0.0012                                                       model_training.py:445
+                    INFO     Confidence Interval: 0.8572 (±0.0012)                                 model_training.py:446
+                    INFO     ===================================================================== model_training.py:447
+                             ===========                                                                                
+                    INFO     Saving data to cross_validation_results (PickleDataset)...             data_catalog.py:1008
+                    INFO     Completed node: phase3_cross_validation                                       runner.py:245
+                    INFO     Completed 13 out of 23 tasks                                                  runner.py:246
+                    INFO     Loading data from best_model (PickleDataset)...                        data_catalog.py:1048
+                    INFO     Loading data from X_train_scaled (CSVDataset)...                       data_catalog.py:1048
+                    INFO     Loading data from X_test_scaled (CSVDataset)...                        data_catalog.py:1048
+                    INFO     Loading data from y_train_balanced (PickleDataset)...                  data_catalog.py:1048
+                    INFO     Loading data from y_test (CSVDataset)...                               data_catalog.py:1048
+                    INFO     Loading data from problem_type (TextDataset)...                        data_catalog.py:1048
+                    INFO     Running node: phase3_evaluate_model: evaluate_model() ->                        node.py:420
+                    INFO     ===================================================================== model_training.py:349
+                             ===========                                                                                
+                    INFO     📈 PHASE 3.4: MODEL EVALUATION                                        model_training.py:350
+                    INFO     ===================================================================== model_training.py:351
+                             ===========                                                                                
+                    INFO     ROC-AUC: 0.9143                                                       model_training.py:385
+                    INFO     ✅ Classification Metrics:                                            model_training.py:387
+                    INFO        Train Score: 0.8788                                                model_training.py:388
+                    INFO        Test Score: 0.8615                                                 model_training.py:389
+                    INFO        Accuracy: 0.8615                                                   model_training.py:390
+                    INFO        Precision: 0.8556                                                  model_training.py:391
+                    INFO        Recall: 0.8615                                                     model_training.py:392
+                    INFO        F1-Score: 0.8529                                                   model_training.py:393
+                    INFO     ===================================================================== model_training.py:412
+                             ===========                                                                                
+                    INFO     Saving data to model_evaluation (PickleDataset)...                     data_catalog.py:1008
+                    INFO     Completed node: phase3_evaluate_model                                         runner.py:245
+                    INFO     Completed 14 out of 23 tasks                                                  runner.py:246
+                    INFO     Loading data from best_model (PickleDataset)...                        data_catalog.py:1048
+                    INFO     Loading data from X_test_scaled (CSVDataset)...                        data_catalog.py:1048
+                    INFO     Loading data from y_test (CSVDataset)...                               data_catalog.py:1048
+                    INFO     Loading data from problem_type (TextDataset)...                        data_catalog.py:1048
+                    INFO     Running node: phase3_make_predictions: make_predictions() ->                    node.py:420
+                    INFO     ===================================================================== model_training.py:503
+                             ===========                                                                                
+                    INFO     PHASE 3.6: MAKING PREDICTIONS                                         model_training.py:504
+                    INFO     ===================================================================== model_training.py:505
+                             ===========                                                                                
+                    INFO     ✅ Prediction accuracy: 0.8615                                        model_training.py:519
+                    INFO     ✅ Predictions saved: data/07_model_output/phase3_predictions.csv     model_training.py:536
+                    INFO     Saving data to phase3_predictions (CSVDataset)...                      data_catalog.py:1008
+                    INFO     Completed node: phase3_make_predictions                                       runner.py:245
+                    INFO     Completed 15 out of 23 tasks                                                  runner.py:246
+                    INFO     Loading data from phase4_trained_models (PickleDataset)...             data_catalog.py:1048
+[01/29/26 02:26:04] INFO     Loading data from phase4_results (CSVDataset)...                       data_catalog.py:1048
+                    INFO     Loading data from X_train_selected (CSVDataset)...                     data_catalog.py:1048
+                    INFO     Loading data from y_train (CSVDataset)...                              data_catalog.py:1048
+                    INFO     Loading data from X_test_selected (CSVDataset)...                      data_catalog.py:1048
+                    INFO     Loading data from y_test (CSVDataset)...                               data_catalog.py:1048
+                    INFO     Loading data from problem_type (TextDataset)...                        data_catalog.py:1048
+                    INFO     Running node: phase4_ensemble_voting: phase4_create_ensemble_voting() ->        node.py:420
+                    INFO     ================================================================== phase4_algorithms.py:434
+                             ==============                                                                             
+                    INFO     🎯 CREATING ENSEMBLE VOTING CLASSIFIER (PATH A)                    phase4_algorithms.py:435
+                    INFO     ================================================================== phase4_algorithms.py:436
+                             ==============                                                                             
+                    INFO     Selected top 5 models for ensemble:                                phase4_algorithms.py:449
+                    INFO       1. GradientBoostingClassifier                                    phase4_algorithms.py:451
+                    INFO       2. StackingClassifier                                            phase4_algorithms.py:451
+                    INFO       3. DecisionTreeClassifier                                        phase4_algorithms.py:451
+                    INFO       4. AdaBoostClassifier                                            phase4_algorithms.py:451
+                    INFO       5. BaggingClassifier                                             phase4_algorithms.py:451
+                    INFO                                                                        phase4_algorithms.py:456
+                             ✅ Best model selected for PATH C: GradientBoostingClassifier                              
+                    INFO     Training ensemble...                                               phase4_algorithms.py:504
+
+[01/29/26 02:29:41] INFO     ✅ Ensemble trained                                                phase4_algorithms.py:511
+                    INFO       Best single model: 0.8623                                        phase4_algorithms.py:512
+                    INFO       Ensemble score: 0.8635                                           phase4_algorithms.py:513
+[01/29/26 02:29:55] INFO     ================================================================== phase4_algorithms.py:525
+                             ==============                                                                             
+                    INFO     Saving data to phase4_results_with_ensemble (MemoryDataset)...         data_catalog.py:1008
+                    INFO     Saving data to phase4_trained_models_with_ensemble (MemoryDataset)...  data_catalog.py:1008
+                    INFO     Saving data to phase4_best_model (MemoryDataset)...                    data_catalog.py:1008
+                    INFO     Completed node: phase4_ensemble_voting                                        runner.py:245
+                    INFO     Completed 16 out of 23 tasks                                                  runner.py:246
+                    INFO     Loading data from best_model (PickleDataset)...                        data_catalog.py:1048
+                    INFO     Loading data from model_evaluation (PickleDataset)...                  data_catalog.py:1048
+                    INFO     Loading data from problem_type (TextDataset)...                        data_catalog.py:1048
+                    INFO     Running node: phase3_save_model: save_model_and_evaluation() ->                 node.py:420
+                    INFO     ===================================================================== model_training.py:468
+                             ===========                                                                                
+                    INFO     PHASE 3.5: SAVING MODEL & EVALUATION METRICS                          model_training.py:469
+                    INFO     ===================================================================== model_training.py:470
+                             ===========                                                                                
+                    INFO     ✅ Model saved: data/06_models/best_model_classification.pkl          model_training.py:479
+                    INFO     ✅ Evaluation saved:                                                  model_training.py:485
+                             data/06_models/model_evaluation_classification.json                                        
+                    INFO     Saving data to phase3_save_status (TextDataset)...                     data_catalog.py:1008
+                    INFO     Completed node: phase3_save_model                                             runner.py:245
+                    INFO     Completed 17 out of 23 tasks                                                  runner.py:246
+                    INFO     Loading data from phase4_trained_models_with_ensemble                  data_catalog.py:1048
+                             (MemoryDataset)...                                                                         
+                    INFO     Loading data from phase4_results_with_ensemble (MemoryDataset)...      data_catalog.py:1048
+                    INFO     Loading data from problem_type (TextDataset)...                        data_catalog.py:1048
+                    INFO     Running node: phase4_generate_report: phase4_generate_report() ->               node.py:420
+                    INFO     ================================================================== phase4_algorithms.py:741
+                             ==============                                                                             
+                    INFO     📋 GENERATING FINAL REPORT                                         phase4_algorithms.py:742
+                    INFO     ================================================================== phase4_algorithms.py:743
+                             ==============                                                                             
+                    INFO     ✅ Best model: VotingEnsemble (0.8635)                             phase4_algorithms.py:753
+                    INFO     ================================================================== phase4_algorithms.py:754
+                             ==============                                                                             
+                    INFO     Saving data to phase4_report (CSVDataset)...                           data_catalog.py:1008
+                    INFO     Saving data to phase4_summary (PickleDataset)...                       data_catalog.py:1008
+                    INFO     Completed node: phase4_generate_report                                        runner.py:245
+                    INFO     Completed 18 out of 23 tasks                                                  runner.py:246
+                    INFO     Loading data from phase4_best_model (MemoryDataset)...                 data_catalog.py:1048
+                    INFO     Loading data from X_train_selected (CSVDataset)...                     data_catalog.py:1048
+                    INFO     Loading data from y_train (CSVDataset)...                              data_catalog.py:1048
+                    INFO     Loading data from problem_type (TextDataset)...                        data_catalog.py:1048
+                    INFO     Running node: phase4_learning_curves: phase4_generate_learning_curves() ->      node.py:420
+                    INFO     ================================================================== phase4_algorithms.py:543
+                             ==============                                                                             
+                    INFO     📈 GENERATING LEARNING CURVES (PATH C)                             phase4_algorithms.py:544
+                    INFO     ================================================================== phase4_algorithms.py:545
+                             ==============                                                                             
+[learning_curve] Training set sizes: [ 2083  4167  6251  8335 10419 12502 14586 16670 18754 20838]
+[Parallel(n_jobs=-1)]: Using backend LokyBackend with 8 concurrent workers.
+[Parallel(n_jobs=-1)]: Done  50 out of  50 | elapsed:    4.1s finished
+[01/29/26 02:30:01] INFO     ✅ Learning curves saved:                                          phase4_algorithms.py:594
+                             data/07_model_output/path_c_visualizations/learning_curves.png                             
+                    INFO     ✅ Good generalization: gap = 0.0032                               phase4_algorithms.py:601
+                    INFO     Saving data to phase4_learning_curves (MemoryDataset)...               data_catalog.py:1008
+                    INFO     Completed node: phase4_learning_curves                                        runner.py:245
+                    INFO     Completed 19 out of 23 tasks                                                  runner.py:246
+                    INFO     Loading data from phase4_trained_models_with_ensemble                  data_catalog.py:1048
+                             (MemoryDataset)...                                                                         
+                    INFO     Loading data from phase4_results_with_ensemble (MemoryDataset)...      data_catalog.py:1048
+                    INFO     Loading data from X_test_selected (CSVDataset)...                      data_catalog.py:1048
+                    INFO     Loading data from y_test (CSVDataset)...                               data_catalog.py:1048
+                    INFO     Loading data from problem_type (TextDataset)...                        data_catalog.py:1048
+                    INFO     Running node: phase4_roc_curves:                                                node.py:420
+                             phase4_generate_roc_curves_and_confusion_matrices() ->                                     
+                    INFO     ================================================================== phase4_algorithms.py:306
+                             ==============                                                                             
+                    INFO     📈 GENERATING ROC CURVES & CONFUSION MATRICES (PATH B)             phase4_algorithms.py:307
+                    INFO     ================================================================== phase4_algorithms.py:308
+                             ==============                                                                             
+                    INFO     🎯 Generating visualizations for classification...                 phase4_algorithms.py:323
+                    INFO     Analyzing top 5 models:                                            phase4_algorithms.py:328
+                    INFO       - VotingEnsemble: 0.8635                                         phase4_algorithms.py:330
+                    INFO       - GradientBoostingClassifier: 0.8623                             phase4_algorithms.py:330
+                    INFO       - StackingClassifier: 0.8607                                     phase4_algorithms.py:330
+                    INFO       - DecisionTreeClassifier: 0.8584                                 phase4_algorithms.py:330
+                    INFO       - AdaBoostClassifier: 0.8526                                     phase4_algorithms.py:330
+                    INFO       ✅ GradientBoostingClassifier: ROC-AUC = 0.9165                  phase4_algorithms.py:354
+[01/29/26 02:30:02] INFO       ✅ StackingClassifier: ROC-AUC = 0.9162                          phase4_algorithms.py:354
+                    INFO       ✅ DecisionTreeClassifier: ROC-AUC = 0.9001                      phase4_algorithms.py:354
+[01/29/26 02:30:03] INFO       ✅ AdaBoostClassifier: ROC-AUC = 0.9028                          phase4_algorithms.py:354
+                    INFO     ✅ ROC curves saved:                                               phase4_algorithms.py:373
+                             data/07_model_output/path_b_visualizations/roc_curves_top_5.png                            
+                    INFO                                                                        phase4_algorithms.py:378
+                             📊 Generating Confusion Matrices...                                                        
+                    INFO       ✅ GradientBoostingClassifier confusion matrix generated         phase4_algorithms.py:398
+[01/29/26 02:30:05] INFO       ✅ StackingClassifier confusion matrix generated                 phase4_algorithms.py:398
+                    INFO     ✅ Confusion matrices saved:                                       phase4_algorithms.py:403
+                             data/07_model_output/path_b_visualizations/confusion_matrices_top_                         
+                             3.png                                                                                      
+                    INFO     ================================================================== phase4_algorithms.py:412
+                             ==============                                                                             
+                    INFO     Saving data to phase4_roc_analysis (MemoryDataset)...                  data_catalog.py:1008
+                    INFO     Completed node: phase4_roc_curves                                             runner.py:245
+                    INFO     Completed 20 out of 23 tasks                                                  runner.py:246
+                    INFO     Loading data from phase4_best_model (MemoryDataset)...                 data_catalog.py:1048
+                    INFO     Loading data from X_test_selected (CSVDataset)...                      data_catalog.py:1048
+                    INFO     Loading data from problem_type (TextDataset)...                        data_catalog.py:1048
+                    INFO     Running node: phase4_shap_analysis: phase4_generate_shap_analysis() ->          node.py:420
+                    INFO     ================================================================== phase4_algorithms.py:625
+                             ==============                                                                             
+                    INFO     🎯 GENERATING SHAP FEATURE IMPORTANCE (PATH C)                     phase4_algorithms.py:626
+                    INFO     ================================================================== phase4_algorithms.py:627
+                             ==============                                                                             
+                    WARNING  ⚠️  SHAP not installed. Install with: pip install shap             phase4_algorithms.py:630
+                    INFO     Saving data to phase4_shap_analysis (MemoryDataset)...                 data_catalog.py:1008
+                    INFO     Completed node: phase4_shap_analysis                                          runner.py:245
+                    INFO     Completed 21 out of 23 tasks                                                  runner.py:246
+                    INFO     Loading data from phase4_results_with_ensemble (MemoryDataset)...      data_catalog.py:1048
+                    INFO     Loading data from problem_type (TextDataset)...                        data_catalog.py:1048
+                    INFO     Running node: phase4_statistical_testing: phase4_statistical_testing() ->       node.py:420
+                    INFO     ================================================================== phase4_algorithms.py:684
+                             ==============                                                                             
+                    INFO     📊 STATISTICAL SIGNIFICANCE TESTING (PATH C)                       phase4_algorithms.py:685
+                    INFO     ================================================================== phase4_algorithms.py:686
+                             ==============                                                                             
+                    INFO     Comparing:                                                         phase4_algorithms.py:702
+                    INFO       Model 1: VotingEnsemble (0.8635)                                 phase4_algorithms.py:703
+                    INFO       Model 2: GradientBoostingClassifier (0.8623)                     phase4_algorithms.py:704
+                    INFO       Difference: 0.0012                                               phase4_algorithms.py:705
+                    INFO     ⚠️  NOT statistically significant (<1.0%)                          phase4_algorithms.py:713
+                    INFO     Saving data to phase4_statistical_results (MemoryDataset)...           data_catalog.py:1008
+                    INFO     Completed node: phase4_statistical_testing                                    runner.py:245
+                    INFO     Completed 22 out of 23 tasks                                                  runner.py:246
+                    INFO     Loading data from phase4_trained_models_with_ensemble                  data_catalog.py:1048
+                             (MemoryDataset)...                                                                         
+                    INFO     Loading data from phase4_results_with_ensemble (MemoryDataset)...      data_catalog.py:1048
+                    INFO     Loading data from phase4_report (CSVDataset)...                        data_catalog.py:1048
+                    INFO     Loading data from phase4_summary (PickleDataset)...                    data_catalog.py:1048
+                    INFO     Loading data from problem_type (TextDataset)...                        data_catalog.py:1048
+                    INFO     Running node: phase4_save_results: phase4_save_results() ->                     node.py:420
+                    INFO     ================================================================== phase4_algorithms.py:772
+                             ==============                                                                             
+                    INFO     💾 SAVING RESULTS                                                  phase4_algorithms.py:773
+                    INFO     ================================================================== phase4_algorithms.py:774
+                             ==============                                                                             
+                    INFO     ✅ Results saved to data/07_model_output/                          phase4_algorithms.py:787
+                    INFO     ================================================================== phase4_algorithms.py:788
+                             ==============                                                                             
+                    INFO     Saving data to phase4_save_status (TextDataset)...                     data_catalog.py:1008
+                    INFO     Completed node: phase4_save_results                                           runner.py:245
+                    INFO     Completed 23 out of 23 tasks                                                  runner.py:246
+                    INFO     Pipeline execution completed successfully in 550.7 sec.                       runner.py:119
+(venv) ashok@ubuntu:~/work/latest/kedro-ml-engine-integrated$ 
