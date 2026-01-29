@@ -1,11 +1,11 @@
 (venv) ashok@ubuntu:~/work/latest/kedro-ml-engine-integrated$ kedro run
-[01/29/26 05:49:13] INFO     Using                                                                       __init__.py:269
+[01/29/26 05:58:37] INFO     Using                                                                       __init__.py:269
                              '/home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/sit                
                              e-packages/kedro/framework/project/rich_logging.yml' as logging                            
                              configuration.                                                                             
-[01/29/26 05:49:13] INFO     Kedro project kedro-ml-engine-integrated                                     session.py:330
+[01/29/26 05:58:37] INFO     Kedro project kedro-ml-engine-integrated                                     session.py:330
 ✅ Multi-table loader imported successfully
-[01/29/26 05:49:16] INFO     ✅ Phase 1a (data_loading) imported successfully                    pipeline_registry.py:62
+[01/29/26 05:58:39] INFO     ✅ Phase 1a (data_loading) imported successfully                    pipeline_registry.py:62
                     INFO     ✅ Phase 1b (data_validation) imported successfully                 pipeline_registry.py:69
                     INFO     ✅ Phase 1c (data_cleaning with PATH B feature scaling) imported    pipeline_registry.py:76
                              successfully                                                                               
@@ -152,13 +152,13 @@
                     INFO     ================================================================== pipeline_registry.py:500
                              ==============                                                                             
                                                                                                                         
-                    INFO     Kedro is sending anonymous usage data with the sole purpose of improving the  plugin.py:242
+[01/29/26 05:58:40] INFO     Kedro is sending anonymous usage data with the sole purpose of improving the  plugin.py:242
                              product. No personal data or IP addresses are stored on our side. To opt out,              
                              set the `KEDRO_DISABLE_TELEMETRY` or `DO_NOT_TRACK` environment variables, or              
                              create a `.telemetry` file in the current working directory with the contents              
                              `consent: false`. To hide this message, explicitly grant or deny consent.                  
                              Read more at https://docs.kedro.org/en/stable/about/telemetry/                             
-[01/29/26 05:49:17] INFO     Using synchronous mode for loading and saving data. Use the --async sequential_runner.py:59
+                    INFO     Using synchronous mode for loading and saving data. Use the --async sequential_runner.py:59
                              flag for potential performance gains.                                                      
                              https://docs.kedro.org/en/stable/nodes_and_pipelines/run_a_pipeline                        
                              .html#load-and-save-asynchronously                                                         
@@ -220,15 +220,15 @@
                     INFO     Completed node: clean_data_node                                               runner.py:245
                     INFO     Completed 1 out of 20 tasks                                                   runner.py:246
                     INFO     Loading data from X_train (CSVDataset)...                              data_catalog.py:1048
-[01/29/26 05:49:19] INFO     Loading data from X_test (CSVDataset)...                               data_catalog.py:1048
-[01/29/26 05:49:20] INFO     Loading data from params:feature_engineering (MemoryDataset)...        data_catalog.py:1048
+[01/29/26 05:58:42] INFO     Loading data from X_test (CSVDataset)...                               data_catalog.py:1048
+[01/29/26 05:58:43] INFO     Loading data from params:feature_engineering (MemoryDataset)...        data_catalog.py:1048
                     INFO     Running node: engineer_features:                                                node.py:420
                              engineer_features([X_train;X_test;params:feature_engineering]) ->                          
                              [X_train_final;X_test_final]                                                               
 
 
 ================================================================================
-🏗️  PRODUCTION FEATURE ENGINEERING PIPELINE (CORRECTED)
+🏗️  PRODUCTION FEATURE ENGINEERING PIPELINE (100% CORRECTED)
 ================================================================================
 
 ================================================================================
@@ -347,6 +347,23 @@
    Test shape: (61503, 202)
 
 ================================================================================
+🔧 FILLING NaN VALUES (NEW FIX FOR FEATURE SELECTION)
+================================================================================
+
+   NaN values before imputation:
+      Train: 9897118
+      Test: 2479711
+
+   NaN values after imputation:
+      Train: 0
+      Test: 0
+================================================================================
+
+📊 After NaN imputation:
+   Train shape: (246008, 202)
+   Test shape: (61503, 202)
+
+================================================================================
 ✔️  FEATURE EXPLOSION SAFETY CHECK (Permanent Fix #5)
 ================================================================================
 
@@ -361,7 +378,7 @@
 
 
 ================================================================================
-✅ FEATURE ENGINEERING COMPLETE
+✅ FEATURE ENGINEERING COMPLETE - 100% WORKING
 ================================================================================
 
    Input shapes:
@@ -376,18 +393,20 @@
 
    Steps applied:
       ✓ Dropped ID columns
-      ✓ Encoded categoricals smartly
-      ✓ Scaled numeric features
-      ✓ Filtered low-variance features
+      ✓ Encoded categoricals smartly (fit once)
+      ✓ Scaled numeric features (fit once)
+      ✓ Filtered low-variance features (fit once)
+      ✓ Filled remaining NaN values (fit once)
       ✓ Validated against feature explosion
 
-   ✅ TRAIN AND TEST SHAPES MATCH: False
+   ✅ TRAIN AND TEST SHAPES MATCH: True
+   ✅ NO NaN VALUES: True
 
 ================================================================================
 
-[01/29/26 05:49:24] INFO     Saving data to X_train_final (CSVDataset)...                           data_catalog.py:1008
-[01/29/26 05:49:56] INFO     Saving data to X_test_final (CSVDataset)...                            data_catalog.py:1008
-[01/29/26 05:50:04] INFO     Completed node: engineer_features                                             runner.py:245
+[01/29/26 05:58:48] INFO     Saving data to X_train_final (CSVDataset)...                           data_catalog.py:1008
+[01/29/26 05:59:29] INFO     Saving data to X_test_final (CSVDataset)...                            data_catalog.py:1008
+[01/29/26 05:59:40] INFO     Completed node: engineer_features                                             runner.py:245
                     INFO     Completed 2 out of 20 tasks                                                   runner.py:246
                     INFO     Loading data from params:data_loading (MemoryDataset)...               data_catalog.py:1048
                     INFO     Running node: load_data_node: load_data_auto() ->                               node.py:420
@@ -413,22 +432,22 @@
 ================================================================================
 
                     INFO     Loading application...                                       data_loading_multitable.py:124
-Loading application... [01/29/26 05:50:06] INFO     ✅ (307,511 rows × 122 cols)                                 data_loading_multitable.py:124
+Loading application... [01/29/26 05:59:41] INFO     ✅ (307,511 rows × 122 cols)                                 data_loading_multitable.py:124
 ✅ (307,511 rows × 122 cols)
                     INFO     Loading bureau...                                            data_loading_multitable.py:124
-Loading bureau... [01/29/26 05:50:07] INFO     ✅ (1,716,428 rows × 17 cols)                                data_loading_multitable.py:124
+Loading bureau... [01/29/26 05:59:43] INFO     ✅ (1,716,428 rows × 17 cols)                                data_loading_multitable.py:124
 ✅ (1,716,428 rows × 17 cols)
                     INFO     Loading previous_application...                              data_loading_multitable.py:124
-Loading previous_application... [01/29/26 05:50:11] INFO     ✅ (1,670,214 rows × 37 cols)                                data_loading_multitable.py:124
+Loading previous_application... [01/29/26 05:59:47] INFO     ✅ (1,670,214 rows × 37 cols)                                data_loading_multitable.py:124
 ✅ (1,670,214 rows × 37 cols)
                     INFO     Loading pos_cash...                                          data_loading_multitable.py:124
-Loading pos_cash... [01/29/26 05:50:14] INFO     ✅ (10,001,358 rows × 8 cols)                                data_loading_multitable.py:124
+Loading pos_cash... [01/29/26 05:59:50] INFO     ✅ (10,001,358 rows × 8 cols)                                data_loading_multitable.py:124
 ✅ (10,001,358 rows × 8 cols)
                     INFO     Loading credit_card...                                       data_loading_multitable.py:124
-Loading credit_card... [01/29/26 05:50:18] INFO     ✅ (3,840,312 rows × 23 cols)                                data_loading_multitable.py:124
+Loading credit_card... [01/29/26 05:59:54] INFO     ✅ (3,840,312 rows × 23 cols)                                data_loading_multitable.py:124
 ✅ (3,840,312 rows × 23 cols)
                     INFO     Loading installments...                                      data_loading_multitable.py:124
-Loading installments... [01/29/26 05:50:24] INFO     ✅ (13,605,401 rows × 8 cols)                                data_loading_multitable.py:124
+Loading installments... [01/29/26 06:00:00] INFO     ✅ (13,605,401 rows × 8 cols)                                data_loading_multitable.py:124
 ✅ (13,605,401 rows × 8 cols)
                     INFO                                                                  data_loading_multitable.py:124
                              ============================================================                               
@@ -444,31 +463,31 @@ Loading installments... [01/29/26 05:50:24] INFO     ✅ (13,605,401 rows × 8 c
 
                     INFO     Aggregating bureau...                                        data_loading_multitable.py:124
 Aggregating bureau...
-                    INFO       ✅ Aggregated from 1,716,428 to 305,811 rows               data_loading_multitable.py:124
+[01/29/26 06:00:01] INFO       ✅ Aggregated from 1,716,428 to 305,811 rows               data_loading_multitable.py:124
   ✅ Aggregated from 1,716,428 to 305,811 rows
                     INFO          Features created: 8                                     data_loading_multitable.py:124
      Features created: 8
                     INFO     Aggregating previous_application...                          data_loading_multitable.py:124
 Aggregating previous_application...
-[01/29/26 05:50:25] INFO       ✅ Aggregated from 1,670,214 to 338,857 rows               data_loading_multitable.py:124
+                    INFO       ✅ Aggregated from 1,670,214 to 338,857 rows               data_loading_multitable.py:124
   ✅ Aggregated from 1,670,214 to 338,857 rows
                     INFO          Features created: 6                                     data_loading_multitable.py:124
      Features created: 6
                     INFO     Aggregating pos_cash...                                      data_loading_multitable.py:124
 Aggregating pos_cash...
-[01/29/26 05:50:26] INFO       ✅ Aggregated from 10,001,358 to 337,252 rows              data_loading_multitable.py:124
+[01/29/26 06:00:02] INFO       ✅ Aggregated from 10,001,358 to 337,252 rows              data_loading_multitable.py:124
   ✅ Aggregated from 10,001,358 to 337,252 rows
                     INFO          Features created: 3                                     data_loading_multitable.py:124
      Features created: 3
                     INFO     Aggregating credit_card...                                   data_loading_multitable.py:124
 Aggregating credit_card...
-                    INFO       ✅ Aggregated from 3,840,312 to 103,558 rows               data_loading_multitable.py:124
+[01/29/26 06:00:03] INFO       ✅ Aggregated from 3,840,312 to 103,558 rows               data_loading_multitable.py:124
   ✅ Aggregated from 3,840,312 to 103,558 rows
                     INFO          Features created: 5                                     data_loading_multitable.py:124
      Features created: 5
                     INFO     Aggregating installments...                                  data_loading_multitable.py:124
 Aggregating installments...
-[01/29/26 05:50:27] INFO       ✅ Aggregated from 13,605,401 to 339,587 rows              data_loading_multitable.py:124
+[01/29/26 06:00:04] INFO       ✅ Aggregated from 13,605,401 to 339,587 rows              data_loading_multitable.py:124
   ✅ Aggregated from 13,605,401 to 339,587 rows
                     INFO          Features created: 4                                     data_loading_multitable.py:124
      Features created: 4
@@ -525,7 +544,7 @@ Joining application ← credit_card
   Type: left
                     INFO       On: application.SK_ID_CURR = credit_card.SK_ID_CURR        data_loading_multitable.py:124
   On: application.SK_ID_CURR = credit_card.SK_ID_CURR
-[01/29/26 05:50:28] INFO       Result: 307,511 rows × 171 cols                            data_loading_multitable.py:124
+                    INFO       Result: 307,511 rows × 171 cols                            data_loading_multitable.py:124
   Result: 307,511 rows × 171 cols
                     INFO                                                                  data_loading_multitable.py:124
                              Joining application ← installments                                                         
@@ -562,8 +581,8 @@ Final shape: 307,511 rows × 181 columns
                              =========                                                                                  
                                                                                                                         
                     INFO     Saving data to X_train_raw (CSVDataset)...                             data_catalog.py:1008
-[01/29/26 05:50:41] INFO     Saving data to X_test_raw (CSVDataset)...                              data_catalog.py:1008
-[01/29/26 05:50:45] INFO     Saving data to y_train_raw (PickleDataset)...                          data_catalog.py:1008
+[01/29/26 06:00:18] INFO     Saving data to X_test_raw (CSVDataset)...                              data_catalog.py:1008
+[01/29/26 06:00:21] INFO     Saving data to y_train_raw (PickleDataset)...                          data_catalog.py:1008
                     INFO     Saving data to y_test_raw (PickleDataset)...                           data_catalog.py:1008
                     INFO     Completed node: load_data_node                                                runner.py:245
                     INFO     Completed 3 out of 20 tasks                                                   runner.py:246
@@ -579,15 +598,15 @@ Final shape: 307,511 rows × 181 columns
                     INFO     Completed node: validate_data_quality_node                                    runner.py:245
                     INFO     Completed 4 out of 20 tasks                                                   runner.py:246
                     INFO     Loading data from X_train_final (CSVDataset)...                        data_catalog.py:1048
-[01/29/26 05:50:49] INFO     Loading data from X_test_final (CSVDataset)...                         data_catalog.py:1048
-[01/29/26 05:50:50] INFO     Loading data from y_train (PickleDataset)...                           data_catalog.py:1048
+[01/29/26 06:00:27] INFO     Loading data from X_test_final (CSVDataset)...                         data_catalog.py:1048
+[01/29/26 06:00:28] INFO     Loading data from y_train (PickleDataset)...                           data_catalog.py:1048
                     INFO     Loading data from params:feature_selection (MemoryDataset)...          data_catalog.py:1048
                     INFO     Running node: feature_selection:                                                node.py:420
                              feature_selection([X_train_final;X_test_final;y_train;params:feature_selection]            
                              ) -> [X_train_selected;X_test_selected]                                                    
 
 ================================================================================
-🎯 FEATURE SELECTION NODE
+🎯 FEATURE SELECTION NODE (100% WORKING)
 ================================================================================
 
    Input features:
@@ -596,24 +615,127 @@ Final shape: 307,511 rows × 181 columns
    Selecting: 56 features
    Problem type: Classification
 
-                    ERROR    Node feature_selection:                                                         node.py:445
-                             feature_selection([X_train_final;X_test_final;y_train;params:feature_selection]            
-                             ) -> [X_train_selected;X_test_selected] failed with error:                                 
-                             Input X contains NaN.                                                                      
-                             SelectKBest does not accept missing values encoded as NaN natively. For                    
-                             supervised learning, you might want to consider                                            
-                             sklearn.ensemble.HistGradientBoostingClassifier and Regressor which accept                 
-                             missing values encoded as NaNs natively. Alternatively, it is possible to                  
-                             preprocess the data, for instance by using an imputer transformer in a pipeline            
-                             or drop samples with missing values. See                                                   
-                             https://scikit-learn.org/stable/modules/impute.html You can find a list of all             
-                             estimators that handle NaN values at the following page:                                   
-                             https://scikit-learn.org/stable/modules/impute.html#estimators-that-handle-nan-            
-                             values                                                                                     
-                    WARNING  There are 16 nodes that have not run.                                         runner.py:339
+   Transforming test data with selected features...
+
+   ✅ Selected 56 features:
+      ['AMT_CREDIT_scaled', 'AMT_GOODS_PRICE_scaled', 'REGION_POPULATION_RELATIVE_scaled', 'DAYS_BIRTH_scaled', 'DAYS_EMPLOYED_scaled', 'DAYS_REGISTRATION_scaled', 'FLAG_EMP_PHONE_scaled', 'FLAG_WORK_PHONE_scaled', 'REGION_RATING_CLIENT_scaled', 'REGION_RATING_CLIENT_W_CITY_scaled', 'REG_CITY_NOT_LIVE_CITY_scaled', 'REG_CITY_NOT_WORK_CITY_scaled', 'LIVE_CITY_NOT_WORK_CITY_scaled', 'EXT_SOURCE_1_scaled', 'EXT_SOURCE_2_scaled', 'EXT_SOURCE_3_scaled', 'FLOORSMAX_AVG_scaled', 'FLOORSMAX_MODE_scaled', 'FLOORSMAX_MEDI_scaled', 'DEF_30_CNT_SOCIAL_CIRCLE_scaled', 'DEF_60_CNT_SOCIAL_CIRCLE_scaled', 'DAYS_LAST_PHONE_CHANGE_scaled', 'FLAG_DOCUMENT_3_scaled', 'FLAG_DOCUMENT_6_scaled', "BUREAU_('DAYS_CREDIT', 'min')_scaled", "BUREAU_('DAYS_CREDIT', 'max')_scaled", "BUREAU_('DAYS_CREDIT', 'mean')_scaled", "BUREAU_('DAYS_CREDIT_ENDDATE', 'min')_scaled", "BUREAU_('DAYS_CREDIT_ENDDATE', 'max')_scaled", "PREV_('DAYS_DECISION', 'min')_scaled", "PREV_('NAME_CONTRACT_STATUS', 'nunique')_scaled", "POS_('MONTHS_BALANCE', 'count')_scaled", "POS_('MONTHS_BALANCE', 'min')_scaled", "CC_('MONTHS_BALANCE', 'count')_scaled", "CC_('MONTHS_BALANCE', 'min')_scaled", "CC_('AMT_BALANCE', 'mean')_scaled", "CC_('AMT_BALANCE', 'max')_scaled", "CC_('AMT_DRAWINGS_ATM_CURRENT', 'mean')_scaled", "CC_('CNT_DRAWINGS_CURRENT', 'sum')_scaled", "CC_('CNT_DRAWINGS_CURRENT', 'mean')_scaled", "INSTALL_('DAYS_ENTRY_PAYMENT', 'min')_scaled", "INSTALL_('DAYS_ENTRY_PAYMENT', 'mean')_scaled", 'NAME_CONTRACT_TYPE_Revolving loans', 'CODE_GENDER_M', 'NAME_INCOME_TYPE_Pensioner', 'NAME_INCOME_TYPE_Working', 'NAME_EDUCATION_TYPE_Higher education', 'NAME_EDUCATION_TYPE_Secondary / secondary special', 'NAME_FAMILY_STATUS_Single / not married', 'NAME_HOUSING_TYPE_House / apartment', 'NAME_HOUSING_TYPE_With parents', 'FONDKAPREMONT_MODE_nan', 'HOUSETYPE_MODE_nan', 'WALLSMATERIAL_MODE_Panel', 'WALLSMATERIAL_MODE_nan', 'EMERGENCYSTATE_MODE_nan']
+
+   Output shapes:
+      X_train_selected: (246008, 56)
+      X_test_selected: (61503, 56)
+      ✅ SHAPES MATCH: False
+================================================================================
+
+[01/29/26 06:00:29] INFO     Saving data to X_train_selected (CSVDataset)...                        data_catalog.py:1008
+[01/29/26 06:00:39] INFO     Saving data to X_test_selected (CSVDataset)...                         data_catalog.py:1008
+[01/29/26 06:00:42] INFO     Completed node: feature_selection                                             runner.py:245
+                    INFO     Completed 5 out of 20 tasks                                                   runner.py:246
+                    INFO     Loading data from X_train_selected (CSVDataset)...                     data_catalog.py:1048
+[01/29/26 06:00:43] INFO     Loading data from X_test_selected (CSVDataset)...                      data_catalog.py:1048
+                    INFO     Loading data from y_train (PickleDataset)...                           data_catalog.py:1048
+                    INFO     Running node: phase3_scale_features:                                            node.py:420
+                             scale_features([X_train_selected;X_test_selected;y_train]) ->                              
+                             [X_train_scaled;X_test_scaled;y_train_balanced;scalers]                                    
+                    INFO     ====================================================================== model_training.py:55
+                             ==========                                                                                 
+                    INFO     🔄 PHASE 3.0: FEATURE SCALING (PATH B) + SMOTE (OPTION D)              model_training.py:56
+                    INFO     ====================================================================== model_training.py:61
+                             ==========                                                                                 
+                    INFO     Found 56 numeric columns to scale                                      model_training.py:67
+                    INFO     Found 0 categorical columns (unchanged)                                model_training.py:68
+                    INFO     Using StandardScaler (default)                                         model_training.py:78
+[01/29/26 06:00:44] INFO     ✅ Scaled 56 numeric columns                                           model_training.py:90
+                    INFO        Train shape: (246008, 56)                                           model_training.py:91
+                    INFO        Test shape: (61503, 56)                                             model_training.py:92
+                    INFO                                                                            model_training.py:97
+                             ======================================================================                     
+                             ==========                                                                                 
+                    INFO     🎯 OPTION D: HANDLING CLASS IMBALANCE WITH SMOTE                       model_training.py:98
+                    INFO     ====================================================================== model_training.py:99
+                             ==========                                                                                 
+                    INFO     Detected classification problem (2 classes)                           model_training.py:107
+                    INFO     Before SMOTE:                                                         model_training.py:111
+                    INFO        Class 0: 226148 samples (91.9%)                                    model_training.py:113
+                    INFO        Class 1: 19860 samples (8.1%)                                      model_training.py:113
+                    INFO                                                                           model_training.py:116
+                             Applying SMOTE to balance classes...                                                       
+[01/29/26 06:00:45] INFO     After SMOTE:                                                          model_training.py:124
+                    INFO        Class 0: 226148 samples (50.0%)                                    model_training.py:127
+                    INFO        Class 1: 226148 samples (50.0%)                                    model_training.py:127
+                    INFO     ✅ Classes balanced with SMOTE!                                       model_training.py:129
+                    INFO     ===================================================================== model_training.py:140
+                             ===========                                                                                
+                    INFO     Saving data to X_train_scaled (CSVDataset)...                          data_catalog.py:1008
+[01/29/26 06:01:08] INFO     Saving data to X_test_scaled (CSVDataset)...                           data_catalog.py:1008
+[01/29/26 06:01:11] INFO     Saving data to y_train_balanced (PickleDataset)...                     data_catalog.py:1008
+[01/29/26 06:01:12] INFO     Saving data to scalers (PickleDataset)...                              data_catalog.py:1008
+                    INFO     Completed node: phase3_scale_features                                         runner.py:245
+                    INFO     Completed 6 out of 20 tasks                                                   runner.py:246
+                    INFO     Loading data from X_train_scaled (CSVDataset)...                       data_catalog.py:1048
+[01/29/26 06:01:14] INFO     Loading data from y_train_balanced (PickleDataset)...                  data_catalog.py:1048
+                    INFO     Loading data from params:problem_type (MemoryDataset)...               data_catalog.py:1048
+                    INFO     Running node: phase3_train_baseline:                                            node.py:420
+                             train_baseline_model([X_train_scaled;y_train_balanced;params:problem_type]) ->             
+                    INFO     ===================================================================== model_training.py:178
+                             ===========                                                                                
+                    INFO     📊 PHASE 3.2: TRAINING BASELINE MODEL                                 model_training.py:179
+                    INFO     ===================================================================== model_training.py:180
+                             ===========                                                                                
+                    INFO     Detected problem type: classification                                 model_training.py:187
+                    INFO     Using LogisticRegression as baseline                                  model_training.py:191
+[01/29/26 06:01:35] INFO     ✅ Baseline trained with score: 0.6915                                model_training.py:199
+                    INFO     ===================================================================== model_training.py:200
+                             ===========                                                                                
+                    INFO     Saving data to baseline_model (PickleDataset)...                       data_catalog.py:1008
+                    INFO     Saving data to baseline_metrics (PickleDataset)...                     data_catalog.py:1008
+                    INFO     Saving data to problem_type (TextDataset)...                           data_catalog.py:1008
+                    INFO     Completed node: phase3_train_baseline                                         runner.py:245
+                    INFO     Completed 7 out of 20 tasks                                                   runner.py:246
+                    INFO     Loading data from X_train_scaled (CSVDataset)...                       data_catalog.py:1048
+[01/29/26 06:01:38] INFO     Loading data from y_train_balanced (PickleDataset)...                  data_catalog.py:1048
+                    INFO     Loading data from problem_type (TextDataset)...                        data_catalog.py:1048
+                    INFO     Loading data from params:feature_selection (MemoryDataset)...          data_catalog.py:1048
+                    INFO     Running node: phase3_hyperparameter_tuning:                                     node.py:420
+                             hyperparameter_tuning([X_train_scaled;y_train_balanced;problem_type;params:feat            
+                             ure_selection]) ->                                                                         
+                    INFO     ===================================================================== model_training.py:224
+                             ===========                                                                                
+                    INFO     PHASE 3.3: OPTIMIZED HYPERPARAMETER TUNING WITH RANDOMIZEDSEARCHCV    model_training.py:225
+                             (PATH B)                                                                                   
+                    INFO     ===================================================================== model_training.py:226
+                             ===========                                                                                
+                    INFO     🎯 Classification: RandomForestClassifier (OPTIMIZED)                 model_training.py:233
+                    INFO     🔧 Parameter distribution:                                            model_training.py:246
+                    INFO        n_estimators: [50, 100, 150, 200, 300, 500]                        model_training.py:248
+                    INFO        max_depth: [5, 10, 15, 20]                                         model_training.py:248
+                    INFO        min_samples_split: [2, 5, 10]                                      model_training.py:248
+                    INFO        min_samples_leaf: [1, 2, 4]                                        model_training.py:248
+                    INFO        max_features: ['sqrt', 'log2', None]                               model_training.py:248
+                    INFO        bootstrap: [True, False]                                           model_training.py:248
+                    INFO                                                                           model_training.py:261
+                             =====================================================================                      
+                             ===========                                                                                
+                    INFO     ⏱️  STARTING RANDOMIZEDSEARCHCV (OPTIMIZED)                           model_training.py:262
+                    INFO        30 random combinations × 5-fold CV = 150 model fits                model_training.py:263
+                    INFO        Estimated time: 5-10 minutes (was 2+ hours)                        model_training.py:264
+                    INFO     ===================================================================== model_training.py:265
+                             ===========                                                                                
+                                                                                                                        
+Fitting 5 folds for each of 10 candidates, totalling 50 fits
+[01/29/26 06:02:25] ERROR    Node phase3_hyperparameter_tuning:                                              node.py:445
+                             hyperparameter_tuning([X_train_scaled;y_train_balanced;problem_type;params:feat            
+                             ure_selection]) ->  failed with error:                                                     
+                             A worker process managed by the executor was unexpectedly terminated. This                 
+                             could be caused by a segmentation fault while calling the function or by an                
+                             excessive memory usage causing the Operating System to kill the worker.                    
+                                                                                                                        
+                             The exit codes of the workers are {SIGKILL(-9)}                                            
+                             Detailed tracebacks of the workers should have been printed to stderr in the               
+                             executor process if faulthandler was not disabled.                                         
+                    WARNING  There are 13 nodes that have not run.                                         runner.py:339
                              You can resume the pipeline run from the nearest nodes with persisted inputs               
                              by adding the following argument to your previous command:                                 
-                               --from-nodes "feature_selection"                                                         
+                               --from-nodes "phase3_hyperparameter_tuning,phase4_train_all"                             
 ╭─────────────────────────────── Traceback (most recent call last) ────────────────────────────────╮
 │ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/bin/kedro:8 in <module>                  │
 │                                                                                                  │
@@ -784,38 +906,16 @@ Final shape: 307,511 rows × 181 columns
 │   484 │   def _run_with_dict(                                                                    │
 │   485 │   │   self, inputs: dict[str, Any], node_inputs: dict[str, str]                          │
 │                                                                                                  │
-│ /home/ashok/work/latest/kedro-ml-engine-integrated/src/ml_engine/pipelines/feature_engineering.p │
-│ y:704 in feature_selection                                                                       │
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/src/ml_engine/pipelines/model_training.py:267 │
+│ in hyperparameter_tuning                                                                         │
 │                                                                                                  │
-│   701 │   selector = SelectKBest(score_func=score_func, k=k)                                     │
-│   702 │                                                                                          │
-│   703 │   # Fit on training data                                                                 │
-│ ❱ 704 │   X_train_selected_array = selector.fit_transform(X_train_engineered, y_train)           │
-│   705 │   selected_features = X_train_engineered.columns[selector.get_support()].tolist()        │
-│   706 │                                                                                          │
-│   707 │   # Create training dataframe                                                            │
-│                                                                                                  │
-│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/sklearn/uti │
-│ ls/_set_output.py:316 in wrapped                                                                 │
-│                                                                                                  │
-│   313 │                                                                                          │
-│   314 │   @wraps(f)                                                                              │
-│   315 │   def wrapped(self, X, *args, **kwargs):                                                 │
-│ ❱ 316 │   │   data_to_wrap = f(self, X, *args, **kwargs)                                         │
-│   317 │   │   if isinstance(data_to_wrap, tuple):                                                │
-│   318 │   │   │   # only wrap the first output for cross decomposition                           │
-│   319 │   │   │   return_tuple = (                                                               │
-│                                                                                                  │
-│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/sklearn/bas │
-│ e.py:910 in fit_transform                                                                        │
-│                                                                                                  │
-│    907 │   │   │   return self.fit(X, **fit_params).transform(X)                                 │
-│    908 │   │   else:                                                                             │
-│    909 │   │   │   # fit method of arity 2 (supervised transformation)                           │
-│ ❱  910 │   │   │   return self.fit(X, y, **fit_params).transform(X)                              │
-│    911                                                                                           │
-│    912                                                                                           │
-│    913 class OneToOneFeatureMixin:                                                               │
+│   264 │   │   log.info("   Estimated time: 5-10 minutes (was 2+ hours)")                         │
+│   265 │   │   log.info("="*80 + "\n")                                                            │
+│   266 │   │                                                                                      │
+│ ❱ 267 │   │   search.fit(X_train, y_train)                                                       │
+│   268 │   │                                                                                      │
+│   269 │   │   log.info(f"✅ Best params: {search.best_params_}")                                 │
+│   270 │   │   log.info(f"✅ Best CV accuracy: {search.best_score_:.4f}")                         │
 │                                                                                                  │
 │ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/sklearn/bas │
 │ e.py:1336 in wrapper                                                                             │
@@ -828,77 +928,121 @@ Final shape: 307,511 rows × 181 columns
 │   1338 │   │   return wrapper                                                                    │
 │   1339                                                                                           │
 │                                                                                                  │
-│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/sklearn/fea │
-│ ture_selection/_univariate_selection.py:563 in fit                                               │
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/sklearn/mod │
+│ el_selection/_search.py:1053 in fit                                                              │
 │                                                                                                  │
-│    560 │   │   if y is None:                                                                     │
-│    561 │   │   │   X = validate_data(self, X, accept_sparse=["csr", "csc"])                      │
-│    562 │   │   else:                                                                             │
-│ ❱  563 │   │   │   X, y = validate_data(                                                         │
-│    564 │   │   │   │   self, X, y, accept_sparse=["csr", "csc"], multi_output=True               │
-│    565 │   │   │   )                                                                             │
-│    566                                                                                           │
+│   1050 │   │   │   │                                                                             │
+│   1051 │   │   │   │   return results                                                            │
+│   1052 │   │   │                                                                                 │
+│ ❱ 1053 │   │   │   self._run_search(evaluate_candidates)                                         │
+│   1054 │   │   │                                                                                 │
+│   1055 │   │   │   # multimetric is determined here because in the case of a callable            │
+│   1056 │   │   │   # self.scoring the return type is only known after calling                    │
 │                                                                                                  │
-│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/sklearn/uti │
-│ ls/validation.py:2919 in validate_data                                                           │
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/sklearn/mod │
+│ el_selection/_search.py:2002 in _run_search                                                      │
 │                                                                                                  │
-│   2916 │   │   │   │   check_y_params = {**default_check_params, **check_y_params}               │
-│   2917 │   │   │   y = check_array(y, input_name="y", **check_y_params)                          │
-│   2918 │   │   else:                                                                             │
-│ ❱ 2919 │   │   │   X, y = check_X_y(X, y, **check_params)                                        │
-│   2920 │   │   out = X, y                                                                        │
-│   2921 │                                                                                         │
-│   2922 │   if not no_val_X and check_params.get("ensure_2d", True):                              │
+│   1999 │                                                                                         │
+│   2000 │   def _run_search(self, evaluate_candidates):                                           │
+│   2001 │   │   """Search n_iter candidates from param_distributions"""                           │
+│ ❱ 2002 │   │   evaluate_candidates(                                                              │
+│   2003 │   │   │   ParameterSampler(                                                             │
+│   2004 │   │   │   │   self.param_distributions, self.n_iter, random_state=self.random_state     │
+│   2005 │   │   │   )                                                                             │
 │                                                                                                  │
-│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/sklearn/uti │
-│ ls/validation.py:1314 in check_X_y                                                               │
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/sklearn/mod │
+│ el_selection/_search.py:999 in evaluate_candidates                                               │
 │                                                                                                  │
-│   1311 │   │   │   f"{estimator_name} requires y to be passed, but the target y is None"         │
-│   1312 │   │   )                                                                                 │
-│   1313 │                                                                                         │
-│ ❱ 1314 │   X = check_array(                                                                      │
-│   1315 │   │   X,                                                                                │
-│   1316 │   │   accept_sparse=accept_sparse,                                                      │
-│   1317 │   │   accept_large_sparse=accept_large_sparse,                                          │
-│                                                                                                  │
-│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/sklearn/uti │
-│ ls/validation.py:1074 in check_array                                                             │
-│                                                                                                  │
-│   1071 │   │   │   )                                                                             │
-│   1072 │   │                                                                                     │
-│   1073 │   │   if ensure_all_finite:                                                             │
-│ ❱ 1074 │   │   │   _assert_all_finite(                                                           │
-│   1075 │   │   │   │   array,                                                                    │
-│   1076 │   │   │   │   input_name=input_name,                                                    │
-│   1077 │   │   │   │   estimator_name=estimator_name,                                            │
+│    996 │   │   │   │   │   │   )                                                                 │
+│    997 │   │   │   │   │   )                                                                     │
+│    998 │   │   │   │                                                                             │
+│ ❱  999 │   │   │   │   out = parallel(                                                           │
+│   1000 │   │   │   │   │   delayed(_fit_and_score)(                                              │
+│   1001 │   │   │   │   │   │   clone(base_estimator),                                            │
+│   1002 │   │   │   │   │   │   X,                                                                │
 │                                                                                                  │
 │ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/sklearn/uti │
-│ ls/validation.py:133 in _assert_all_finite                                                       │
+│ ls/parallel.py:91 in __call__                                                                    │
 │                                                                                                  │
-│    130 │   if first_pass_isfinite:                                                               │
-│    131 │   │   return                                                                            │
-│    132 │                                                                                         │
-│ ❱  133 │   _assert_all_finite_element_wise(                                                      │
-│    134 │   │   X,                                                                                │
-│    135 │   │   xp=xp,                                                                            │
-│    136 │   │   allow_nan=allow_nan,                                                              │
+│    88 │   │   │   )                                                                              │
+│    89 │   │   │   for delayed_func, args, kwargs in iterable                                     │
+│    90 │   │   )                                                                                  │
+│ ❱  91 │   │   return super().__call__(iterable_with_config_and_warning_filters)                  │
+│    92                                                                                            │
+│    93                                                                                            │
+│    94 # remove when https://github.com/joblib/joblib/issues/1071 is fixed                        │
 │                                                                                                  │
-│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/sklearn/uti │
-│ ls/validation.py:182 in _assert_all_finite_element_wise                                          │
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/joblib/para │
+│ llel.py:2072 in __call__                                                                         │
 │                                                                                                  │
-│    179 │   │   │   │   " https://scikit-learn.org/stable/modules/impute.html"                    │
-│    180 │   │   │   │   "#estimators-that-handle-nan-values"                                      │
-│    181 │   │   │   )                                                                             │
-│ ❱  182 │   │   raise ValueError(msg_err)                                                         │
-│    183                                                                                           │
-│    184                                                                                           │
-│    185 def assert_all_finite(                                                                    │
+│   2069 │   │   # dispatch of the tasks to the workers.                                           │
+│   2070 │   │   next(output)                                                                      │
+│   2071 │   │                                                                                     │
+│ ❱ 2072 │   │   return output if self.return_generator else list(output)                          │
+│   2073 │                                                                                         │
+│   2074 │   def __repr__(self):                                                                   │
+│   2075 │   │   return "%s(n_jobs=%s)" % (self.__class__.__name__, self.n_jobs)                   │
+│                                                                                                  │
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/joblib/para │
+│ llel.py:1682 in _get_outputs                                                                     │
+│                                                                                                  │
+│   1679 │   │   │   yield                                                                         │
+│   1680 │   │   │                                                                                 │
+│   1681 │   │   │   with self._backend.retrieval_context():                                       │
+│ ❱ 1682 │   │   │   │   yield from self._retrieve()                                               │
+│   1683 │   │                                                                                     │
+│   1684 │   │   except GeneratorExit:                                                             │
+│   1685 │   │   │   # The generator has been garbage collected before being fully                 │
+│                                                                                                  │
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/joblib/para │
+│ llel.py:1784 in _retrieve                                                                        │
+│                                                                                                  │
+│   1781 │   │   │   # exception (e.g. `GeneratorExit`), exit the loop and surface the             │
+│   1782 │   │   │   # worker traceback.                                                           │
+│   1783 │   │   │   if self._aborting:                                                            │
+│ ❱ 1784 │   │   │   │   self._raise_error_fast()                                                  │
+│   1785 │   │   │   │   break                                                                     │
+│   1786 │   │   │                                                                                 │
+│   1787 │   │   │   nb_jobs = len(self._jobs)                                                     │
+│                                                                                                  │
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/joblib/para │
+│ llel.py:1859 in _raise_error_fast                                                                │
+│                                                                                                  │
+│   1856 │   │   # calling get_result. This job might not exists if abort has been                 │
+│   1857 │   │   # called directly or if the generator is gc'ed.                                   │
+│   1858 │   │   if error_job is not None:                                                         │
+│ ❱ 1859 │   │   │   error_job.get_result(self.timeout)                                            │
+│   1860 │                                                                                         │
+│   1861 │   def _warn_exit_early(self):                                                           │
+│   1862 │   │   """Warn the user if the generator is gc'ed before being consumned."""             │
+│                                                                                                  │
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/joblib/para │
+│ llel.py:758 in get_result                                                                        │
+│                                                                                                  │
+│    755 │   │   │   # We assume that the result has already been retrieved by the                 │
+│    756 │   │   │   # callback thread, and is stored internally. It's just waiting to             │
+│    757 │   │   │   # be returned.                                                                │
+│ ❱  758 │   │   │   return self._return_or_raise()                                                │
+│    759 │   │                                                                                     │
+│    760 │   │   # For other backends, the main thread needs to run the retrieval step.            │
+│    761 │   │   try:                                                                              │
+│                                                                                                  │
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/joblib/para │
+│ llel.py:773 in _return_or_raise                                                                  │
+│                                                                                                  │
+│    770 │   def _return_or_raise(self):                                                           │
+│    771 │   │   try:                                                                              │
+│    772 │   │   │   if self.status == TASK_ERROR:                                                 │
+│ ❱  773 │   │   │   │   raise self._result                                                        │
+│    774 │   │   │   return self._result                                                           │
+│    775 │   │   finally:                                                                          │
+│    776 │   │   │   del self._result                                                              │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
-ValueError: Input X contains NaN.
-SelectKBest does not accept missing values encoded as NaN natively. For supervised learning, you might want to consider 
-sklearn.ensemble.HistGradientBoostingClassifier and Regressor which accept missing values encoded as NaNs natively. 
-Alternatively, it is possible to preprocess the data, for instance by using an imputer transformer in a pipeline or drop
-samples with missing values. See https://scikit-learn.org/stable/modules/impute.html You can find a list of all 
-estimators that handle NaN values at the following page: 
-https://scikit-learn.org/stable/modules/impute.html#estimators-that-handle-nan-values
-(venv) ashok@ubuntu:~/work/latest/kedro-ml-engine-integrated$ 
+TerminatedWorkerError: A worker process managed by the executor was unexpectedly terminated. This could be caused by a 
+segmentation fault while calling the function or by an excessive memory usage causing the Operating System to kill the 
+worker.
+
+The exit codes of the workers are {SIGKILL(-9)}
+Detailed tracebacks of the workers should have been printed to stderr in the executor process if faulthandler was not 
+disabled.
+/home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/joblib/externals/loky/backend/resou
