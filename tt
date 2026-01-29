@@ -1,18 +1,18 @@
-(venv) ashok@ubuntu:~/work/latest/kedro-ml-engine-integrated$ kedro run --pipeline data_loading
-[01/29/26 04:58:22] INFO     Using                                                                       __init__.py:269
+ashok@ubuntu:~/work/latest/kedro-ml-engine-integrated$ kedro run --pipeline data_loading
+[01/29/26 05:05:26] INFO     Using                                                                       __init__.py:269
                              '/home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/sit                
                              e-packages/kedro/framework/project/rich_logging.yml' as logging                            
                              configuration.                                                                             
-[01/29/26 04:58:22] INFO     Kedro project kedro-ml-engine-integrated                                     session.py:330
+[01/29/26 05:05:26] INFO     Kedro project kedro-ml-engine-integrated                                     session.py:330
 ✅ Multi-table loader imported successfully
-[01/29/26 04:58:24] INFO     ✅ Phase 1a (data_loading) imported successfully                    pipeline_registry.py:62
+[01/29/26 05:05:28] INFO     ✅ Phase 1a (data_loading) imported successfully                    pipeline_registry.py:62
                     INFO     ✅ Phase 1b (data_validation) imported successfully                 pipeline_registry.py:69
                     INFO     ✅ Phase 1c (data_cleaning with PATH B feature scaling) imported    pipeline_registry.py:76
                              successfully                                                                               
                     INFO     ✅ Phase 2a (feature_engineering) imported successfully             pipeline_registry.py:87
                     INFO     ✅ Phase 2b (feature_selection) imported successfully               pipeline_registry.py:94
                     INFO     ✅ Phase 3 (model_training with PATH A+B) imported successfully    pipeline_registry.py:108
-                    INFO     ✅ Phase 4 (phase4_algorithms with PATH A+B+C ready) imported      pipeline_registry.py:126
+[01/29/26 05:05:29] INFO     ✅ Phase 4 (phase4_algorithms with PATH A+B+C ready) imported      pipeline_registry.py:126
                              successfully                                                                               
                     INFO     ✅ Phase 6 (ensemble_methods) imported successfully                pipeline_registry.py:139
                     INFO     ✅ Phase 5a (training_strategies) module available                 pipeline_registry.py:166
@@ -191,22 +191,22 @@
 ================================================================================
 
                     INFO     Loading application...                                       data_loading_multitable.py:124
-Loading application... [01/29/26 04:58:26] INFO     ✅ (307,511 rows × 122 cols)                                 data_loading_multitable.py:124
+Loading application... [01/29/26 05:05:31] INFO     ✅ (307,511 rows × 122 cols)                                 data_loading_multitable.py:124
 ✅ (307,511 rows × 122 cols)
                     INFO     Loading bureau...                                            data_loading_multitable.py:124
-Loading bureau... [01/29/26 04:58:28] INFO     ✅ (1,716,428 rows × 17 cols)                                data_loading_multitable.py:124
+Loading bureau... [01/29/26 05:05:33] INFO     ✅ (1,716,428 rows × 17 cols)                                data_loading_multitable.py:124
 ✅ (1,716,428 rows × 17 cols)
                     INFO     Loading previous_application...                              data_loading_multitable.py:124
-Loading previous_application... [01/29/26 04:58:32] INFO     ✅ (1,670,214 rows × 37 cols)                                data_loading_multitable.py:124
+Loading previous_application... [01/29/26 05:05:37] INFO     ✅ (1,670,214 rows × 37 cols)                                data_loading_multitable.py:124
 ✅ (1,670,214 rows × 37 cols)
                     INFO     Loading pos_cash...                                          data_loading_multitable.py:124
-Loading pos_cash... [01/29/26 04:58:36] INFO     ✅ (10,001,358 rows × 8 cols)                                data_loading_multitable.py:124
+Loading pos_cash... [01/29/26 05:05:40] INFO     ✅ (10,001,358 rows × 8 cols)                                data_loading_multitable.py:124
 ✅ (10,001,358 rows × 8 cols)
                     INFO     Loading credit_card...                                       data_loading_multitable.py:124
-Loading credit_card... [01/29/26 04:58:39] INFO     ✅ (3,840,312 rows × 23 cols)                                data_loading_multitable.py:124
+Loading credit_card... [01/29/26 05:05:44] INFO     ✅ (3,840,312 rows × 23 cols)                                data_loading_multitable.py:124
 ✅ (3,840,312 rows × 23 cols)
                     INFO     Loading installments...                                      data_loading_multitable.py:124
-Loading installments... [01/29/26 04:58:46] INFO     ✅ (13,605,401 rows × 8 cols)                                data_loading_multitable.py:124
+Loading installments... [01/29/26 05:05:51] INFO     ✅ (13,605,401 rows × 8 cols)                                data_loading_multitable.py:124
 ✅ (13,605,401 rows × 8 cols)
                     INFO                                                                  data_loading_multitable.py:124
                              ============================================================                               
@@ -222,288 +222,127 @@ Loading installments... [01/29/26 04:58:46] INFO     ✅ (13,605,401 rows × 8 c
 
                     INFO     Aggregating bureau...                                        data_loading_multitable.py:124
 Aggregating bureau...
-                    ERROR    Node load_data_node: load_data_auto() ->                                        node.py:445
-                             [X_train_raw;X_test_raw;y_train_raw;y_test_raw] failed with error:                         
-                             "Label(s) ['CNT_CREDIT', 'STATUS'] do not exist"                                           
-                    WARNING  No nodes ran. Repeat the previous command to attempt a new run.               runner.py:335
-╭─────────────────────────────── Traceback (most recent call last) ────────────────────────────────╮
-│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/bin/kedro:8 in <module>                  │
-│                                                                                                  │
-│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/kedro/frame │
-│ work/cli/cli.py:260 in main                                                                      │
-│                                                                                                  │
-│   257 │   """                                                                                    │
-│   258 │   _init_plugins()                                                                        │
-│   259 │   cli_collection = KedroCLI(project_path=find_kedro_project(Path.cwd()) or Path.cwd())   │
-│ ❱ 260 │   cli_collection()                                                                       │
-│   261                                                                                            │
-│                                                                                                  │
-│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/click/core. │
-│ py:1485 in __call__                                                                              │
-│                                                                                                  │
-│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/kedro/frame │
-│ work/cli/cli.py:162 in main                                                                      │
-│                                                                                                  │
-│   159 │   │   )                                                                                  │
-│   160 │   │                                                                                      │
-│   161 │   │   try:                                                                               │
-│ ❱ 162 │   │   │   super().main(                                                                  │
-│   163 │   │   │   │   args=args,                                                                 │
-│   164 │   │   │   │   prog_name=prog_name,                                                       │
-│   165 │   │   │   │   complete_var=complete_var,                                                 │
-│                                                                                                  │
-│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/click/core. │
-│ py:1406 in main                                                                                  │
-│                                                                                                  │
-│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/click/core. │
-│ py:1873 in invoke                                                                                │
-│                                                                                                  │
-│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/click/core. │
-│ py:1269 in invoke                                                                                │
-│                                                                                                  │
-│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/click/core. │
-│ py:824 in invoke                                                                                 │
-│                                                                                                  │
-│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/kedro/frame │
-│ work/cli/project.py:262 in run                                                                   │
-│                                                                                                  │
-│   259 │   with KedroSession.create(                                                              │
-│   260 │   │   env=env, conf_source=conf_source, runtime_params=params                            │
-│   261 │   ) as session:                                                                          │
-│ ❱ 262 │   │   return session.run(                                                                │
-│   263 │   │   │   tags=tuple_tags,                                                               │
-│   264 │   │   │   runner=runner_obj(is_async=is_async),                                          │
-│   265 │   │   │   node_names=tuple_node_names,                                                   │
-│                                                                                                  │
-│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/kedro/frame │
-│ work/session/session.py:409 in run                                                               │
-│                                                                                                  │
-│   406 │   │   │   run_params=record_data, pipeline=filtered_pipeline, catalog=catalog            │
-│   407 │   │   )                                                                                  │
-│   408 │   │   try:                                                                               │
-│ ❱ 409 │   │   │   run_result = runner.run(                                                       │
-│   410 │   │   │   │   filtered_pipeline,                                                         │
-│   411 │   │   │   │   catalog,                                                                   │
-│   412 │   │   │   │   hook_manager,                                                              │
-│                                                                                                  │
-│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/kedro/runne │
-│ r/runner.py:115 in run                                                                           │
-│                                                                                                  │
-│   112 │   │   │   )                                                                              │
-│   113 │   │                                                                                      │
-│   114 │   │   start_time = perf_counter()                                                        │
-│ ❱ 115 │   │   self._run(pipeline, catalog, hook_or_null_manager, run_id)  # type: ignore[arg-t   │
-│   116 │   │   end_time = perf_counter()                                                          │
-│   117 │   │   run_duration = end_time - start_time                                               │
-│   118                                                                                            │
-│                                                                                                  │
-│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/kedro/runne │
-│ r/sequential_runner.py:63 in _run                                                                │
-│                                                                                                  │
-│   60 │   │   │   │   "Using synchronous mode for loading and saving data. Use the --async fla    │
-│   61 │   │   │   │   "for potential performance gains. https://docs.kedro.org/en/stable/nodes    │
-│   62 │   │   │   )                                                                               │
-│ ❱ 63 │   │   super()._run(                                                                       │
-│   64 │   │   │   pipeline=pipeline,                                                              │
-│   65 │   │   │   catalog=catalog,                                                                │
-│   66 │   │   │   hook_manager=hook_manager,                                                      │
-│                                                                                                  │
-│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/kedro/runne │
-│ r/runner.py:240 in _run                                                                          │
-│                                                                                                  │
-│   237 │   │   │   │   │   │   hook_manager=hook_manager,                                         │
-│   238 │   │   │   │   │   │   is_async=self._is_async,                                           │
-│   239 │   │   │   │   │   │   run_id=run_id,                                                     │
-│ ❱ 240 │   │   │   │   │   ).execute()                                                            │
-│   241 │   │   │   │   │   done_nodes.add(node)                                                   │
-│   242 │   │   │   │   except Exception:                                                          │
-│   243 │   │   │   │   │   self._suggest_resume_scenario(pipeline, done_nodes, catalog)           │
-│                                                                                                  │
-│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/kedro/runne │
-│ r/task.py:88 in execute                                                                          │
-│                                                                                                  │
-│    85 │   │   │   │   self.run_id,                                                               │
-│    86 │   │   │   )                                                                              │
-│    87 │   │   else:                                                                              │
-│ ❱  88 │   │   │   node = self._run_node_sequential(                                              │
-│    89 │   │   │   │   self.node,                                                                 │
-│    90 │   │   │   │   self.catalog,                                                              │
-│    91 │   │   │   │   self.hook_manager,  # type: ignore[arg-type]                               │
-│                                                                                                  │
-│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/kedro/runne │
-│ r/task.py:164 in _run_node_sequential                                                            │
-│                                                                                                  │
-│   161 │   │   )                                                                                  │
-│   162 │   │   inputs.update(additional_inputs)                                                   │
-│   163 │   │                                                                                      │
-│ ❱ 164 │   │   outputs = self._call_node_run(                                                     │
-│   165 │   │   │   node, catalog, inputs, is_async, hook_manager, run_id=run_id                   │
-│   166 │   │   )                                                                                  │
-│   167                                                                                            │
-│                                                                                                  │
-│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/kedro/runne │
-│ r/task.py:309 in _call_node_run                                                                  │
-│                                                                                                  │
-│   306 │   │   │   │   is_async=is_async,                                                         │
-│   307 │   │   │   │   run_id=run_id,                                                             │
-│   308 │   │   │   )                                                                              │
-│ ❱ 309 │   │   │   raise exc                                                                      │
-│   310 │   │   hook_manager.hook.after_node_run(                                                  │
-│   311 │   │   │   node=node,                                                                     │
-│   312 │   │   │   catalog=catalog,                                                               │
-│                                                                                                  │
-│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/kedro/runne │
-│ r/task.py:299 in _call_node_run                                                                  │
-│                                                                                                  │
-│   296 │   │   run_id: str | None = None,                                                         │
-│   297 │   ) -> dict[str, Any]:                                                                   │
-│   298 │   │   try:                                                                               │
-│ ❱ 299 │   │   │   outputs = node.run(inputs)                                                     │
-│   300 │   │   except Exception as exc:                                                           │
-│   301 │   │   │   hook_manager.hook.on_node_error(                                               │
-│   302 │   │   │   │   error=exc,                                                                 │
-│                                                                                                  │
-│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/kedro/pipel │
-│ ine/node.py:451 in run                                                                           │
-│                                                                                                  │
-│   448 │   │   │   │   str(exc),                                                                  │
-│   449 │   │   │   │   extra={"markup": True},                                                    │
-│   450 │   │   │   )                                                                              │
-│ ❱ 451 │   │   │   raise exc                                                                      │
-│   452 │                                                                                          │
-│   453 │   def _run_with_no_inputs(self, inputs: dict[str, Any]) -> Any:                          │
-│   454 │   │   if inputs:                                                                         │
-│                                                                                                  │
-│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/kedro/pipel │
-│ ine/node.py:435 in run                                                                           │
-│                                                                                                  │
-│   432 │   │   │   if not self._inputs:                                                           │
-│   433 │   │   │   │   outputs = self._run_with_no_inputs(inputs)                                 │
-│   434 │   │   │   elif isinstance(self._inputs, str):                                            │
-│ ❱ 435 │   │   │   │   outputs = self._run_with_one_input(inputs, self._inputs)                   │
-│   436 │   │   │   elif isinstance(self._inputs, list):                                           │
-│   437 │   │   │   │   outputs = self._run_with_list(inputs, self._inputs)                        │
-│   438 │   │   │   elif isinstance(self._inputs, dict):                                           │
-│                                                                                                  │
-│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/kedro/pipel │
-│ ine/node.py:471 in _run_with_one_input                                                           │
-│                                                                                                  │
-│   468 │   │   │   │   f"{sorted(inputs.keys())}."                                                │
-│   469 │   │   │   )                                                                              │
-│   470 │   │                                                                                      │
-│ ❱ 471 │   │   return self._func(inputs[node_input])                                              │
-│   472 │                                                                                          │
-│   473 │   def _run_with_list(self, inputs: dict[str, Any], node_inputs: list[str]) -> Any:       │
-│   474 │   │   # Node inputs and provided run inputs should completely overlap                    │
-│                                                                                                  │
-│ /home/ashok/work/latest/kedro-ml-engine-integrated/src/ml_engine/pipelines/data_loading/data_loa │
-│ ding.py:164 in load_data_auto                                                                    │
-│                                                                                                  │
-│   161 │   │   │   raise RuntimeError("Multi-table loader not available!")                        │
-│   162 │   │                                                                                      │
-│   163 │   │   log.info("🔗 Multi-Table Mode Activated")                                          │
-│ ❱ 164 │   │   data = _load_multi_table(data_cfg)                                                 │
-│   165 │   else:                                                                                  │
-│   166 │   │   # Single-table mode (default)                                                      │
-│   167 │   │   log.info("📂 Single-Table Mode Activated")                                         │
-│                                                                                                  │
-│ /home/ashok/work/latest/kedro-ml-engine-integrated/src/ml_engine/pipelines/data_loading/data_loa │
-│ ding.py:259 in _load_multi_table                                                                 │
-│                                                                                                  │
-│   256 │                                                                                          │
-│   257 │   # Load data                                                                            │
-│   258 │   loader = MultiTableDataLoader(config, verbose=True)                                    │
-│ ❱ 259 │   return loader.load_and_join()                                                          │
-│   260                                                                                            │
-│   261                                                                                            │
-│   262 # ════════════════════════════════════════════════════════════════════════════             │
-│                                                                                                  │
-│ /home/ashok/work/latest/kedro-ml-engine-integrated/src/ml_engine/pipelines/data_loading/data_loa │
-│ ding_multitable.py:265 in load_and_join                                                          │
-│                                                                                                  │
-│   262 │   │                                                                                      │
-│   263 │   │   # Aggregate if needed                                                              │
-│   264 │   │   if self.config.aggregations:                                                       │
-│ ❱ 265 │   │   │   self.aggregate_tables()                                                        │
-│   266 │   │                                                                                      │
-│   267 │   │   # Join all tables                                                                  │
-│   268 │   │   if self.config.joins:                                                              │
-│                                                                                                  │
-│ /home/ashok/work/latest/kedro-ml-engine-integrated/src/ml_engine/pipelines/data_loading/data_loa │
-│ ding_multitable.py:186 in aggregate_tables                                                       │
-│                                                                                                  │
-│   183 │   │   │   source_table = self.tables[agg_cfg.table]                                      │
-│   184 │   │   │                                                                                  │
-│   185 │   │   │   # Group and aggregate                                                          │
-│ ❱ 186 │   │   │   agg_df = source_table.groupby(agg_cfg.group_by).agg(agg_cfg.features)          │
-│   187 │   │   │                                                                                  │
-│   188 │   │   │   # Flatten column names                                                         │
-│   189 │   │   │   agg_df.columns = [f"{agg_cfg.prefix}{col}" if agg_cfg.prefix else col          │
-│                                                                                                  │
-│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/pandas/core │
-│ /groupby/generic.py:2291 in aggregate                                                            │
-│                                                                                                  │
-│   2288 │   │   │   kwargs["engine_kwargs"] = engine_kwargs                                       │
-│   2289 │   │                                                                                     │
-│   2290 │   │   op = GroupByApply(self, func, args=args, kwargs=kwargs)                           │
-│ ❱ 2291 │   │   result = op.agg()                                                                 │
-│   2292 │   │   if not is_dict_like(func) and result is not None:                                 │
-│   2293 │   │   │   # GH #52849                                                                   │
-│   2294 │   │   │   if not self.as_index and is_list_like(func):                                  │
-│                                                                                                  │
-│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/pandas/core │
-│ /apply.py:294 in agg                                                                             │
-│                                                                                                  │
-│    291 │   │   │   return self.apply_str()                                                       │
-│    292 │   │                                                                                     │
-│    293 │   │   if is_dict_like(func):                                                            │
-│ ❱  294 │   │   │   return self.agg_dict_like()                                                   │
-│    295 │   │   elif is_list_like(func):                                                          │
-│    296 │   │   │   # we require a list, but not a 'str'                                          │
-│    297 │   │   │   return self.agg_list_like()                                                   │
-│                                                                                                  │
-│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/pandas/core │
-│ /apply.py:511 in agg_dict_like                                                                   │
-│                                                                                                  │
-│    508 │   │   -------                                                                           │
-│    509 │   │   Result of aggregation.                                                            │
-│    510 │   │   """                                                                               │
-│ ❱  511 │   │   return self.agg_or_apply_dict_like(op_name="agg")                                 │
-│    512 │                                                                                         │
-│    513 │   def compute_dict_like(                                                                │
-│    514 │   │   self,                                                                             │
-│                                                                                                  │
-│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/pandas/core │
-│ /apply.py:1677 in agg_or_apply_dict_like                                                         │
-│                                                                                                  │
-│   1674 │   │   with com.temp_setattr(                                                            │
-│   1675 │   │   │   obj, "as_index", True, condition=hasattr(obj, "as_index")                     │
-│   1676 │   │   ):                                                                                │
-│ ❱ 1677 │   │   │   result_index, result_data = self.compute_dict_like(                           │
-│   1678 │   │   │   │   op_name, selected_obj, selection, kwargs                                  │
-│   1679 │   │   │   )                                                                             │
-│   1680 │   │   result = self.wrap_results_dict_like(selected_obj, result_index, result_data)     │
-│                                                                                                  │
-│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/pandas/core │
-│ /apply.py:550 in compute_dict_like                                                               │
-│                                                                                                  │
-│    547 │   │   obj = self.obj                                                                    │
-│    548 │   │   is_groupby = isinstance(obj, (DataFrameGroupBy, SeriesGroupBy))                   │
-│    549 │   │   func = cast(AggFuncTypeDict, self.func)                                           │
-│ ❱  550 │   │   func = self.normalize_dictlike_arg(op_name, selected_obj, func)                   │
-│    551 │   │                                                                                     │
-│    552 │   │   is_non_unique_col = (                                                             │
-│    553 │   │   │   selected_obj.ndim == 2                                                        │
-│                                                                                                  │
-│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/pandas/core │
-│ /apply.py:762 in normalize_dictlike_arg                                                          │
-│                                                                                                  │
-│    759 │   │   │   cols = Index(list(func.keys())).difference(obj.columns, sort=True)            │
-│    760 │   │   │   if len(cols) > 0:                                                             │
-│    761 │   │   │   │   # GH 58474                                                                │
-│ ❱  762 │   │   │   │   raise KeyError(f"Label(s) {list(cols)} do not exist")                     │
-│    763 │   │                                                                                     │
-│    764 │   │   aggregator_types = (list, tuple, dict)                                            │
-│    765                                                                                           │
-╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
-KeyError: "Label(s) ['CNT_CREDIT', 'STATUS'] do not exist"
+                    INFO       ✅ Aggregated from 1,716,428 to 305,811 rows               data_loading_multitable.py:124
+  ✅ Aggregated from 1,716,428 to 305,811 rows
+                    INFO          Features created: 8                                     data_loading_multitable.py:124
+     Features created: 8
+                    INFO     Aggregating previous_application...                          data_loading_multitable.py:124
+Aggregating previous_application...
+[01/29/26 05:05:52] INFO       ✅ Aggregated from 1,670,214 to 338,857 rows               data_loading_multitable.py:124
+  ✅ Aggregated from 1,670,214 to 338,857 rows
+                    INFO          Features created: 6                                     data_loading_multitable.py:124
+     Features created: 6
+                    INFO     Aggregating pos_cash...                                      data_loading_multitable.py:124
+Aggregating pos_cash...
+[01/29/26 05:05:53] INFO       ✅ Aggregated from 10,001,358 to 337,252 rows              data_loading_multitable.py:124
+  ✅ Aggregated from 10,001,358 to 337,252 rows
+                    INFO          Features created: 3                                     data_loading_multitable.py:124
+     Features created: 3
+                    INFO     Aggregating credit_card...                                   data_loading_multitable.py:124
+Aggregating credit_card...
+                    INFO       ✅ Aggregated from 3,840,312 to 103,558 rows               data_loading_multitable.py:124
+  ✅ Aggregated from 3,840,312 to 103,558 rows
+                    INFO          Features created: 5                                     data_loading_multitable.py:124
+     Features created: 5
+                    INFO     Aggregating installments...                                  data_loading_multitable.py:124
+Aggregating installments...
+[01/29/26 05:05:54] INFO       ✅ Aggregated from 13,605,401 to 339,587 rows              data_loading_multitable.py:124
+  ✅ Aggregated from 13,605,401 to 339,587 rows
+                    INFO          Features created: 4                                     data_loading_multitable.py:124
+     Features created: 4
+                    INFO                                                                  data_loading_multitable.py:124
+                             ============================================================                               
+                             ====================                                                                       
+
+================================================================================
+                    INFO     🔗 JOINING TABLES                                            data_loading_multitable.py:124
+🔗 JOINING TABLES
+                    INFO     ============================================================ data_loading_multitable.py:124
+                             ====================                                                                       
+                                                                                                                        
+================================================================================
+
+                    INFO     Starting with application: (307511, 122)                     data_loading_multitable.py:124
+Starting with application: (307511, 122)
+                    INFO                                                                  data_loading_multitable.py:124
+                             Joining application ← bureau                                                               
+
+Joining application ← bureau
+                    INFO       Type: left                                                 data_loading_multitable.py:124
+  Type: left
+                    INFO       On: application.SK_ID_CURR = bureau.SK_ID_CURR             data_loading_multitable.py:124
+  On: application.SK_ID_CURR = bureau.SK_ID_CURR
+                    INFO       Result: 307,511 rows × 140 cols                            data_loading_multitable.py:124
+  Result: 307,511 rows × 140 cols
+                    INFO                                                                  data_loading_multitable.py:124
+                             Joining application ← previous_application                                                 
+
+Joining application ← previous_application
+                    INFO       Type: left                                                 data_loading_multitable.py:124
+  Type: left
+                    INFO       On: application.SK_ID_CURR =                               data_loading_multitable.py:124
+                             previous_application.SK_ID_CURR                                                            
+  On: application.SK_ID_CURR = previous_application.SK_ID_CURR
+                    INFO       Result: 307,511 rows × 152 cols                            data_loading_multitable.py:124
+  Result: 307,511 rows × 152 cols
+                    INFO                                                                  data_loading_multitable.py:124
+                             Joining application ← pos_cash                                                             
+
+Joining application ← pos_cash
+                    INFO       Type: left                                                 data_loading_multitable.py:124
+  Type: left
+                    INFO       On: application.SK_ID_CURR = pos_cash.SK_ID_CURR           data_loading_multitable.py:124
+  On: application.SK_ID_CURR = pos_cash.SK_ID_CURR
+                    INFO       Result: 307,511 rows × 159 cols                            data_loading_multitable.py:124
+  Result: 307,511 rows × 159 cols
+                    INFO                                                                  data_loading_multitable.py:124
+                             Joining application ← credit_card                                                          
+
+Joining application ← credit_card
+                    INFO       Type: left                                                 data_loading_multitable.py:124
+  Type: left
+                    INFO       On: application.SK_ID_CURR = credit_card.SK_ID_CURR        data_loading_multitable.py:124
+  On: application.SK_ID_CURR = credit_card.SK_ID_CURR
+                    INFO       Result: 307,511 rows × 171 cols                            data_loading_multitable.py:124
+  Result: 307,511 rows × 171 cols
+                    INFO                                                                  data_loading_multitable.py:124
+                             Joining application ← installments                                                         
+
+Joining application ← installments
+                    INFO       Type: left                                                 data_loading_multitable.py:124
+  Type: left
+                    INFO       On: application.SK_ID_CURR = installments.SK_ID_CURR       data_loading_multitable.py:124
+  On: application.SK_ID_CURR = installments.SK_ID_CURR
+                    INFO       Result: 307,511 rows × 181 cols                            data_loading_multitable.py:124
+  Result: 307,511 rows × 181 cols
+                    INFO                                                                  data_loading_multitable.py:124
+                             ============================================================                               
+                             ====================                                                                       
+
+================================================================================
+                    INFO     ✅ DATA LOADING COMPLETE                                     data_loading_multitable.py:124
+✅ DATA LOADING COMPLETE
+                    INFO     ============================================================ data_loading_multitable.py:124
+                             ====================                                                                       
+================================================================================
+                    INFO     Final shape: 307,511 rows × 181 columns                      data_loading_multitable.py:124
+Final shape: 307,511 rows × 181 columns
+                    INFO     🎯 Separating target column: TARGET                                      data_loading.py:89
+                    INFO     ✅ Features: (307511, 180) | Target: (307511,)                           data_loading.py:97
+                    INFO     📊 Splitting data (test_size=0.2)                                       data_loading.py:121
+[01/29/26 05:05:55] INFO     ✅ Train: (246008, 180) | Test: (61503, 180)                            data_loading.py:132
+                    INFO                                                                             data_loading.py:185
+                             =======================================================================                    
+                             =========                                                                                  
+                    INFO     ✅ DATA LOADING COMPLETE                                                data_loading.py:186
+                    INFO        Train: (246008, 180) | Test: (61503, 180)                            data_loading.py:187
+                    INFO     ======================================================================= data_loading.py:188
+                             =========                                                                                  
+                                                                                                                        
+                    INFO     Saving data to X_train_raw (CSVDataset)...                             data_catalog.py:1008
+[01/29/26 05:06:07] INFO     Saving data to X_test_raw (CSVDataset)...                              data_catalog.py:1008
+[01/29/26 05:06:10] INFO     Saving data to y_train_raw (MemoryDataset)...                          data_catalog.py:1008
+                    INFO     Saving data to y_test_raw (MemoryDataset)...                           data_catalog.py:1008
+                    INFO     Completed node: load_data_node                                                runner.py:245
+                    INFO     Completed 1 out of 1 tasks                                                    runner.py:246
+                    INFO     Pipeline execution completed successfully in 40.9 sec.                        runner.py:119
