@@ -1,12 +1,11 @@
 (venv) ashok@ubuntu:~/work/latest/kedro-ml-engine-integrated$ kedro run --pipeline data_loading
-[01/29/26 04:47:18] INFO     Using                                                                       __init__.py:269
+[01/29/26 04:58:22] INFO     Using                                                                       __init__.py:269
                              '/home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/sit                
                              e-packages/kedro/framework/project/rich_logging.yml' as logging                            
                              configuration.                                                                             
-[01/29/26 04:47:18] INFO     Kedro project kedro-ml-engine-integrated                                     session.py:330
+[01/29/26 04:58:22] INFO     Kedro project kedro-ml-engine-integrated                                     session.py:330
 ✅ Multi-table loader imported successfully
-[01/29/26 04:47:19] WARNING  Multi-table loader not available, single-table mode only                 data_loading.py:63
-[01/29/26 04:47:20] INFO     ✅ Phase 1a (data_loading) imported successfully                    pipeline_registry.py:62
+[01/29/26 04:58:24] INFO     ✅ Phase 1a (data_loading) imported successfully                    pipeline_registry.py:62
                     INFO     ✅ Phase 1b (data_validation) imported successfully                 pipeline_registry.py:69
                     INFO     ✅ Phase 1c (data_cleaning with PATH B feature scaling) imported    pipeline_registry.py:76
                              successfully                                                                               
@@ -159,7 +158,7 @@
                              create a `.telemetry` file in the current working directory with the contents              
                              `consent: false`. To hide this message, explicitly grant or deny consent.                  
                              Read more at https://docs.kedro.org/en/stable/about/telemetry/                             
-[01/29/26 04:47:21] WARNING  Workflow tracking is disabled during partial pipeline runs (executed using run_hooks.py:135
+                    WARNING  Workflow tracking is disabled during partial pipeline runs (executed using run_hooks.py:135
                              --from-nodes, --to-nodes, --tags, --pipeline, and more).                                   
                              `.viz/kedro_pipeline_events.json` will be created only during a full kedro                 
                              run. See issue https://github.com/kedro-org/kedro-viz/issues/2443 for more                 
@@ -171,16 +170,61 @@
                     INFO     Loading data from params:data_loading (MemoryDataset)...               data_catalog.py:1048
                     INFO     Running node: load_data_node: load_data_auto() ->                               node.py:420
                              [X_train_raw;X_test_raw;y_train_raw;y_test_raw]                                            
-                    INFO                                                                             data_loading.py:172
+                    INFO                                                                             data_loading.py:154
                              =======================================================================                    
                              =========                                                                                  
-                    INFO     📊 DATA LOADING - MODE: MULTI                                           data_loading.py:173
-                    INFO     ======================================================================= data_loading.py:174
+                    INFO     📊 DATA LOADING - MODE: MULTI                                           data_loading.py:155
+                    INFO     ======================================================================= data_loading.py:156
                              =========                                                                                  
                                                                                                                         
+                    INFO     🔗 Multi-Table Mode Activated                                           data_loading.py:163
+                    INFO                                                                  data_loading_multitable.py:124
+                             ============================================================                               
+                             ====================                                                                       
+
+================================================================================
+                    INFO     📂 LOADING TABLES                                            data_loading_multitable.py:124
+📂 LOADING TABLES
+                    INFO     ============================================================ data_loading_multitable.py:124
+                             ====================                                                                       
+                                                                                                                        
+================================================================================
+
+                    INFO     Loading application...                                       data_loading_multitable.py:124
+Loading application... [01/29/26 04:58:26] INFO     ✅ (307,511 rows × 122 cols)                                 data_loading_multitable.py:124
+✅ (307,511 rows × 122 cols)
+                    INFO     Loading bureau...                                            data_loading_multitable.py:124
+Loading bureau... [01/29/26 04:58:28] INFO     ✅ (1,716,428 rows × 17 cols)                                data_loading_multitable.py:124
+✅ (1,716,428 rows × 17 cols)
+                    INFO     Loading previous_application...                              data_loading_multitable.py:124
+Loading previous_application... [01/29/26 04:58:32] INFO     ✅ (1,670,214 rows × 37 cols)                                data_loading_multitable.py:124
+✅ (1,670,214 rows × 37 cols)
+                    INFO     Loading pos_cash...                                          data_loading_multitable.py:124
+Loading pos_cash... [01/29/26 04:58:36] INFO     ✅ (10,001,358 rows × 8 cols)                                data_loading_multitable.py:124
+✅ (10,001,358 rows × 8 cols)
+                    INFO     Loading credit_card...                                       data_loading_multitable.py:124
+Loading credit_card... [01/29/26 04:58:39] INFO     ✅ (3,840,312 rows × 23 cols)                                data_loading_multitable.py:124
+✅ (3,840,312 rows × 23 cols)
+                    INFO     Loading installments...                                      data_loading_multitable.py:124
+Loading installments... [01/29/26 04:58:46] INFO     ✅ (13,605,401 rows × 8 cols)                                data_loading_multitable.py:124
+✅ (13,605,401 rows × 8 cols)
+                    INFO                                                                  data_loading_multitable.py:124
+                             ============================================================                               
+                             ====================                                                                       
+
+================================================================================
+                    INFO     🔄 AGGREGATING MANY-TO-ONE RELATIONSHIPS                     data_loading_multitable.py:124
+🔄 AGGREGATING MANY-TO-ONE RELATIONSHIPS
+                    INFO     ============================================================ data_loading_multitable.py:124
+                             ====================                                                                       
+                                                                                                                        
+================================================================================
+
+                    INFO     Aggregating bureau...                                        data_loading_multitable.py:124
+Aggregating bureau...
                     ERROR    Node load_data_node: load_data_auto() ->                                        node.py:445
                              [X_train_raw;X_test_raw;y_train_raw;y_test_raw] failed with error:                         
-                             Multi-table loader not available!                                                          
+                             "Label(s) ['CNT_CREDIT', 'STATUS'] do not exist"                                           
                     WARNING  No nodes ran. Repeat the previous command to attempt a new run.               runner.py:335
 ╭─────────────────────────────── Traceback (most recent call last) ────────────────────────────────╮
 │ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/bin/kedro:8 in <module>                  │
@@ -353,14 +397,113 @@
 │   474 │   │   # Node inputs and provided run inputs should completely overlap                    │
 │                                                                                                  │
 │ /home/ashok/work/latest/kedro-ml-engine-integrated/src/ml_engine/pipelines/data_loading/data_loa │
-│ ding.py:179 in load_data_auto                                                                    │
+│ ding.py:164 in load_data_auto                                                                    │
 │                                                                                                  │
-│   176 │   if mode == 'multi':                                                                    │
-│   177 │   │   # Multi-table mode                                                                 │
-│   178 │   │   if not MULTI_TABLE_AVAILABLE:                                                      │
-│ ❱ 179 │   │   │   raise RuntimeError("Multi-table loader not available!")                        │
-│   180 │   │                                                                                      │
-│   181 │   │   log.info("🔗 Multi-Table Mode Activated")                                          │
-│   182 │   │   data = _load_multi_table(data_cfg)                                                 │
+│   161 │   │   │   raise RuntimeError("Multi-table loader not available!")                        │
+│   162 │   │                                                                                      │
+│   163 │   │   log.info("🔗 Multi-Table Mode Activated")                                          │
+│ ❱ 164 │   │   data = _load_multi_table(data_cfg)                                                 │
+│   165 │   else:                                                                                  │
+│   166 │   │   # Single-table mode (default)                                                      │
+│   167 │   │   log.info("📂 Single-Table Mode Activated")                                         │
+│                                                                                                  │
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/src/ml_engine/pipelines/data_loading/data_loa │
+│ ding.py:259 in _load_multi_table                                                                 │
+│                                                                                                  │
+│   256 │                                                                                          │
+│   257 │   # Load data                                                                            │
+│   258 │   loader = MultiTableDataLoader(config, verbose=True)                                    │
+│ ❱ 259 │   return loader.load_and_join()                                                          │
+│   260                                                                                            │
+│   261                                                                                            │
+│   262 # ════════════════════════════════════════════════════════════════════════════             │
+│                                                                                                  │
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/src/ml_engine/pipelines/data_loading/data_loa │
+│ ding_multitable.py:265 in load_and_join                                                          │
+│                                                                                                  │
+│   262 │   │                                                                                      │
+│   263 │   │   # Aggregate if needed                                                              │
+│   264 │   │   if self.config.aggregations:                                                       │
+│ ❱ 265 │   │   │   self.aggregate_tables()                                                        │
+│   266 │   │                                                                                      │
+│   267 │   │   # Join all tables                                                                  │
+│   268 │   │   if self.config.joins:                                                              │
+│                                                                                                  │
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/src/ml_engine/pipelines/data_loading/data_loa │
+│ ding_multitable.py:186 in aggregate_tables                                                       │
+│                                                                                                  │
+│   183 │   │   │   source_table = self.tables[agg_cfg.table]                                      │
+│   184 │   │   │                                                                                  │
+│   185 │   │   │   # Group and aggregate                                                          │
+│ ❱ 186 │   │   │   agg_df = source_table.groupby(agg_cfg.group_by).agg(agg_cfg.features)          │
+│   187 │   │   │                                                                                  │
+│   188 │   │   │   # Flatten column names                                                         │
+│   189 │   │   │   agg_df.columns = [f"{agg_cfg.prefix}{col}" if agg_cfg.prefix else col          │
+│                                                                                                  │
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/pandas/core │
+│ /groupby/generic.py:2291 in aggregate                                                            │
+│                                                                                                  │
+│   2288 │   │   │   kwargs["engine_kwargs"] = engine_kwargs                                       │
+│   2289 │   │                                                                                     │
+│   2290 │   │   op = GroupByApply(self, func, args=args, kwargs=kwargs)                           │
+│ ❱ 2291 │   │   result = op.agg()                                                                 │
+│   2292 │   │   if not is_dict_like(func) and result is not None:                                 │
+│   2293 │   │   │   # GH #52849                                                                   │
+│   2294 │   │   │   if not self.as_index and is_list_like(func):                                  │
+│                                                                                                  │
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/pandas/core │
+│ /apply.py:294 in agg                                                                             │
+│                                                                                                  │
+│    291 │   │   │   return self.apply_str()                                                       │
+│    292 │   │                                                                                     │
+│    293 │   │   if is_dict_like(func):                                                            │
+│ ❱  294 │   │   │   return self.agg_dict_like()                                                   │
+│    295 │   │   elif is_list_like(func):                                                          │
+│    296 │   │   │   # we require a list, but not a 'str'                                          │
+│    297 │   │   │   return self.agg_list_like()                                                   │
+│                                                                                                  │
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/pandas/core │
+│ /apply.py:511 in agg_dict_like                                                                   │
+│                                                                                                  │
+│    508 │   │   -------                                                                           │
+│    509 │   │   Result of aggregation.                                                            │
+│    510 │   │   """                                                                               │
+│ ❱  511 │   │   return self.agg_or_apply_dict_like(op_name="agg")                                 │
+│    512 │                                                                                         │
+│    513 │   def compute_dict_like(                                                                │
+│    514 │   │   self,                                                                             │
+│                                                                                                  │
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/pandas/core │
+│ /apply.py:1677 in agg_or_apply_dict_like                                                         │
+│                                                                                                  │
+│   1674 │   │   with com.temp_setattr(                                                            │
+│   1675 │   │   │   obj, "as_index", True, condition=hasattr(obj, "as_index")                     │
+│   1676 │   │   ):                                                                                │
+│ ❱ 1677 │   │   │   result_index, result_data = self.compute_dict_like(                           │
+│   1678 │   │   │   │   op_name, selected_obj, selection, kwargs                                  │
+│   1679 │   │   │   )                                                                             │
+│   1680 │   │   result = self.wrap_results_dict_like(selected_obj, result_index, result_data)     │
+│                                                                                                  │
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/pandas/core │
+│ /apply.py:550 in compute_dict_like                                                               │
+│                                                                                                  │
+│    547 │   │   obj = self.obj                                                                    │
+│    548 │   │   is_groupby = isinstance(obj, (DataFrameGroupBy, SeriesGroupBy))                   │
+│    549 │   │   func = cast(AggFuncTypeDict, self.func)                                           │
+│ ❱  550 │   │   func = self.normalize_dictlike_arg(op_name, selected_obj, func)                   │
+│    551 │   │                                                                                     │
+│    552 │   │   is_non_unique_col = (                                                             │
+│    553 │   │   │   selected_obj.ndim == 2                                                        │
+│                                                                                                  │
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/pandas/core │
+│ /apply.py:762 in normalize_dictlike_arg                                                          │
+│                                                                                                  │
+│    759 │   │   │   cols = Index(list(func.keys())).difference(obj.columns, sort=True)            │
+│    760 │   │   │   if len(cols) > 0:                                                             │
+│    761 │   │   │   │   # GH 58474                                                                │
+│ ❱  762 │   │   │   │   raise KeyError(f"Label(s) {list(cols)} do not exist")                     │
+│    763 │   │                                                                                     │
+│    764 │   │   aggregator_types = (list, tuple, dict)                                            │
+│    765                                                                                           │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
-RuntimeError: Multi-table loader not available!
+KeyError: "Label(s) ['CNT_CREDIT', 'STATUS'] do not exist"
