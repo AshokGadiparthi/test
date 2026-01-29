@@ -1,18 +1,18 @@
-ashok@ubuntu:~/work/latest/kedro-ml-engine-integrated$ kedro run --pipeline data_loading
-[01/29/26 05:05:26] INFO     Using                                                                       __init__.py:269
+(venv) ashok@ubuntu:~/work/latest/kedro-ml-engine-integrated$ kedro run
+[01/29/26 05:38:24] INFO     Using                                                                       __init__.py:269
                              '/home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/sit                
                              e-packages/kedro/framework/project/rich_logging.yml' as logging                            
                              configuration.                                                                             
-[01/29/26 05:05:26] INFO     Kedro project kedro-ml-engine-integrated                                     session.py:330
+[01/29/26 05:38:24] INFO     Kedro project kedro-ml-engine-integrated                                     session.py:330
 ✅ Multi-table loader imported successfully
-[01/29/26 05:05:28] INFO     ✅ Phase 1a (data_loading) imported successfully                    pipeline_registry.py:62
+[01/29/26 05:38:26] INFO     ✅ Phase 1a (data_loading) imported successfully                    pipeline_registry.py:62
                     INFO     ✅ Phase 1b (data_validation) imported successfully                 pipeline_registry.py:69
                     INFO     ✅ Phase 1c (data_cleaning with PATH B feature scaling) imported    pipeline_registry.py:76
                              successfully                                                                               
                     INFO     ✅ Phase 2a (feature_engineering) imported successfully             pipeline_registry.py:87
                     INFO     ✅ Phase 2b (feature_selection) imported successfully               pipeline_registry.py:94
                     INFO     ✅ Phase 3 (model_training with PATH A+B) imported successfully    pipeline_registry.py:108
-[01/29/26 05:05:29] INFO     ✅ Phase 4 (phase4_algorithms with PATH A+B+C ready) imported      pipeline_registry.py:126
+                    INFO     ✅ Phase 4 (phase4_algorithms with PATH A+B+C ready) imported      pipeline_registry.py:126
                              successfully                                                                               
                     INFO     ✅ Phase 6 (ensemble_methods) imported successfully                pipeline_registry.py:139
                     INFO     ✅ Phase 5a (training_strategies) module available                 pipeline_registry.py:166
@@ -158,15 +158,237 @@ ashok@ubuntu:~/work/latest/kedro-ml-engine-integrated$ kedro run --pipeline data
                              create a `.telemetry` file in the current working directory with the contents              
                              `consent: false`. To hide this message, explicitly grant or deny consent.                  
                              Read more at https://docs.kedro.org/en/stable/about/telemetry/                             
-                    WARNING  Workflow tracking is disabled during partial pipeline runs (executed using run_hooks.py:135
-                             --from-nodes, --to-nodes, --tags, --pipeline, and more).                                   
-                             `.viz/kedro_pipeline_events.json` will be created only during a full kedro                 
-                             run. See issue https://github.com/kedro-org/kedro-viz/issues/2443 for more                 
-                             details.                                                                                   
                     INFO     Using synchronous mode for loading and saving data. Use the --async sequential_runner.py:59
                              flag for potential performance gains.                                                      
                              https://docs.kedro.org/en/stable/nodes_and_pipelines/run_a_pipeline                        
                              .html#load-and-save-asynchronously                                                         
+                    INFO     Loading data from raw_data (CSVDataset)...                             data_catalog.py:1048
+                    INFO     Loading data from params:data_processing.handle_missing                data_catalog.py:1048
+                             (MemoryDataset)...                                                                         
+                    INFO     Running node: clean_data_node: clean_data() ->                                  node.py:420
+                    INFO     🧹 Cleaning data...                                                     data_cleaning.py:27
+                    INFO     ======================================================================= data_cleaning.py:36
+                             =========                                                                                  
+                    INFO     🔍 STARTING OUTLIER DETECTION (PATH A)                                  data_cleaning.py:37
+                    INFO     ======================================================================= data_cleaning.py:38
+                             =========                                                                                  
+                    INFO     Found 6 numeric columns for outlier detection                           data_cleaning.py:41
+                    INFO       Column 'age': 143 outliers (bounds: [-2.00, 78.00])                   data_cleaning.py:60
+                    INFO       Column 'fnlwgt': 992 outliers (bounds: [-61009.00, 415887.00])        data_cleaning.py:60
+                    INFO       Column 'education.num': 1198 outliers (bounds: [4.50, 16.50])         data_cleaning.py:60
+                    INFO       Column 'capital.gain': 2712 outliers (bounds: [0.00, 0.00])           data_cleaning.py:60
+                    INFO       Column 'capital.loss': 1519 outliers (bounds: [0.00, 0.00])           data_cleaning.py:60
+                    INFO       Column 'hours.per.week': 9008 outliers (bounds: [32.50, 52.50])       data_cleaning.py:60
+                    INFO     Total outliers found: 15572 across 6 columns                            data_cleaning.py:62
+                    INFO     Capping outliers to reasonable bounds...                                data_cleaning.py:64
+                    INFO     ✅ Outliers capped successfully                                         data_cleaning.py:74
+                    INFO     ----------------------------------------------------------------------- data_cleaning.py:83
+                             ---------                                                                                  
+                    INFO     🔍 DUPLICATE DETECTION                                                  data_cleaning.py:84
+                    INFO     ----------------------------------------------------------------------- data_cleaning.py:85
+                             ---------                                                                                  
+[01/29/26 05:38:27] INFO     Initial rows: 32561                                                     data_cleaning.py:93
+                    INFO     ✅ Duplicates removed. Final rows: 32510                                data_cleaning.py:94
+                    INFO        Rows deleted: 51                                                     data_cleaning.py:95
+                    INFO     ---------------------------------------------------------------------- data_cleaning.py:103
+                             ----------                                                                                 
+                    INFO     📊 HANDLING MISSING VALUES                                             data_cleaning.py:104
+                    INFO     ---------------------------------------------------------------------- data_cleaning.py:105
+                             ----------                                                                                 
+                    INFO        Handling missing values with 'mean' strategy                        data_cleaning.py:107
+                    INFO     ---------------------------------------------------------------------- data_cleaning.py:145
+                             ----------                                                                                 
+                    INFO     📈 FEATURE SCALING (PATH B)                                            data_cleaning.py:146
+                    INFO     ====================================================================== data_cleaning.py:147
+                             ==========                                                                                 
+                    INFO     Scaling 6 numeric columns with StandardScaler...                       data_cleaning.py:151
+                    INFO     ✅ Feature scaling applied to:                                         data_cleaning.py:157
+                    INFO        1. age                                                              data_cleaning.py:159
+                    INFO        2. fnlwgt                                                           data_cleaning.py:159
+                    INFO        3. education.num                                                    data_cleaning.py:159
+                    INFO        4. capital.gain                                                     data_cleaning.py:159
+                    INFO        5. capital.loss                                                     data_cleaning.py:159
+                    INFO        6. hours.per.week                                                   data_cleaning.py:159
+                    INFO     ✅ All numeric features normalized to mean=0, std=1                    data_cleaning.py:164
+                    INFO     ====================================================================== data_cleaning.py:168
+                             ==========                                                                                 
+                    INFO        ✅ Cleaned data shape: (32510, 15)                                  data_cleaning.py:173
+                    INFO     ====================================================================== data_cleaning.py:174
+                             ==========                                                                                 
+                    INFO     Saving data to cleaned_data (CSVDataset)...                            data_catalog.py:1008
+                    INFO     Saving data to data_cleaning_report (MemoryDataset)...                 data_catalog.py:1008
+                    INFO     Completed node: clean_data_node                                               runner.py:245
+                    INFO     Completed 1 out of 20 tasks                                                   runner.py:246
+                    INFO     Loading data from X_train (CSVDataset)...                              data_catalog.py:1048
+[01/29/26 05:38:29] INFO     Loading data from X_test (CSVDataset)...                               data_catalog.py:1048
+                    INFO     Loading data from params:feature_engineering (MemoryDataset)...        data_catalog.py:1048
+                    INFO     Running node: engineer_features:                                                node.py:420
+                             engineer_features([X_train;X_test;params:feature_engineering]) ->                          
+                             [X_train_final;X_test_final]                                                               
+
+
+================================================================================
+🏗️  PRODUCTION FEATURE ENGINEERING PIPELINE (CORRECTED)
+================================================================================
+
+================================================================================
+🔍 DETECTING ID COLUMNS (Permanent Fix #1)
+================================================================================
+   ✓ Detected ID column: SK_ID_CURR
+      Cardinality: 100.0% (246008 unique values)
+   ✓ Detected ID column: DAYS_ID_PUBLISH
+      Cardinality: 2.5% (6145 unique values)
+
+   🎯 Dropping 2 ID columns: ['SK_ID_CURR', 'DAYS_ID_PUBLISH']
+================================================================================
+
+
+📊 After dropping IDs: Train 178 features, Test 178 features
+
+   Numeric columns: 162
+   Categorical columns: 16
+
+================================================================================
+📈 PROCESSING NUMERIC FEATURES
+================================================================================
+   ✓ Scaled 162 numeric features
+     Train shape: (246008, 162)
+     Test shape: (61503, 162)
+
+================================================================================
+📦 SMART CATEGORICAL ENCODING (Permanent Fix #2) - FIX #1
+================================================================================
+
+   Configuration:
+      Max categories per column: 10
+      Max total features from encoding: 100
+
+   Analyzing categorical columns:
+      NAME_CONTRACT_TYPE: 2 unique values
+         → One-hot encode
+      CODE_GENDER: 3 unique values
+         → One-hot encode
+      FLAG_OWN_CAR: 2 unique values
+         → One-hot encode
+      FLAG_OWN_REALTY: 2 unique values
+         → One-hot encode
+      NAME_TYPE_SUITE: 7 unique values
+         → One-hot encode
+      NAME_INCOME_TYPE: 8 unique values
+         → One-hot encode
+      NAME_EDUCATION_TYPE: 5 unique values
+         → One-hot encode
+      NAME_FAMILY_STATUS: 6 unique values
+         → One-hot encode
+      NAME_HOUSING_TYPE: 6 unique values
+         → One-hot encode
+      OCCUPATION_TYPE: 18 unique values
+         → Label encode
+      WEEKDAY_APPR_PROCESS_START: 7 unique values
+         → One-hot encode
+      ORGANIZATION_TYPE: 58 unique values
+         → DROP (high cardinality)
+      FONDKAPREMONT_MODE: 4 unique values
+         → One-hot encode
+      HOUSETYPE_MODE: 3 unique values
+         → One-hot encode
+      WALLSMATERIAL_MODE: 7 unique values
+         → One-hot encode
+      EMERGENCYSTATE_MODE: 2 unique values
+         → One-hot encode
+
+   One-hot encoding 14 columns...
+      ✓ Created 55 features from one-hot encoding
+      ✓ Train encoded shape: (246008, 55)
+      ✓ Test encoded shape: (61503, 55)
+
+   Label encoding 1 columns...
+      ✓ Label encoded 1 features
+
+   Result:
+      Dropped: 1 columns
+      Train encoded shape: (246008, 56)
+      Test encoded shape: (61503, 56)
+================================================================================
+
+
+📊 After combining features:
+   Train shape: (246008, 218)
+   Test shape: (61503, 218)
+
+================================================================================
+⚡ POLYNOMIAL FEATURES (Permanent Fix #3) - FIX #2
+================================================================================
+
+   ✓ Polynomial features: DISABLED
+================================================================================
+
+📊 After polynomial:
+   Train shape: (246008, 218)
+   Test shape: (61503, 218)
+
+================================================================================
+🔬 VARIANCE FILTERING (Permanent Fix #4) - FIX #3
+================================================================================
+
+   Configuration:
+      Variance threshold: 0.01
+
+   Result:
+      Features before: 218
+      Train filtered shape: (246008, 202)
+      Test filtered shape: (61503, 202)
+      Removed: 16 low-variance features
+      Removed columns: ['CODE_GENDER_XNA', 'NAME_TYPE_SUITE_Group of people', 'NAME_TYPE_SUITE_Other_A', 'NAME_TYPE_SUITE_Other_B', 'NAME_TYPE_SUITE_nan']...
+================================================================================
+
+📊 After variance filter:
+   Train shape: (246008, 202)
+   Test shape: (61503, 202)
+
+================================================================================
+✔️  FEATURE EXPLOSION SAFETY CHECK (Permanent Fix #5)
+================================================================================
+
+   Train features: 202
+   Test features: 202
+   Max allowed: 500
+
+   ✓ Feature count is safe
+   ✓ Train and test shapes match!
+================================================================================
+
+
+
+================================================================================
+✅ FEATURE ENGINEERING COMPLETE
+================================================================================
+
+   Input shapes:
+      Train: (246008, 180)
+      Test: (61503, 180)
+
+   Output shapes:
+      Train: (246008, 202)
+      Test: (61503, 202)
+
+   Features: 180 → 202
+
+   Steps applied:
+      ✓ Dropped ID columns
+      ✓ Encoded categoricals smartly
+      ✓ Scaled numeric features
+      ✓ Filtered low-variance features
+      ✓ Validated against feature explosion
+
+   ✅ TRAIN AND TEST SHAPES MATCH: False
+
+================================================================================
+
+[01/29/26 05:38:33] INFO     Saving data to X_train_final (CSVDataset)...                           data_catalog.py:1008
+[01/29/26 05:39:08] INFO     Saving data to X_test_final (CSVDataset)...                            data_catalog.py:1008
+[01/29/26 05:39:16] INFO     Completed node: engineer_features                                             runner.py:245
+                    INFO     Completed 2 out of 20 tasks                                                   runner.py:246
                     INFO     Loading data from params:data_loading (MemoryDataset)...               data_catalog.py:1048
                     INFO     Running node: load_data_node: load_data_auto() ->                               node.py:420
                              [X_train_raw;X_test_raw;y_train_raw;y_test_raw]                                            
@@ -191,22 +413,22 @@ ashok@ubuntu:~/work/latest/kedro-ml-engine-integrated$ kedro run --pipeline data
 ================================================================================
 
                     INFO     Loading application...                                       data_loading_multitable.py:124
-Loading application... [01/29/26 05:05:31] INFO     ✅ (307,511 rows × 122 cols)                                 data_loading_multitable.py:124
+Loading application... [01/29/26 05:39:18] INFO     ✅ (307,511 rows × 122 cols)                                 data_loading_multitable.py:124
 ✅ (307,511 rows × 122 cols)
                     INFO     Loading bureau...                                            data_loading_multitable.py:124
-Loading bureau... [01/29/26 05:05:33] INFO     ✅ (1,716,428 rows × 17 cols)                                data_loading_multitable.py:124
+Loading bureau... [01/29/26 05:39:19] INFO     ✅ (1,716,428 rows × 17 cols)                                data_loading_multitable.py:124
 ✅ (1,716,428 rows × 17 cols)
                     INFO     Loading previous_application...                              data_loading_multitable.py:124
-Loading previous_application... [01/29/26 05:05:37] INFO     ✅ (1,670,214 rows × 37 cols)                                data_loading_multitable.py:124
+Loading previous_application... [01/29/26 05:39:23] INFO     ✅ (1,670,214 rows × 37 cols)                                data_loading_multitable.py:124
 ✅ (1,670,214 rows × 37 cols)
                     INFO     Loading pos_cash...                                          data_loading_multitable.py:124
-Loading pos_cash... [01/29/26 05:05:40] INFO     ✅ (10,001,358 rows × 8 cols)                                data_loading_multitable.py:124
+Loading pos_cash... [01/29/26 05:39:27] INFO     ✅ (10,001,358 rows × 8 cols)                                data_loading_multitable.py:124
 ✅ (10,001,358 rows × 8 cols)
                     INFO     Loading credit_card...                                       data_loading_multitable.py:124
-Loading credit_card... [01/29/26 05:05:44] INFO     ✅ (3,840,312 rows × 23 cols)                                data_loading_multitable.py:124
+Loading credit_card... [01/29/26 05:39:31] INFO     ✅ (3,840,312 rows × 23 cols)                                data_loading_multitable.py:124
 ✅ (3,840,312 rows × 23 cols)
                     INFO     Loading installments...                                      data_loading_multitable.py:124
-Loading installments... [01/29/26 05:05:51] INFO     ✅ (13,605,401 rows × 8 cols)                                data_loading_multitable.py:124
+Loading installments... [01/29/26 05:39:38] INFO     ✅ (13,605,401 rows × 8 cols)                                data_loading_multitable.py:124
 ✅ (13,605,401 rows × 8 cols)
                     INFO                                                                  data_loading_multitable.py:124
                              ============================================================                               
@@ -222,35 +444,35 @@ Loading installments... [01/29/26 05:05:51] INFO     ✅ (13,605,401 rows × 8 c
 
                     INFO     Aggregating bureau...                                        data_loading_multitable.py:124
 Aggregating bureau...
-                    INFO       ✅ Aggregated from 1,716,428 to 305,811 rows               data_loading_multitable.py:124
+[01/29/26 05:39:39] INFO       ✅ Aggregated from 1,716,428 to 305,811 rows               data_loading_multitable.py:124
   ✅ Aggregated from 1,716,428 to 305,811 rows
                     INFO          Features created: 8                                     data_loading_multitable.py:124
      Features created: 8
                     INFO     Aggregating previous_application...                          data_loading_multitable.py:124
 Aggregating previous_application...
-[01/29/26 05:05:52] INFO       ✅ Aggregated from 1,670,214 to 338,857 rows               data_loading_multitable.py:124
+                    INFO       ✅ Aggregated from 1,670,214 to 338,857 rows               data_loading_multitable.py:124
   ✅ Aggregated from 1,670,214 to 338,857 rows
                     INFO          Features created: 6                                     data_loading_multitable.py:124
      Features created: 6
                     INFO     Aggregating pos_cash...                                      data_loading_multitable.py:124
 Aggregating pos_cash...
-[01/29/26 05:05:53] INFO       ✅ Aggregated from 10,001,358 to 337,252 rows              data_loading_multitable.py:124
+[01/29/26 05:39:40] INFO       ✅ Aggregated from 10,001,358 to 337,252 rows              data_loading_multitable.py:124
   ✅ Aggregated from 10,001,358 to 337,252 rows
                     INFO          Features created: 3                                     data_loading_multitable.py:124
      Features created: 3
                     INFO     Aggregating credit_card...                                   data_loading_multitable.py:124
 Aggregating credit_card...
-                    INFO       ✅ Aggregated from 3,840,312 to 103,558 rows               data_loading_multitable.py:124
+[01/29/26 05:39:41] INFO       ✅ Aggregated from 3,840,312 to 103,558 rows               data_loading_multitable.py:124
   ✅ Aggregated from 3,840,312 to 103,558 rows
                     INFO          Features created: 5                                     data_loading_multitable.py:124
      Features created: 5
                     INFO     Aggregating installments...                                  data_loading_multitable.py:124
 Aggregating installments...
-[01/29/26 05:05:54] INFO       ✅ Aggregated from 13,605,401 to 339,587 rows              data_loading_multitable.py:124
+                    INFO       ✅ Aggregated from 13,605,401 to 339,587 rows              data_loading_multitable.py:124
   ✅ Aggregated from 13,605,401 to 339,587 rows
                     INFO          Features created: 4                                     data_loading_multitable.py:124
      Features created: 4
-                    INFO                                                                  data_loading_multitable.py:124
+[01/29/26 05:39:42] INFO                                                                  data_loading_multitable.py:124
                              ============================================================                               
                              ====================                                                                       
 
@@ -330,7 +552,7 @@ Final shape: 307,511 rows × 181 columns
                     INFO     🎯 Separating target column: TARGET                                      data_loading.py:89
                     INFO     ✅ Features: (307511, 180) | Target: (307511,)                           data_loading.py:97
                     INFO     📊 Splitting data (test_size=0.2)                                       data_loading.py:121
-[01/29/26 05:05:55] INFO     ✅ Train: (246008, 180) | Test: (61503, 180)                            data_loading.py:132
+                    INFO     ✅ Train: (246008, 180) | Test: (61503, 180)                            data_loading.py:132
                     INFO                                                                             data_loading.py:185
                              =======================================================================                    
                              =========                                                                                  
@@ -340,9 +562,250 @@ Final shape: 307,511 rows × 181 columns
                              =========                                                                                  
                                                                                                                         
                     INFO     Saving data to X_train_raw (CSVDataset)...                             data_catalog.py:1008
-[01/29/26 05:06:07] INFO     Saving data to X_test_raw (CSVDataset)...                              data_catalog.py:1008
-[01/29/26 05:06:10] INFO     Saving data to y_train_raw (MemoryDataset)...                          data_catalog.py:1008
+[01/29/26 05:39:55] INFO     Saving data to X_test_raw (CSVDataset)...                              data_catalog.py:1008
+[01/29/26 05:39:58] INFO     Saving data to y_train_raw (MemoryDataset)...                          data_catalog.py:1008
                     INFO     Saving data to y_test_raw (MemoryDataset)...                           data_catalog.py:1008
                     INFO     Completed node: load_data_node                                                runner.py:245
-                    INFO     Completed 1 out of 1 tasks                                                    runner.py:246
-                    INFO     Pipeline execution completed successfully in 40.9 sec.                        runner.py:119
+                    INFO     Completed 3 out of 20 tasks                                                   runner.py:246
+                    INFO     Loading data from raw_data (CSVDataset)...                             data_catalog.py:1048
+[01/29/26 05:39:59] INFO     Running node: validate_data_quality_node: validate_data_quality() ->            node.py:420
+                    INFO     🔍 Validating data quality...                                         data_validation.py:20
+                    INFO        Rows: 32561                                                        data_validation.py:24
+                    INFO        Columns: 15                                                        data_validation.py:25
+                    INFO        Memory: 17.65 MB                                                   data_validation.py:26
+                    WARNING     ⚠️  24 duplicate rows found                                        data_validation.py:34
+                    INFO        ✅ Validation passed                                               data_validation.py:37
+                    INFO     Saving data to data_validation_report (MemoryDataset)...               data_catalog.py:1008
+                    INFO     Completed node: validate_data_quality_node                                    runner.py:245
+                    INFO     Completed 4 out of 20 tasks                                                   runner.py:246
+                    INFO     Loading data from X_train_final (CSVDataset)...                        data_catalog.py:1048
+[01/29/26 05:40:03] INFO     Loading data from X_test_final (CSVDataset)...                         data_catalog.py:1048
+[01/29/26 05:40:04] INFO     Loading data from y_train (CSVDataset)...                              data_catalog.py:1048
+                    WARNING  There are 16 nodes that have not run.                                         runner.py:339
+                             You can resume the pipeline run from the nearest nodes with persisted inputs               
+                             by adding the following argument to your previous command:                                 
+                               --from-nodes "feature_selection"                                                         
+╭─────────────────────────────── Traceback (most recent call last) ────────────────────────────────╮
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/kedro/io/co │
+│ re.py:277 in load                                                                                │
+│                                                                                                  │
+│    274 │   │   │   self._logger.debug("Loading %s", str(self))                                   │
+│    275 │   │   │                                                                                 │
+│    276 │   │   │   try:                                                                          │
+│ ❱  277 │   │   │   │   return load_func(self)                                                    │
+│    278 │   │   │   except DatasetError:                                                          │
+│    279 │   │   │   │   raise                                                                     │
+│    280 │   │   │   except Exception as exc:                                                      │
+│                                                                                                  │
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/kedro_datas │
+│ ets/pandas/csv_dataset.py:171 in load                                                            │
+│                                                                                                  │
+│   168 │   │   │   # (<urlopen error file not on local host>),                                    │
+│   169 │   │   │   # so we don't join that back to the filepath;                                  │
+│   170 │   │   │   # storage_options also don't work with local paths                             │
+│ ❱ 171 │   │   │   return pd.read_csv(load_path, **self._load_args)                               │
+│   172 │   │                                                                                      │
+│   173 │   │   load_path = f"{self._protocol}{PROTOCOL_DELIMITER}{load_path}"                     │
+│   174 │   │   return pd.read_csv(                                                                │
+│                                                                                                  │
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/pandas/io/p │
+│ arsers/readers.py:873 in read_csv                                                                │
+│                                                                                                  │
+│    870 │   )                                                                                     │
+│    871 │   kwds.update(kwds_defaults)                                                            │
+│    872 │                                                                                         │
+│ ❱  873 │   return _read(filepath_or_buffer, kwds)                                                │
+│    874                                                                                           │
+│    875                                                                                           │
+│    876 @overload                                                                                 │
+│                                                                                                  │
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/pandas/io/p │
+│ arsers/readers.py:300 in _read                                                                   │
+│                                                                                                  │
+│    297 │   _validate_names(kwds.get("names", None))                                              │
+│    298 │                                                                                         │
+│    299 │   # Create the parser.                                                                  │
+│ ❱  300 │   parser = TextFileReader(filepath_or_buffer, **kwds)                                   │
+│    301 │                                                                                         │
+│    302 │   if chunksize or iterator:                                                             │
+│    303 │   │   return parser                                                                     │
+│                                                                                                  │
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/pandas/io/p │
+│ arsers/readers.py:1645 in __init__                                                               │
+│                                                                                                  │
+│   1642 │   │   │   self.options["has_index_names"] = kwds["has_index_names"]                     │
+│   1643 │   │                                                                                     │
+│   1644 │   │   self.handles: IOHandles | None = None                                             │
+│ ❱ 1645 │   │   self._engine = self._make_engine(f, self.engine)                                  │
+│   1646 │                                                                                         │
+│   1647 │   def close(self) -> None:                                                              │
+│   1648 │   │   if self.handles is not None:                                                      │
+│                                                                                                  │
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/pandas/io/p │
+│ arsers/readers.py:1904 in _make_engine                                                           │
+│                                                                                                  │
+│   1901 │   │   │   │   is_text = False                                                           │
+│   1902 │   │   │   │   if "b" not in mode:                                                       │
+│   1903 │   │   │   │   │   mode += "b"                                                           │
+│ ❱ 1904 │   │   │   self.handles = get_handle(                                                    │
+│   1905 │   │   │   │   f,                                                                        │
+│   1906 │   │   │   │   mode,                                                                     │
+│   1907 │   │   │   │   encoding=self.options.get("encoding", None),                              │
+│                                                                                                  │
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/pandas/io/c │
+│ ommon.py:926 in get_handle                                                                       │
+│                                                                                                  │
+│    923 │   │   # Binary mode does not support 'encoding' and 'newline'.                          │
+│    924 │   │   if ioargs.encoding and "b" not in ioargs.mode:                                    │
+│    925 │   │   │   # Encoding                                                                    │
+│ ❱  926 │   │   │   handle = open(                                                                │
+│    927 │   │   │   │   handle,                                                                   │
+│    928 │   │   │   │   ioargs.mode,                                                              │
+│    929 │   │   │   │   encoding=ioargs.encoding,                                                 │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+FileNotFoundError: [Errno 2] No such file or directory: 
+'/home/ashok/work/latest/kedro-ml-engine-integrated/data/03_primary/y_train.csv'
+
+The above exception was the direct cause of the following exception:
+
+╭─────────────────────────────── Traceback (most recent call last) ────────────────────────────────╮
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/bin/kedro:8 in <module>                  │
+│                                                                                                  │
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/kedro/frame │
+│ work/cli/cli.py:260 in main                                                                      │
+│                                                                                                  │
+│   257 │   """                                                                                    │
+│   258 │   _init_plugins()                                                                        │
+│   259 │   cli_collection = KedroCLI(project_path=find_kedro_project(Path.cwd()) or Path.cwd())   │
+│ ❱ 260 │   cli_collection()                                                                       │
+│   261                                                                                            │
+│                                                                                                  │
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/click/core. │
+│ py:1485 in __call__                                                                              │
+│                                                                                                  │
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/kedro/frame │
+│ work/cli/cli.py:162 in main                                                                      │
+│                                                                                                  │
+│   159 │   │   )                                                                                  │
+│   160 │   │                                                                                      │
+│   161 │   │   try:                                                                               │
+│ ❱ 162 │   │   │   super().main(                                                                  │
+│   163 │   │   │   │   args=args,                                                                 │
+│   164 │   │   │   │   prog_name=prog_name,                                                       │
+│   165 │   │   │   │   complete_var=complete_var,                                                 │
+│                                                                                                  │
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/click/core. │
+│ py:1406 in main                                                                                  │
+│                                                                                                  │
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/click/core. │
+│ py:1873 in invoke                                                                                │
+│                                                                                                  │
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/click/core. │
+│ py:1269 in invoke                                                                                │
+│                                                                                                  │
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/click/core. │
+│ py:824 in invoke                                                                                 │
+│                                                                                                  │
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/kedro/frame │
+│ work/cli/project.py:262 in run                                                                   │
+│                                                                                                  │
+│   259 │   with KedroSession.create(                                                              │
+│   260 │   │   env=env, conf_source=conf_source, runtime_params=params                            │
+│   261 │   ) as session:                                                                          │
+│ ❱ 262 │   │   return session.run(                                                                │
+│   263 │   │   │   tags=tuple_tags,                                                               │
+│   264 │   │   │   runner=runner_obj(is_async=is_async),                                          │
+│   265 │   │   │   node_names=tuple_node_names,                                                   │
+│                                                                                                  │
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/kedro/frame │
+│ work/session/session.py:409 in run                                                               │
+│                                                                                                  │
+│   406 │   │   │   run_params=record_data, pipeline=filtered_pipeline, catalog=catalog            │
+│   407 │   │   )                                                                                  │
+│   408 │   │   try:                                                                               │
+│ ❱ 409 │   │   │   run_result = runner.run(                                                       │
+│   410 │   │   │   │   filtered_pipeline,                                                         │
+│   411 │   │   │   │   catalog,                                                                   │
+│   412 │   │   │   │   hook_manager,                                                              │
+│                                                                                                  │
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/kedro/runne │
+│ r/runner.py:115 in run                                                                           │
+│                                                                                                  │
+│   112 │   │   │   )                                                                              │
+│   113 │   │                                                                                      │
+│   114 │   │   start_time = perf_counter()                                                        │
+│ ❱ 115 │   │   self._run(pipeline, catalog, hook_or_null_manager, run_id)  # type: ignore[arg-t   │
+│   116 │   │   end_time = perf_counter()                                                          │
+│   117 │   │   run_duration = end_time - start_time                                               │
+│   118                                                                                            │
+│                                                                                                  │
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/kedro/runne │
+│ r/sequential_runner.py:63 in _run                                                                │
+│                                                                                                  │
+│   60 │   │   │   │   "Using synchronous mode for loading and saving data. Use the --async fla    │
+│   61 │   │   │   │   "for potential performance gains. https://docs.kedro.org/en/stable/nodes    │
+│   62 │   │   │   )                                                                               │
+│ ❱ 63 │   │   super()._run(                                                                       │
+│   64 │   │   │   pipeline=pipeline,                                                              │
+│   65 │   │   │   catalog=catalog,                                                                │
+│   66 │   │   │   hook_manager=hook_manager,                                                      │
+│                                                                                                  │
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/kedro/runne │
+│ r/runner.py:240 in _run                                                                          │
+│                                                                                                  │
+│   237 │   │   │   │   │   │   hook_manager=hook_manager,                                         │
+│   238 │   │   │   │   │   │   is_async=self._is_async,                                           │
+│   239 │   │   │   │   │   │   run_id=run_id,                                                     │
+│ ❱ 240 │   │   │   │   │   ).execute()                                                            │
+│   241 │   │   │   │   │   done_nodes.add(node)                                                   │
+│   242 │   │   │   │   except Exception:                                                          │
+│   243 │   │   │   │   │   self._suggest_resume_scenario(pipeline, done_nodes, catalog)           │
+│                                                                                                  │
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/kedro/runne │
+│ r/task.py:88 in execute                                                                          │
+│                                                                                                  │
+│    85 │   │   │   │   self.run_id,                                                               │
+│    86 │   │   │   )                                                                              │
+│    87 │   │   else:                                                                              │
+│ ❱  88 │   │   │   node = self._run_node_sequential(                                              │
+│    89 │   │   │   │   self.node,                                                                 │
+│    90 │   │   │   │   self.catalog,                                                              │
+│    91 │   │   │   │   self.hook_manager,  # type: ignore[arg-type]                               │
+│                                                                                                  │
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/kedro/runne │
+│ r/task.py:152 in _run_node_sequential                                                            │
+│                                                                                                  │
+│   149 │   │                                                                                      │
+│   150 │   │   for name in node.inputs:                                                           │
+│   151 │   │   │   hook_manager.hook.before_dataset_loaded(dataset_name=name, node=node)          │
+│ ❱ 152 │   │   │   inputs[name] = catalog.load(name)                                              │
+│   153 │   │   │   hook_manager.hook.after_dataset_loaded(                                        │
+│   154 │   │   │   │   dataset_name=name, data=inputs[name], node=node                            │
+│   155 │   │   │   )                                                                              │
+│                                                                                                  │
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/kedro/io/da │
+│ ta_catalog.py:1055 in load                                                                       │
+│                                                                                                  │
+│   1052 │   │   │   extra={"markup": True},                                                       │
+│   1053 │   │   )                                                                                 │
+│   1054 │   │                                                                                     │
+│ ❱ 1055 │   │   return dataset.load()                                                             │
+│   1056 │                                                                                         │
+│   1057 │   def release(self, ds_name: str) -> None:                                              │
+│   1058 │   │   """Release any cached data associated with a dataset                              │
+│                                                                                                  │
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/kedro/io/co │
+│ re.py:284 in load                                                                                │
+│                                                                                                  │
+│    281 │   │   │   │   # This exception handling is by design as the composed datasets           │
+│    282 │   │   │   │   # can throw any type of exception.                                        │
+│    283 │   │   │   │   message = f"Failed while loading data from dataset {self!s}.\n{exc!s}"    │
+│ ❱  284 │   │   │   │   raise DatasetError(message) from exc                                      │
+│    285 │   │                                                                                     │
+│    286 │   │   load.__annotations__["return"] = load_func.__annotations__.get("return")          │
+│    287 │   │   load.__loadwrapped__ = True  # type: ignore[attr-defined]                         │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+DatasetError: Failed while loading data from dataset 
+kedro_datasets.pandas.csv_dataset.CSVDataset(filepath=PurePosixPath('/home/ashok/work/latest/kedro-ml-engine-integrated/
+data/03_primary/y_train.csv'), protocol='file', load_args={}, save_args={'index': False}).
+[Errno 2] No such file or directory: '/home/ashok/work/latest/kedro-ml-engine-integrated/data/03_primary/y_train.csv'
