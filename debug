@@ -1,18 +1,18 @@
-(venv) ashok@ubuntu:~/work/latest/kedro-ml-engine-integrated$ kedro run --pipeline phase3
-[01/29/26 19:34:30] INFO     Using                                                                       __init__.py:269
+(venv) ashok@ubuntu:~/work/latest/kedro-ml-engine-integrated$ kedro run --pipeline phase6
+[01/29/26 19:42:33] INFO     Using                                                                       __init__.py:269
                              '/home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/sit                
                              e-packages/kedro/framework/project/rich_logging.yml' as logging                            
                              configuration.                                                                             
-[01/29/26 19:34:31] INFO     Kedro project kedro-ml-engine-integrated                                     session.py:330
+[01/29/26 19:42:33] INFO     Kedro project kedro-ml-engine-integrated                                     session.py:330
 ✅ Multi-table loader imported successfully
-[01/29/26 19:34:33] INFO     ✅ Phase 1a (data_loading) imported successfully                    pipeline_registry.py:62
+[01/29/26 19:42:35] INFO     ✅ Phase 1a (data_loading) imported successfully                    pipeline_registry.py:62
                     INFO     ✅ Phase 1b (data_validation) imported successfully                 pipeline_registry.py:69
                     INFO     ✅ Phase 1c (data_cleaning with PATH B feature scaling) imported    pipeline_registry.py:76
                              successfully                                                                               
                     INFO     ✅ Phase 2a (feature_engineering) imported successfully             pipeline_registry.py:87
                     INFO     ✅ Phase 2b (feature_selection) imported successfully               pipeline_registry.py:94
                     INFO     ✅ Phase 3 (model_training with PATH A+B) imported successfully    pipeline_registry.py:108
-[01/29/26 19:34:34] INFO     ✅ Phase 4 (phase4_algorithms with PATH A+B+C ready) imported      pipeline_registry.py:126
+                    INFO     ✅ Phase 4 (phase4_algorithms with PATH A+B+C ready) imported      pipeline_registry.py:126
                              successfully                                                                               
                     INFO     ✅ Phase 6 (ensemble_methods) imported successfully                pipeline_registry.py:139
                     INFO     ✅ Phase 5a (training_strategies) module available                 pipeline_registry.py:166
@@ -163,168 +163,75 @@
                              `.viz/kedro_pipeline_events.json` will be created only during a full kedro                 
                              run. See issue https://github.com/kedro-org/kedro-viz/issues/2443 for more                 
                              details.                                                                                   
-                    INFO     Using synchronous mode for loading and saving data. Use the --async sequential_runner.py:59
-                             flag for potential performance gains.                                                      
-                             https://docs.kedro.org/en/stable/nodes_and_pipelines/run_a_pipeline                        
-                             .html#load-and-save-asynchronously                                                         
-                    INFO     Loading data from X_train_selected (CSVDataset)...                     data_catalog.py:1048
-[01/29/26 19:34:36] INFO     Loading data from X_test_selected (CSVDataset)...                      data_catalog.py:1048
-                    INFO     Loading data from y_train (PickleDataset)...                           data_catalog.py:1048
-                    INFO     Running node: phase3_scale_features:                                            node.py:420
-                             scale_features([X_train_selected;X_test_selected;y_train]) ->                              
-                             [X_train_scaled;X_test_scaled;y_train_balanced;scalers]                                    
-                    INFO     ====================================================================== model_training.py:55
-                             ==========                                                                                 
-                    INFO     🔄 PHASE 3.0: FEATURE SCALING (PATH B) + SMOTE (OPTION D)              model_training.py:56
-                    INFO     ====================================================================== model_training.py:61
-                             ==========                                                                                 
-                    INFO     Found 56 numeric columns to scale                                      model_training.py:67
-                    INFO     Found 0 categorical columns (unchanged)                                model_training.py:68
-                    INFO     Using StandardScaler (default)                                         model_training.py:78
-                    INFO     ✅ Scaled 56 numeric columns                                           model_training.py:90
-                    INFO        Train shape: (246008, 56)                                           model_training.py:91
-                    INFO        Test shape: (61503, 56)                                             model_training.py:92
-                    INFO                                                                            model_training.py:97
-                             ======================================================================                     
-                             ==========                                                                                 
-                    INFO     🎯 OPTION D: HANDLING CLASS IMBALANCE WITH SMOTE                       model_training.py:98
-                    INFO     ====================================================================== model_training.py:99
-                             ==========                                                                                 
-[01/29/26 19:34:37] INFO     Detected classification problem (2 classes)                           model_training.py:107
-                    INFO     Before SMOTE:                                                         model_training.py:111
-                    INFO        Class 0: 226148 samples (91.9%)                                    model_training.py:113
-                    INFO        Class 1: 19860 samples (8.1%)                                      model_training.py:113
-                    INFO                                                                           model_training.py:116
-                             Applying SMOTE to balance classes...                                                       
-[01/29/26 19:34:38] INFO     After SMOTE:                                                          model_training.py:124
-                    INFO        Class 0: 226148 samples (50.0%)                                    model_training.py:127
-                    INFO        Class 1: 226148 samples (50.0%)                                    model_training.py:127
-                    INFO     ✅ Classes balanced with SMOTE!                                       model_training.py:129
-                    INFO     ===================================================================== model_training.py:140
-                             ===========                                                                                
-                    INFO     Saving data to X_train_scaled (CSVDataset)...                          data_catalog.py:1008
-[01/29/26 19:35:01] INFO     Saving data to X_test_scaled (CSVDataset)...                           data_catalog.py:1008
-[01/29/26 19:35:04] INFO     Saving data to y_train_balanced (PickleDataset)...                     data_catalog.py:1008
-                    INFO     Saving data to scalers (PickleDataset)...                              data_catalog.py:1008
-                    INFO     Completed node: phase3_scale_features                                         runner.py:245
-                    INFO     Completed 1 out of 7 tasks                                                    runner.py:246
-                    INFO     Loading data from X_train_scaled (CSVDataset)...                       data_catalog.py:1048
-[01/29/26 19:35:06] INFO     Loading data from y_train_balanced (PickleDataset)...                  data_catalog.py:1048
-                    INFO     Loading data from params:problem_type (MemoryDataset)...               data_catalog.py:1048
-                    INFO     Running node: phase3_train_baseline:                                            node.py:420
-                             train_baseline_model([X_train_scaled;y_train_balanced;params:problem_type]) ->             
-                    INFO     ===================================================================== model_training.py:178
-                             ===========                                                                                
-                    INFO     📊 PHASE 3.2: TRAINING BASELINE MODEL                                 model_training.py:179
-                    INFO     ===================================================================== model_training.py:180
-                             ===========                                                                                
-                    INFO     Detected problem type: classification                                 model_training.py:187
-                    INFO     Using LogisticRegression as baseline                                  model_training.py:191
-[01/29/26 19:35:27] INFO     ✅ Baseline trained with score: 0.6915                                model_training.py:199
-                    INFO     ===================================================================== model_training.py:200
-                             ===========                                                                                
-                    INFO     Saving data to baseline_model (PickleDataset)...                       data_catalog.py:1008
-                    INFO     Saving data to baseline_metrics (PickleDataset)...                     data_catalog.py:1008
-                    INFO     Saving data to problem_type (TextDataset)...                           data_catalog.py:1008
-                    INFO     Completed node: phase3_train_baseline                                         runner.py:245
-                    INFO     Completed 2 out of 7 tasks                                                    runner.py:246
-                    INFO     Loading data from X_train_scaled (CSVDataset)...                       data_catalog.py:1048
-[01/29/26 19:35:29] INFO     Loading data from y_train_balanced (PickleDataset)...                  data_catalog.py:1048
-                    INFO     Loading data from problem_type (TextDataset)...                        data_catalog.py:1048
-                    INFO     Loading data from params:feature_selection (MemoryDataset)...          data_catalog.py:1048
-                    INFO     Running node: phase3_hyperparameter_tuning:                                     node.py:420
-                             hyperparameter_tuning([X_train_scaled;y_train_balanced;problem_type;params:feat            
-                             ure_selection]) ->                                                                         
-                    INFO     ===================================================================== model_training.py:219
-                             ===========                                                                                
-                    INFO     ⏭️  PHASE 3.3: TESTING MODE (Skipping Hyperparameter Tuning)          model_training.py:220
-                    INFO     ===================================================================== model_training.py:221
-                             ===========                                                                                
-                    INFO     🎯 Classification: RandomForestClassifier (DEFAULT PARAMS)            model_training.py:228
-                    INFO     Training model with default parameters...                             model_training.py:239
-[01/29/26 19:35:48] INFO     ✅ Model trained successfully                                         model_training.py:244
-                    INFO     ✅ Training score: 0.8329                                             model_training.py:245
-                    INFO     ===================================================================== model_training.py:283
-                             ===========                                                                                
-                                                                                                                        
-                    INFO     Saving data to best_model (PickleDataset)...                           data_catalog.py:1008
-                    INFO     Saving data to tuning_info (PickleDataset)...                          data_catalog.py:1008
-                    INFO     Completed node: phase3_hyperparameter_tuning                                  runner.py:245
-                    INFO     Completed 3 out of 7 tasks                                                    runner.py:246
-                    INFO     Loading data from best_model (PickleDataset)...                        data_catalog.py:1048
-                    INFO     Loading data from X_train_scaled (CSVDataset)...                       data_catalog.py:1048
-[01/29/26 19:35:50] INFO     Loading data from y_train_balanced (PickleDataset)...                  data_catalog.py:1048
-                    INFO     Loading data from problem_type (TextDataset)...                        data_catalog.py:1048
-                    INFO     Running node: phase3_cross_validation: cross_validation() ->                    node.py:420
-                    INFO     ===================================================================== model_training.py:382
-                             ===========                                                                                
-                    INFO     📊 RUNNING 5-FOLD CROSS-VALIDATION (PATH A)                           model_training.py:383
-                    INFO     ===================================================================== model_training.py:384
-                             ===========                                                                                
-[01/29/26 19:37:01] INFO     Cross-validation scores: ['0.8296', '0.8276', '0.8241', '0.8310',     model_training.py:396
-                             '0.8295']                                                                                  
-                    INFO     Mean CV Score: 0.8284                                                 model_training.py:397
-                    INFO     Std Dev: 0.0024                                                       model_training.py:398
-                    INFO     Confidence Interval: 0.8284 (±0.0024)                                 model_training.py:399
-                    INFO     ===================================================================== model_training.py:400
-                             ===========                                                                                
-                    INFO     Saving data to cross_validation_results (PickleDataset)...             data_catalog.py:1008
-                    INFO     Completed node: phase3_cross_validation                                       runner.py:245
-                    INFO     Completed 4 out of 7 tasks                                                    runner.py:246
-                    INFO     Loading data from best_model (PickleDataset)...                        data_catalog.py:1048
-[01/29/26 19:37:02] INFO     Loading data from X_train_scaled (CSVDataset)...                       data_catalog.py:1048
-[01/29/26 19:37:05] INFO     Loading data from X_test_scaled (CSVDataset)...                        data_catalog.py:1048
-                    INFO     Loading data from y_train_balanced (PickleDataset)...                  data_catalog.py:1048
-                    INFO     Loading data from y_test (PickleDataset)...                            data_catalog.py:1048
-                    INFO     Loading data from problem_type (TextDataset)...                        data_catalog.py:1048
-                    INFO     Running node: phase3_evaluate_model: evaluate_model() ->                        node.py:420
-                    INFO     ===================================================================== model_training.py:302
-                             ===========                                                                                
-                    INFO     📈 PHASE 3.4: MODEL EVALUATION                                        model_training.py:303
-                    INFO     ===================================================================== model_training.py:304
-                             ===========                                                                                
-[01/29/26 19:37:06] INFO     ROC-AUC: 0.7132                                                       model_training.py:338
-                    INFO     ✅ Classification Metrics:                                            model_training.py:340
-                    INFO        Train Score: 0.8329                                                model_training.py:341
-                    INFO        Test Score: 0.7906                                                 model_training.py:342
-                    INFO        Accuracy: 0.7906                                                   model_training.py:343
-                    INFO        Precision: 0.8815                                                  model_training.py:344
-                    INFO        Recall: 0.7906                                                     model_training.py:345
-                    INFO        F1-Score: 0.8277                                                   model_training.py:346
-                    INFO     ===================================================================== model_training.py:365
-                             ===========                                                                                
-                    INFO     Saving data to model_evaluation (PickleDataset)...                     data_catalog.py:1008
-                    INFO     Completed node: phase3_evaluate_model                                         runner.py:245
-                    INFO     Completed 5 out of 7 tasks                                                    runner.py:246
-                    INFO     Loading data from best_model (PickleDataset)...                        data_catalog.py:1048
-                    INFO     Loading data from X_test_scaled (CSVDataset)...                        data_catalog.py:1048
-                    INFO     Loading data from y_test (PickleDataset)...                            data_catalog.py:1048
-                    INFO     Loading data from problem_type (TextDataset)...                        data_catalog.py:1048
-                    INFO     Running node: phase3_make_predictions: make_predictions() ->                    node.py:420
-                    INFO     ===================================================================== model_training.py:456
-                             ===========                                                                                
-                    INFO     PHASE 3.6: MAKING PREDICTIONS                                         model_training.py:457
-                    INFO     ===================================================================== model_training.py:458
-                             ===========                                                                                
-[01/29/26 19:37:07] INFO     ✅ Prediction accuracy: 0.7906                                        model_training.py:472
-                    INFO     ✅ Predictions saved: data/07_model_output/phase3_predictions.csv     model_training.py:489
-                    INFO     Saving data to phase3_predictions (CSVDataset)...                      data_catalog.py:1008
-                    INFO     Completed node: phase3_make_predictions                                       runner.py:245
-                    INFO     Completed 6 out of 7 tasks                                                    runner.py:246
-                    INFO     Loading data from best_model (PickleDataset)...                        data_catalog.py:1048
-                    INFO     Loading data from model_evaluation (PickleDataset)...                  data_catalog.py:1048
-                    INFO     Loading data from problem_type (TextDataset)...                        data_catalog.py:1048
-                    INFO     Running node: phase3_save_model: save_model_and_evaluation() ->                 node.py:420
-                    INFO     ===================================================================== model_training.py:421
-                             ===========                                                                                
-                    INFO     PHASE 3.5: SAVING MODEL & EVALUATION METRICS                          model_training.py:422
-                    INFO     ===================================================================== model_training.py:423
-                             ===========                                                                                
-                    INFO     ✅ Model saved: data/06_models/best_model_classification.pkl          model_training.py:432
-                    INFO     ✅ Evaluation saved:                                                  model_training.py:438
-                             data/06_models/model_evaluation_classification.json                                        
-                    INFO     Saving data to phase3_save_status (TextDataset)...                     data_catalog.py:1008
-                    INFO     Completed node: phase3_save_model                                             runner.py:245
-                    INFO     Completed 7 out of 7 tasks                                                    runner.py:246
-                    INFO     Pipeline execution completed successfully in 152.4 sec.                       runner.py:119
-(venv) ashok@ubuntu:~/work/latest/kedro-ml-engine-integrated$ 
+╭─────────────────────────────── Traceback (most recent call last) ────────────────────────────────╮
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/bin/kedro:8 in <module>                  │
+│                                                                                                  │
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/kedro/frame │
+│ work/cli/cli.py:260 in main                                                                      │
+│                                                                                                  │
+│   257 │   """                                                                                    │
+│   258 │   _init_plugins()                                                                        │
+│   259 │   cli_collection = KedroCLI(project_path=find_kedro_project(Path.cwd()) or Path.cwd())   │
+│ ❱ 260 │   cli_collection()                                                                       │
+│   261                                                                                            │
+│                                                                                                  │
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/click/core. │
+│ py:1485 in __call__                                                                              │
+│                                                                                                  │
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/kedro/frame │
+│ work/cli/cli.py:162 in main                                                                      │
+│                                                                                                  │
+│   159 │   │   )                                                                                  │
+│   160 │   │                                                                                      │
+│   161 │   │   try:                                                                               │
+│ ❱ 162 │   │   │   super().main(                                                                  │
+│   163 │   │   │   │   args=args,                                                                 │
+│   164 │   │   │   │   prog_name=prog_name,                                                       │
+│   165 │   │   │   │   complete_var=complete_var,                                                 │
+│                                                                                                  │
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/click/core. │
+│ py:1406 in main                                                                                  │
+│                                                                                                  │
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/click/core. │
+│ py:1873 in invoke                                                                                │
+│                                                                                                  │
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/click/core. │
+│ py:1269 in invoke                                                                                │
+│                                                                                                  │
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/click/core. │
+│ py:824 in invoke                                                                                 │
+│                                                                                                  │
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/kedro/frame │
+│ work/cli/project.py:262 in run                                                                   │
+│                                                                                                  │
+│   259 │   with KedroSession.create(                                                              │
+│   260 │   │   env=env, conf_source=conf_source, runtime_params=params                            │
+│   261 │   ) as session:                                                                          │
+│ ❱ 262 │   │   return session.run(                                                                │
+│   263 │   │   │   tags=tuple_tags,                                                               │
+│   264 │   │   │   runner=runner_obj(is_async=is_async),                                          │
+│   265 │   │   │   node_names=tuple_node_names,                                                   │
+│                                                                                                  │
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/kedro/frame │
+│ work/session/session.py:409 in run                                                               │
+│                                                                                                  │
+│   406 │   │   │   run_params=record_data, pipeline=filtered_pipeline, catalog=catalog            │
+│   407 │   │   )                                                                                  │
+│   408 │   │   try:                                                                               │
+│ ❱ 409 │   │   │   run_result = runner.run(                                                       │
+│   410 │   │   │   │   filtered_pipeline,                                                         │
+│   411 │   │   │   │   catalog,                                                                   │
+│   412 │   │   │   │   hook_manager,                                                              │
+│                                                                                                  │
+│ /home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/site-packages/kedro/runne │
+│ r/runner.py:103 in run                                                                           │
+│                                                                                                  │
+│   100 │   │   unsatisfied = pipeline.inputs() - set(warmed_up_ds)                                │
+│   101 │   │                                                                                      │
+│   102 │   │   if unsatisfied:                                                                    │
+│ ❱ 103 │   │   │   raise ValueError(                                                              │
+│   104 │   │   │   │   f"Pipeline input(s) {unsatisfied} not found in the {catalog.__class__.__   │
+│   105 │   │   │   )                                                                              │
+│   106                                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+ValueError: Pipeline input(s) {'phase4_models'} not found in the DataCatalogWithCatalogCommandsMixin
