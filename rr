@@ -1,419 +1,760 @@
-package com.example.meshcdc.service;
-
-import com.google.api.services.dataflow.Dataflow;
-import com.google.api.services.dataflow.model.FlexTemplateRuntimeEnvironment;
-import com.google.api.services.dataflow.model.LaunchFlexTemplateParameter;
-import com.google.api.services.dataflow.model.LaunchFlexTemplateRequest;
-import com.google.api.services.dataflow.model.LaunchFlexTemplateResponse;
-import com.google.cloud.storage.Blob;
-import com.google.cloud.storage.Storage;
-import com.google.cloud.storage.StorageOptions;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.*;
-
-@Service
-public class DataflowLauncherService {
-
-  private final Dataflow df;
-  private final Storage storage;
-  private final String projectId;
-  private final String region;
-  private final String flexSpecGcs;
-  private final String saEmail;
-  private final String tempLocation;
-  private final ObjectMapper M = new ObjectMapper();
-
-  public DataflowLauncherService(
-      Dataflow df,
-      @Value("${mesh.project-id}") String projectId,
-      @Value("${mesh.region}") String region,
-      @Value("${mesh.dataflow.containerSpecGcs}") String flexSpecGcs,
-      @Value("${mesh.dataflow.service-account}") String saEmail,
-      @Value("${mesh.dataflow.temp-location}") String tempLocation
-  ) {
-    this.df = df;
-    this.storage = StorageOptions.getDefaultInstance().getService();
-    this.projectId = projectId;
-    this.region = region;
-    this.flexSpecGcs = flexSpecGcs;
-    this.saEmail = saEmail;
-    this.tempLocation = tempLocation;
-  }
-
-  public String launchReplication(String jobName, String configLocation, String metricsTable, String dlqPath) throws IOException {
-    // Build String-only parameters (Dataflow API requires Map<String, String>)
-    Map<String, String> reqParams = new LinkedHashMap<>();
-    putIfNonEmpty(reqParams, "configLocation", configLocation);
-    putIfNonEmpty(reqParams, "metricsTable",  metricsTable);
-    putIfNonEmpty(reqParams, "dlqPath",       dlqPath);
-
-    // Normalize common typos/synonyms (e.g., dlqparg -> dlqPath)
-    reqParams = normalizeKeys(reqParams);
-
-    // Validate against names declared in containerSpec.json (throws if mismatch)
-    validateAgainstSpec(reqParams.keySet());
-
-    FlexTemplateRuntimeEnvironment env = new FlexTemplateRuntimeEnvironment()
-        .setServiceAccountEmail(saEmail)
-        .setTempLocation(tempLocation)
-        .setEnableStreamingEngine(true)
-        .setAdditionalUserLabels(Map.of("product", jobName));
-
-    LaunchFlexTemplateParameter param = new LaunchFlexTemplateParameter()
-        .setJobName(jobName)
-        .setContainerSpecGcsPath(flexSpecGcs)
-        .setEnvironment(env)
-        .setParameters(reqParams);
-
-    LaunchFlexTemplateRequest req = new LaunchFlexTemplateRequest().setLaunchParameter(param);
-    LaunchFlexTemplateResponse resp = df.projects().locations().flexTemplates()
-        .launch(projectId, region, req).execute();
-    return resp.getJob() != null ? resp.getJob().getId() : null;
-  }
-
-  private static void putIfNonEmpty(Map<String, String> m, String k, String v) {
-    if (v != null && !v.isBlank()) m.put(k, v);
-  }
-
-  private Map<String,String> normalizeKeys(Map<String,String> in) {
-    Map<String,String> synonyms = Map.of(
-        "dlqparg", "dlqPath",       // your typo seen in error
-        "dlq",     "dlqPath",
-        "metrics_table", "metricsTable",
-        "config_path",  "configLocation"
-    );
-    Map<String,String> out = new LinkedHashMap<>();
-    for (var e : in.entrySet()) {
-      String k = e.getKey();
-      if (synonyms.containsKey(k)) k = synonyms.get(k);
-      out.put(k, e.getValue());
-    }
-    return out;
-  }
-
-  private void validateAgainstSpec(Set<String> keys) {
-    Set<String> allowed = fetchSpecParameterNames();
-    List<String> bad = new ArrayList<>();
-    for (String k : keys) if (!allowed.contains(k)) bad.add(k);
-    if (!bad.isEmpty()) {
-      throw new IllegalArgumentException(
-          "containerSpec " + flexSpecGcs + " does not declare parameters " + bad +
-          ". Allowed: " + allowed);
-    }
-  }
-
-  private Set<String> fetchSpecParameterNames() {
-    // Parse gs://bucket/path.json
-    String gs = flexSpecGcs.replaceFirst("^gs://", "");
-    int slash = gs.indexOf('/');
-    if (slash < 0) throw new IllegalArgumentException("Invalid GCS URI for containerSpec: " + flexSpecGcs);
-    String bucket = gs.substring(0, slash);
-    String object = gs.substring(slash + 1);
-
-    Blob blob = storage.get(bucket, object);
-    if (blob == null) throw new IllegalArgumentException("containerSpec not found: " + flexSpecGcs);
-    String json = new String(blob.getContent(), StandardCharsets.UTF_8);
-
-    try {
-      JsonNode root = M.readTree(json);
-      JsonNode params = root.get("parameters");
-      if (params == null || !params.isArray()) return Set.of(); // no parameters declared
-      Set<String> names = new LinkedHashSet<>();
-      for (JsonNode p : params) {
-        JsonNode n = p.get("name");
-        if (n != null && n.isTextual()) names.add(n.asText());
-      }
-      return names;
-    } catch (Exception e) {
-      throw new RuntimeException("Failed to parse containerSpec.json: " + e.getMessage(), e);
-    }
-  }
-}
-
-
-
-==================
-
-CREATE TABLE Orders (
-  order_id   STRING(36) NOT NULL,
-  user_id    STRING(36) NOT NULL,
-  status     STRING(32),
-  amount     NUMERIC,
-  email      STRING(320),
-  created_at TIMESTAMP NOT NULL OPTIONS (allow_commit_timestamp=true),
-  updated_at TIMESTAMP NOT NULL OPTIONS (allow_commit_timestamp=true),
-) PRIMARY KEY (order_id);
-
-=======================================
-
-awesome — let’s test your backend end-to-end, one tiny step at a time. copy–paste in order.
-
-# 0) One-time prerequisites
-
-```bash
-# pick your project/region
-export GCP_PROJECT=<your-project-id>
-export REGION=us-central1
-
-# config bucket for per-product JSON + DLQ + temp
-export CFG_BUCKET=${GCP_PROJECT}-mesh-config
-
-# BigQuery location (must match your target dataset)
-export BQ_LOCATION=US
-
-# Service account the Dataflow job will run as
-export SA_EMAIL=dp-mesh@${GCP_PROJECT}.iam.gserviceaccount.com
-
-# Flex Template container spec in GCS (we'll upload in step 4)
-export FLEX_SPEC_GCS=gs://${CFG_BUCKET}/flex/containerSpec.json
-```
-
-# 1) Start MariaDB and the app
-
-```bash
-docker compose -f docker-compose.mariadb.yml up -d
-```
-
-Check DB is up (optional):
-
-```bash
-docker exec -it $(docker ps -qf name=db) mysql -umesh -pmesh -e "SELECT 1;"
-```
-
-Run the app (from project root):
-
-```bash
-mvn -q spring-boot:run
-```
-
-You should see `Started MeshCdcApplication` on port `8080`.
-
-# 2) Authenticate to Google & set project
-
-```bash
-gcloud auth application-default login
-gcloud config set project $GCP_PROJECT
-```
-
-# 3) Enable required APIs
-
-```bash
-gcloud services enable \
-  dataflow.googleapis.com storage.googleapis.com bigquery.googleapis.com \
-  spanner.googleapis.com
-```
-
-# 4) Create the config bucket & upload Flex containerSpec
-
-```bash
-gsutil mb -l $REGION gs://$CFG_BUCKET  # OK if it already exists
-
-# Create a containerSpec.json that points at YOUR Dataflow Docker image
-cat > containerSpec.json <<'JSON'
-{
-  "image": "gcr.io/<your-project>/<your-repo>/spanner-bq-repl:1.0.0",
-  "sdk_info": {"language": "JAVA"},
-  "metadata": {"name": "Spanner→BQ CDC"},
-  "default_environment": {"num_workers": 3},
-  "parameters": [
-    {"name": "configLocation", "label": "Replication config GCS path", "is_optional": false},
-    {"name": "metricsTable",  "label": "BQ sidecar table", "is_optional": false},
-    {"name": "dlqPath",       "label": "GCS DLQ path",    "is_optional": true}
-  ]
-}
-JSON
-gsutil cp containerSpec.json $FLEX_SPEC_GCS
-```
-
-# 5) Create BQ dataset + sidecar table
-
-```bash
-bq --location=$BQ_LOCATION mk -d ${GCP_PROJECT}:dp_orders || true
-bq query --location=$BQ_LOCATION --use_legacy_sql=false "
-CREATE TABLE IF NOT EXISTS \`${GCP_PROJECT}.dp_orders.mesh_sync_status` (
-  src_database STRING, src_table STRING,
-  last_seen_commit_ts TIMESTAMP, last_applied_commit_ts TIMESTAMP,
-  backlog_seconds INT64,
-  window_start TIMESTAMP, window_end TIMESTAMP,
-  inserts INT64, updates INT64, deletes INT64,
-  error_count INT64, last_error STRING,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP()
-) PARTITION BY DATE(updated_at);"
-```
-
-# 6) Create the Dataflow service account & grant roles
-
-```bash
-gcloud iam service-accounts create dp-mesh --display-name="Data Mesh SA" || true
-
-gcloud projects add-iam-policy-binding $GCP_PROJECT \
-  --member="serviceAccount:$SA_EMAIL" --role="roles/dataflow.worker"
-gcloud projects add-iam-policy-binding $GCP_PROJECT \
-  --member="serviceAccount:$SA_EMAIL" --role="roles/dataflow.viewer"
-gcloud projects add-iam-policy-binding $GCP_PROJECT \
-  --member="serviceAccount:$SA_EMAIL" --role="roles/storage.admin"
-gcloud projects add-iam-policy-binding $GCP_PROJECT \
-  --member="serviceAccount:$SA_EMAIL" --role="roles/bigquery.admin"
-gcloud projects add-iam-policy-binding $GCP_PROJECT \
-  --member="serviceAccount:$SA_EMAIL" --role="roles/spanner.viewer"
-gcloud projects add-iam-policy-binding $GCP_PROJECT \
-  --member="serviceAccount:$SA_EMAIL" --role="roles/spanner.databaseReader"
-```
-
-# 7) Ensure Spanner change stream exists
-
-If you already have it, skip. Otherwise:
-
-```bash
-# Example: create change stream on all tables
-gcloud spanner databases ddl update <INSTANCE> --database=<DB> \
-  --ddl="CREATE CHANGE STREAM cs_orders FOR ALL OPTIONS (value_capture_type = 'NEW_VALUES')"
-```
-
-# 8) Create a product
-
-```bash
-PID=$(curl -sX POST localhost:8080/v2/products \
- -H 'content-type: application/json' \
- -d '{"productKey":"orders-transactions","name":"Orders","ownerEmail":"you@x.com"}' \
- | jq -r .id)
-echo "Product ID: $PID"
-```
-
-# 9) Post the contract (edit the source & sink fields to your env)
-
-```bash
-cat > contract.json <<JSON
-{
-  "version": "v1",
-  "replication": {
-    "source": {
-      "type": "SPANNER_CHANGE_STREAM",
-      "instance": "<INSTANCE>",
-      "database": "<DB>",
-      "changeStream": "cs_orders",
-      "tables": [
-        {"name": "orders", "pk": ["order_id"], "commitTsCol": "_commit_ts"}
-      ]
-    },
-    "sink": {
-      "type": "BIGQUERY",
-      "project": "$GCP_PROJECT",
-      "dataset": "dp_orders",
-      "table": "curated",
-      "partition": {"field": "_commit_ts", "type": "DAY"},
-      "cluster": ["order_id","status"],
-      "writeMode": "UPSERT",
-      "dlq": {"type": "GCS", "bucket": "$CFG_BUCKET"}
-    },
-    "privacy": {"policyTags": {"email": "PII_EMAIL"}},
-    "slos": {"freshnessMinutes": 15, "completenessPct": 99.5},
-    "sidecar": {"statusTable": "$GCP_PROJECT.dp_orders.mesh_sync_status"},
-    "backfill": {"enabled": false}
-  }
-}
-JSON
-
-curl -sX PUT localhost:8080/v2/products/$PID/contract \
-  -H 'content-type: application/json' --data-binary @contract.json | jq
-```
-
-# 10) Provision the product surface
-
-```bash
-curl -sX POST localhost:8080/v2/products/$PID/provision:apply | jq
-```
-
-Confirm the per-product config exists:
-
-```bash
-gsutil cat gs://$CFG_BUCKET/replications/$PID.json | jq
-```
-
-# 11) Create the pipeline & deploy (launch Dataflow Flex job)
-
-```bash
-PLID=$(curl -sX POST localhost:8080/v2/pipelines \
- -H 'content-type: application/json' \
- -d '{"productId":"'"$PID"'","name":"orders_spanner_to_bq","template":"DATAFLOW_FLEX"}' \
- | jq -r .id)
-echo "Pipeline ID: $PLID"
-
-curl -sX POST localhost:8080/v2/pipelines/$PLID:deploy | jq
-```
-
-You’ll get a JSON with `"jobId"`. Validate the job exists:
-
-```bash
-gcloud dataflow jobs list --region=$REGION --filter="id:<paste-jobId>"
-```
-
-# 12) Check health
-
-```bash
-curl -s localhost:8080/v1/observability/products/$PID/health | jq
-```
-
-You’ll see fields like:
-
-```json
-{"status":"GREEN|YELLOW|RED","freshnessMinutes":..., "systemLagMinutes":..., "backlogSeconds":...}
-```
-
-# 13) Quick functional checks
-
-**A) Verify target table exists**
-
-```bash
-bq ls ${GCP_PROJECT}:dp_orders
-```
-
-**B) Verify sidecar updates**
-
-```bash
-bq query --use_legacy_sql=false "
-SELECT * FROM \`${GCP_PROJECT}.dp_orders.mesh_sync_status\`
-ORDER BY updated_at DESC LIMIT 10"
-```
-
-**C) Access workflow (optional)**
-
-```bash
-REQ=$(curl -sX POST localhost:8080/v2/access/requests \
- -H 'content-type: application/json' \
- -d '{"productId":"'"$PID"'","datasetRef":"'"$GCP_PROJECT"'.dp_orders.curated","columns":["email"],"principal":"user:x@example.com","purpose":"analysis","durationDays":7}' \
- | jq -r .id)
-
-curl -sX POST "localhost:8080/v2/access/requests/$REQ:approve?by=steward@example.com" | jq
-```
-
-# 14) Common issues & exact fixes
-
-* **`PERMISSION_DENIED` on Flex launch**
-  Ensure `$SA_EMAIL` has the roles in step 6, and your app has ADC (`gcloud auth application-default login`).
-* **`Not found: containerSpec`**
-  Check `mesh.dataflow.containerSpecGcs` in `application.yml` points to your `gs://…/containerSpec.json` uploaded in step 4.
-* **`BigQuery location mismatch`**
-  Your dataset must be in `$BQ_LOCATION` and the `ProvisionerService` uses that location. Set `BQ_LOCATION` correctly before creating the dataset.
-* **No rows in sidecar**
-  Your Dataflow pipeline must implement the **heartbeat** that writes to `mesh_sync_status`. (I included the writer pattern in the canvas; wire it into your job.)
-* **Spanner stream errors**
-  Confirm the change stream name exists on the right DB and that the Dataflow SA has `roles/spanner.databaseReader` and `roles/spanner.viewer`.
-
-# 15) What “100% Data Mesh” looks like here (acceptance)
-
-* **Contract-first**: your posted contract drives provisioning + runtime config (GCS JSON).
-* **Self-service**: users create products/pipelines via API (your Angular can call these).
-* **Observability**: deterministic SLOs via sidecar + Dataflow metrics exposed at `/health`.
-* **Governance**: access request flow included; add Policy Tags/column IAM next if needed.
-* **Change mgmt**: contracts are versioned in DB; you can add an approvals endpoint later.
-
----
-
-If any step returns an error or a response you didn’t expect, paste the exact command and output — I’ll pinpoint and fix it.
+(venv) ashok@ubuntu:~/work/latest/kedro-ml-engine-integrated$ kedro run
+[01/29/26 14:41:59] INFO     Using                                                                       __init__.py:269
+                             '/home/ashok/work/latest/kedro-ml-engine-integrated/venv/lib/python3.12/sit                
+                             e-packages/kedro/framework/project/rich_logging.yml' as logging                            
+                             configuration.                                                                             
+[01/29/26 14:41:59] INFO     Kedro project kedro-ml-engine-integrated                                     session.py:330
+✅ Multi-table loader imported successfully
+[01/29/26 14:42:01] INFO     ✅ Phase 1a (data_loading) imported successfully                    pipeline_registry.py:62
+                    INFO     ✅ Phase 1b (data_validation) imported successfully                 pipeline_registry.py:69
+                    INFO     ✅ Phase 1c (data_cleaning with PATH B feature scaling) imported    pipeline_registry.py:76
+                             successfully                                                                               
+                    INFO     ✅ Phase 2a (feature_engineering) imported successfully             pipeline_registry.py:87
+                    INFO     ✅ Phase 2b (feature_selection) imported successfully               pipeline_registry.py:94
+                    INFO     ✅ Phase 3 (model_training with PATH A+B) imported successfully    pipeline_registry.py:108
+                    INFO     ✅ Phase 4 (phase4_algorithms with PATH A+B+C ready) imported      pipeline_registry.py:126
+                             successfully                                                                               
+                    INFO     ✅ Phase 6 (ensemble_methods) imported successfully                pipeline_registry.py:139
+                    INFO     ✅ Phase 5a (training_strategies) module available                 pipeline_registry.py:166
+                    INFO     ✅ Phase 5b (evaluation_metrics) module available                  pipeline_registry.py:174
+                    INFO     ✅ Phase 5c (cross_validation_strategies) module available         pipeline_registry.py:182
+                    INFO     ✅ Phase 5d (model_comparison) module available                    pipeline_registry.py:190
+                    INFO     ✅ Phase 5e (visualization_manager) module available               pipeline_registry.py:198
+                    INFO     ✅ Phase 5f (hyperparameter_analysis) module available             pipeline_registry.py:206
+                    INFO     ✅ Phase 5g (report_generator) module available                    pipeline_registry.py:214
+                    INFO                                                                        pipeline_registry.py:247
+                             ==================================================================                         
+                             ==============                                                                             
+                    INFO     REGISTERING PIPELINES - PATH A, B, C + PHASE 5                     pipeline_registry.py:248
+                    INFO     ================================================================== pipeline_registry.py:249
+                             ==============                                                                             
+                    INFO     ✅ Phase 1 pipeline created (data loading + validation + cleaning) pipeline_registry.py:267
+                    INFO     ✅ Phase 2 pipeline created (feature engineering + selection)      pipeline_registry.py:275
+                    INFO     ✅ Phase 1+2 pipeline created (complete data processing)           pipeline_registry.py:281
+                    INFO     ✅ Phase 3 pipeline created (model training with PATH A+B)         pipeline_registry.py:289
+                    INFO     ✅ Phase 4 pipeline created (algorithms with PATH A+B+C ready)     pipeline_registry.py:297
+                    INFO                                                                 phase6_ensemble_pipeline.py:319
+                             ===========================================================                                
+                             =====================                                                                      
+                    INFO     🔧 CREATING PHASE 6 PIPELINE                                phase6_ensemble_pipeline.py:320
+                    INFO     =========================================================== phase6_ensemble_pipeline.py:321
+                             =====================                                                                      
+                    INFO     ✅ Phase 6 Pipeline created successfully                    phase6_ensemble_pipeline.py:345
+                    INFO     =========================================================== phase6_ensemble_pipeline.py:346
+                             =====================                                                                      
+                                                                                                                        
+                    INFO     ✅ Phase 6 pipeline created (ensemble methods)                     pipeline_registry.py:306
+                    INFO     ✅ Complete Pipeline created (Phase 1-6)                           pipeline_registry.py:349
+                    INFO     ================================================================== pipeline_registry.py:351
+                             ==============                                                                             
+                    INFO     ✅ COMPLETE PIPELINE CREATED (Phase 1-4)                           pipeline_registry.py:352
+                    INFO        Phases included: 4                                              pipeline_registry.py:353
+                    INFO        Path A (outlier detection, CV, ensemble): ✅                    pipeline_registry.py:354
+                    INFO        Path B (feature scaling, tuning, ROC): ✅                       pipeline_registry.py:355
+                    INFO        Path C (learning curves, SHAP, stats): ✅ (optional)            pipeline_registry.py:356
+                    INFO        Expected accuracy: 89-90%                                       pipeline_registry.py:357
+                    INFO     ================================================================== pipeline_registry.py:358
+                             ==============                                                                             
+                    INFO     ✅ Available pipelines: ['phase1', 'data_loading',                 pipeline_registry.py:359
+                             'data_validation', 'data_cleaning', 'phase2',                                              
+                             'feature_engineering', 'phase1_2', 'data_processing', 'phase3',                            
+                             'model_training', 'phase4', 'algorithms', 'phase6', 'ensemble',                            
+                             'ensemble_methods', 'complete', 'all', 'end_to_end', 'a_b_c',                              
+                             '__default__', 'complete_1_6', 'all_with_ensemble',                                        
+                             'end_to_end_full']                                                                         
+                    INFO     ================================================================== pipeline_registry.py:360
+                             ==============                                                                             
+                    INFO                                                                        pipeline_registry.py:389
+                             ==================================================================                         
+                             ==============                                                                             
+                    INFO     🆕 PHASE 5: ADVANCED ANALYSIS MODULES (Available for manual use)   pipeline_registry.py:390
+                    INFO     ================================================================== pipeline_registry.py:391
+                             ==============                                                                             
+                    INFO     Input: Phase 4 outputs (load from disk after pipeline runs)        pipeline_registry.py:392
+                    INFO     Process: 7 modules with classes for analysis and reporting         pipeline_registry.py:393
+                    INFO     Output: Use in Python code for metrics, visualizations, reports    pipeline_registry.py:394
+                    INFO     ================================================================== pipeline_registry.py:395
+                             ==============                                                                             
+                    INFO     ✅ Phase 5a (training_strategies) - Available                      pipeline_registry.py:400
+                    INFO     ✅ Phase 5b (evaluation_metrics) - Available                       pipeline_registry.py:406
+                    INFO     ✅ Phase 5c (cross_validation_strategies) - Available              pipeline_registry.py:412
+                    INFO     ✅ Phase 5d (model_comparison) - Available                         pipeline_registry.py:418
+                    INFO     ✅ Phase 5e (visualization_manager) - Available                    pipeline_registry.py:424
+                    INFO     ✅ Phase 5f (hyperparameter_analysis) - Available                  pipeline_registry.py:430
+                    INFO     ✅ Phase 5g (report_generator) - Available                         pipeline_registry.py:436
+                    INFO                                                                        pipeline_registry.py:441
+                             🆕 PHASE 6 (Ensemble Methods):                                                             
+                    INFO       ✅ Phase 6 available (ensemble methods)                          pipeline_registry.py:443
+                    INFO          Methods: Stacking, Blending, Weighted Voting                  pipeline_registry.py:444
+                    INFO          Can be run: kedro run --pipeline phase6                       pipeline_registry.py:445
+                    INFO          Or as part: kedro run --pipeline complete_1_6                 pipeline_registry.py:446
+                    INFO                                                                        pipeline_registry.py:450
+                             Phase 5 modules available: 7/7                                                             
+                    INFO                                                                        pipeline_registry.py:451
+                             Phase 5 Usage Examples:                                                                    
+                    INFO       from ml_engine.pipelines.evaluation_metrics import               pipeline_registry.py:452
+                             ComprehensiveMetricsCalculator                                                             
+                    INFO       calc = ComprehensiveMetricsCalculator()                          pipeline_registry.py:453
+                    INFO       metrics = calc.evaluate_classification(y_test, y_pred, y_proba)  pipeline_registry.py:454
+                    INFO                                                                        pipeline_registry.py:455
+                               from ml_engine.pipelines.visualization_manager import                                    
+                             VisualizationManager                                                                       
+                    INFO       viz = VisualizationManager()                                     pipeline_registry.py:456
+                    INFO       viz.plot_confusion_matrix(y_test, y_pred, 'output.png')          pipeline_registry.py:457
+                    INFO                                                                        pipeline_registry.py:458
+                               from ml_engine.pipelines.report_generator import                                         
+                             ComprehensiveReportManager                                                                 
+                    INFO       report = ComprehensiveReportManager('MyModel')                   pipeline_registry.py:459
+                    INFO       reports = report.generate_all_reports('./data/08_reporting')     pipeline_registry.py:460
+                    INFO     ================================================================== pipeline_registry.py:461
+                             ==============                                                                             
+                    INFO                                                                        pipeline_registry.py:467
+                             ==================================================================                         
+                             ==============                                                                             
+                    INFO     📊 PIPELINE REGISTRY COMPLETE & FIXED!                             pipeline_registry.py:468
+                    INFO     ================================================================== pipeline_registry.py:469
+                             ==============                                                                             
+                    INFO     Total pipelines registered: 23                                     pipeline_registry.py:470
+                    INFO                                                                        pipeline_registry.py:471
+                             📈 Phase 1-4 (Kedro Pipelines): ✅ All working                                             
+                    INFO       • __default__ (Phase 1-4, 100% backward compatible)              pipeline_registry.py:472
+                    INFO       • complete, all, end_to_end, a_b_c                               pipeline_registry.py:473
+                    INFO       • phase1, phase2, phase3, phase4                                 pipeline_registry.py:474
+                    INFO       • data_loading, feature_engineering, model_training, algorithms  pipeline_registry.py:475
+                    INFO       • phase1_2, data_processing                                      pipeline_registry.py:476
+                    INFO                                                                        pipeline_registry.py:478
+                             🆕 Phase 5 (Python Classes): ✅ 7/7 modules                                                
+                    INFO       • training_strategies (multiple training approaches)             pipeline_registry.py:479
+                    INFO       • evaluation_metrics (40+ automatic metrics)                     pipeline_registry.py:480
+                    INFO       • cross_validation_strategies (6 CV approaches)                  pipeline_registry.py:481
+                    INFO       • model_comparison (statistical testing)                         pipeline_registry.py:482
+                    INFO       • visualization_manager (10+ plot types)                         pipeline_registry.py:483
+                    INFO       • hyperparameter_analysis (sensitivity analysis)                 pipeline_registry.py:484
+                    INFO       • report_generator (HTML/JSON/PDF/Model Cards)                   pipeline_registry.py:485
+                    INFO                                                                        pipeline_registry.py:487
+                             ✅ PHASE 1-4: Automated via Kedro | PHASE 5: Manual Python classes                         
+                    INFO     ✅ NO IMPORT ERRORS | NO CONFLICTS | FULLY WORKING                 pipeline_registry.py:488
+                    INFO                                                                        pipeline_registry.py:490
+                             🎯 How to use:                                                                             
+                    INFO       Phase 1-4 (Automated via Kedro):                                 pipeline_registry.py:491
+                    INFO         $ kedro run                                                    pipeline_registry.py:492
+                    INFO         $ kedro run --pipeline __default__                             pipeline_registry.py:493
+                    INFO         $ kedro run --pipeline complete                                pipeline_registry.py:494
+                    INFO                                                                        pipeline_registry.py:495
+                               Phase 5 (Manual in Python - after Phase 1-4 completes):                                  
+                    INFO         from ml_engine.pipelines.evaluation_metrics import             pipeline_registry.py:496
+                             ComprehensiveMetricsCalculator                                                             
+                    INFO         calc = ComprehensiveMetricsCalculator()                        pipeline_registry.py:497
+                    INFO         metrics = calc.evaluate_classification(y_test, y_pred,         pipeline_registry.py:498
+                             y_proba)                                                                                   
+                    INFO                                                                        pipeline_registry.py:499
+                               That's it! No errors, no conflicts, everything working!                                  
+                    INFO     ================================================================== pipeline_registry.py:500
+                             ==============                                                                             
+                                                                                                                        
+                    INFO     Kedro is sending anonymous usage data with the sole purpose of improving the  plugin.py:242
+                             product. No personal data or IP addresses are stored on our side. To opt out,              
+                             set the `KEDRO_DISABLE_TELEMETRY` or `DO_NOT_TRACK` environment variables, or              
+                             create a `.telemetry` file in the current working directory with the contents              
+                             `consent: false`. To hide this message, explicitly grant or deny consent.                  
+                             Read more at https://docs.kedro.org/en/stable/about/telemetry/                             
+[01/29/26 14:42:02] INFO     Using synchronous mode for loading and saving data. Use the --async sequential_runner.py:59
+                             flag for potential performance gains.                                                      
+                             https://docs.kedro.org/en/stable/nodes_and_pipelines/run_a_pipeline                        
+                             .html#load-and-save-asynchronously                                                         
+                    INFO     Loading data from raw_data (CSVDataset)...                             data_catalog.py:1048
+                    INFO     Loading data from params:data_processing.handle_missing                data_catalog.py:1048
+                             (MemoryDataset)...                                                                         
+                    INFO     Running node: clean_data_node: clean_data() ->                                  node.py:420
+                    INFO     🧹 Cleaning data...                                                     data_cleaning.py:27
+                    INFO     ======================================================================= data_cleaning.py:36
+                             =========                                                                                  
+                    INFO     🔍 STARTING OUTLIER DETECTION (PATH A)                                  data_cleaning.py:37
+                    INFO     ======================================================================= data_cleaning.py:38
+                             =========                                                                                  
+                    INFO     Found 6 numeric columns for outlier detection                           data_cleaning.py:41
+                    INFO       Column 'age': 143 outliers (bounds: [-2.00, 78.00])                   data_cleaning.py:60
+                    INFO       Column 'fnlwgt': 992 outliers (bounds: [-61009.00, 415887.00])        data_cleaning.py:60
+                    INFO       Column 'education.num': 1198 outliers (bounds: [4.50, 16.50])         data_cleaning.py:60
+                    INFO       Column 'capital.gain': 2712 outliers (bounds: [0.00, 0.00])           data_cleaning.py:60
+                    INFO       Column 'capital.loss': 1519 outliers (bounds: [0.00, 0.00])           data_cleaning.py:60
+                    INFO       Column 'hours.per.week': 9008 outliers (bounds: [32.50, 52.50])       data_cleaning.py:60
+                    INFO     Total outliers found: 15572 across 6 columns                            data_cleaning.py:62
+                    INFO     Capping outliers to reasonable bounds...                                data_cleaning.py:64
+                    INFO     ✅ Outliers capped successfully                                         data_cleaning.py:74
+                    INFO     ----------------------------------------------------------------------- data_cleaning.py:83
+                             ---------                                                                                  
+                    INFO     🔍 DUPLICATE DETECTION                                                  data_cleaning.py:84
+                    INFO     ----------------------------------------------------------------------- data_cleaning.py:85
+                             ---------                                                                                  
+                    INFO     Initial rows: 32561                                                     data_cleaning.py:93
+                    INFO     ✅ Duplicates removed. Final rows: 32510                                data_cleaning.py:94
+                    INFO        Rows deleted: 51                                                     data_cleaning.py:95
+                    INFO     ---------------------------------------------------------------------- data_cleaning.py:103
+                             ----------                                                                                 
+                    INFO     📊 HANDLING MISSING VALUES                                             data_cleaning.py:104
+                    INFO     ---------------------------------------------------------------------- data_cleaning.py:105
+                             ----------                                                                                 
+                    INFO        Handling missing values with 'mean' strategy                        data_cleaning.py:107
+                    INFO     ---------------------------------------------------------------------- data_cleaning.py:145
+                             ----------                                                                                 
+                    INFO     📈 FEATURE SCALING (PATH B)                                            data_cleaning.py:146
+                    INFO     ====================================================================== data_cleaning.py:147
+                             ==========                                                                                 
+                    INFO     Scaling 6 numeric columns with StandardScaler...                       data_cleaning.py:151
+                    INFO     ✅ Feature scaling applied to:                                         data_cleaning.py:157
+                    INFO        1. age                                                              data_cleaning.py:159
+                    INFO        2. fnlwgt                                                           data_cleaning.py:159
+                    INFO        3. education.num                                                    data_cleaning.py:159
+                    INFO        4. capital.gain                                                     data_cleaning.py:159
+                    INFO        5. capital.loss                                                     data_cleaning.py:159
+                    INFO        6. hours.per.week                                                   data_cleaning.py:159
+                    INFO     ✅ All numeric features normalized to mean=0, std=1                    data_cleaning.py:164
+                    INFO     ====================================================================== data_cleaning.py:168
+                             ==========                                                                                 
+                    INFO        ✅ Cleaned data shape: (32510, 15)                                  data_cleaning.py:173
+                    INFO     ====================================================================== data_cleaning.py:174
+                             ==========                                                                                 
+                    INFO     Saving data to cleaned_data (CSVDataset)...                            data_catalog.py:1008
+                    INFO     Saving data to data_cleaning_report (MemoryDataset)...                 data_catalog.py:1008
+                    INFO     Completed node: clean_data_node                                               runner.py:245
+                    INFO     Completed 1 out of 20 tasks                                                   runner.py:246
+                    INFO     Loading data from X_train (CSVDataset)...                              data_catalog.py:1048
+[01/29/26 14:42:04] INFO     Loading data from X_test (CSVDataset)...                               data_catalog.py:1048
+[01/29/26 14:42:05] INFO     Loading data from params:feature_engineering (MemoryDataset)...        data_catalog.py:1048
+                    INFO     Running node: engineer_features:                                                node.py:420
+                             engineer_features([X_train;X_test;params:feature_engineering]) ->                          
+                             [X_train_final;X_test_final]                                                               
+
+
+================================================================================
+🏗️  PRODUCTION FEATURE ENGINEERING PIPELINE (100% CORRECTED)
+================================================================================
+
+================================================================================
+🔍 DETECTING ID COLUMNS (Permanent Fix #1)
+================================================================================
+   ✓ Detected ID column: SK_ID_CURR
+      Cardinality: 100.0% (246008 unique values)
+   ✓ Detected ID column: DAYS_ID_PUBLISH
+      Cardinality: 2.5% (6145 unique values)
+
+   🎯 Dropping 2 ID columns: ['SK_ID_CURR', 'DAYS_ID_PUBLISH']
+================================================================================
+
+
+📊 After dropping IDs: Train 178 features, Test 178 features
+
+   Numeric columns: 162
+   Categorical columns: 16
+
+================================================================================
+📈 PROCESSING NUMERIC FEATURES
+================================================================================
+   ✓ Scaled 162 numeric features
+     Train shape: (246008, 162)
+     Test shape: (61503, 162)
+
+================================================================================
+📦 SMART CATEGORICAL ENCODING (Permanent Fix #2) - FIX #1
+================================================================================
+
+   Configuration:
+      Max categories per column: 10
+      Max total features from encoding: 100
+
+   Analyzing categorical columns:
+      NAME_CONTRACT_TYPE: 2 unique values
+         → One-hot encode
+      CODE_GENDER: 3 unique values
+         → One-hot encode
+      FLAG_OWN_CAR: 2 unique values
+         → One-hot encode
+      FLAG_OWN_REALTY: 2 unique values
+         → One-hot encode
+      NAME_TYPE_SUITE: 7 unique values
+         → One-hot encode
+      NAME_INCOME_TYPE: 8 unique values
+         → One-hot encode
+      NAME_EDUCATION_TYPE: 5 unique values
+         → One-hot encode
+      NAME_FAMILY_STATUS: 6 unique values
+         → One-hot encode
+      NAME_HOUSING_TYPE: 6 unique values
+         → One-hot encode
+      OCCUPATION_TYPE: 18 unique values
+         → Label encode
+      WEEKDAY_APPR_PROCESS_START: 7 unique values
+         → One-hot encode
+      ORGANIZATION_TYPE: 58 unique values
+         → DROP (high cardinality)
+      FONDKAPREMONT_MODE: 4 unique values
+         → One-hot encode
+      HOUSETYPE_MODE: 3 unique values
+         → One-hot encode
+      WALLSMATERIAL_MODE: 7 unique values
+         → One-hot encode
+      EMERGENCYSTATE_MODE: 2 unique values
+         → One-hot encode
+
+   One-hot encoding 14 columns...
+      ✓ Created 55 features from one-hot encoding
+      ✓ Train encoded shape: (246008, 55)
+      ✓ Test encoded shape: (61503, 55)
+
+   Label encoding 1 columns...
+      ✓ Label encoded 1 features
+
+   Result:
+      Dropped: 1 columns
+      Train encoded shape: (246008, 56)
+      Test encoded shape: (61503, 56)
+================================================================================
+
+
+📊 After combining features:
+   Train shape: (246008, 218)
+   Test shape: (61503, 218)
+
+================================================================================
+⚡ POLYNOMIAL FEATURES (Permanent Fix #3) - FIX #2
+================================================================================
+
+   ✓ Polynomial features: DISABLED
+================================================================================
+
+📊 After polynomial:
+   Train shape: (246008, 218)
+   Test shape: (61503, 218)
+
+================================================================================
+🔬 VARIANCE FILTERING (Permanent Fix #4) - FIX #3
+================================================================================
+
+   Configuration:
+      Variance threshold: 0.01
+
+   Result:
+      Features before: 218
+      Train filtered shape: (246008, 202)
+      Test filtered shape: (61503, 202)
+      Removed: 16 low-variance features
+      Removed columns: ['CODE_GENDER_XNA', 'NAME_TYPE_SUITE_Group of people', 'NAME_TYPE_SUITE_Other_A', 'NAME_TYPE_SUITE_Other_B', 'NAME_TYPE_SUITE_nan']...
+================================================================================
+
+📊 After variance filter:
+   Train shape: (246008, 202)
+   Test shape: (61503, 202)
+
+================================================================================
+🔧 FILLING NaN VALUES (NEW FIX FOR FEATURE SELECTION)
+================================================================================
+
+   NaN values before imputation:
+      Train: 9897118
+      Test: 2479711
+
+   NaN values after imputation:
+      Train: 0
+      Test: 0
+================================================================================
+
+📊 After NaN imputation:
+   Train shape: (246008, 202)
+   Test shape: (61503, 202)
+
+================================================================================
+✔️  FEATURE EXPLOSION SAFETY CHECK (Permanent Fix #5)
+================================================================================
+
+   Train features: 202
+   Test features: 202
+   Max allowed: 500
+
+   ✓ Feature count is safe
+   ✓ Train and test shapes match!
+================================================================================
+
+
+
+================================================================================
+✅ FEATURE ENGINEERING COMPLETE - 100% WORKING
+================================================================================
+
+   Input shapes:
+      Train: (246008, 180)
+      Test: (61503, 180)
+
+   Output shapes:
+      Train: (246008, 202)
+      Test: (61503, 202)
+
+   Features: 180 → 202
+
+   Steps applied:
+      ✓ Dropped ID columns
+      ✓ Encoded categoricals smartly (fit once)
+      ✓ Scaled numeric features (fit once)
+      ✓ Filtered low-variance features (fit once)
+      ✓ Filled remaining NaN values (fit once)
+      ✓ Validated against feature explosion
+
+   ✅ TRAIN AND TEST SHAPES MATCH: True
+   ✅ NO NaN VALUES: True
+
+================================================================================
+
+[01/29/26 14:42:10] INFO     Saving data to X_train_final (CSVDataset)...                           data_catalog.py:1008
+[01/29/26 14:42:50] INFO     Saving data to X_test_final (CSVDataset)...                            data_catalog.py:1008
+[01/29/26 14:43:00] INFO     Completed node: engineer_features                                             runner.py:245
+                    INFO     Completed 2 out of 20 tasks                                                   runner.py:246
+                    INFO     Loading data from params:data_loading (MemoryDataset)...               data_catalog.py:1048
+                    INFO     Running node: load_data_node: load_data_auto() ->                               node.py:420
+                             [X_train_raw;X_test_raw;y_train_raw;y_test_raw]                                            
+                    INFO                                                                             data_loading.py:154
+                             =======================================================================                    
+                             =========                                                                                  
+                    INFO     📊 DATA LOADING - MODE: MULTI                                           data_loading.py:155
+                    INFO     ======================================================================= data_loading.py:156
+                             =========                                                                                  
+                                                                                                                        
+                    INFO     🔗 Multi-Table Mode Activated                                           data_loading.py:163
+                    INFO                                                                  data_loading_multitable.py:124
+                             ============================================================                               
+                             ====================                                                                       
+
+================================================================================
+                    INFO     📂 LOADING TABLES                                            data_loading_multitable.py:124
+📂 LOADING TABLES
+                    INFO     ============================================================ data_loading_multitable.py:124
+                             ====================                                                                       
+                                                                                                                        
+================================================================================
+
+                    INFO     Loading application...                                       data_loading_multitable.py:124
+Loading application... [01/29/26 14:43:01] INFO     ✅ (307,511 rows × 122 cols)                                 data_loading_multitable.py:124
+✅ (307,511 rows × 122 cols)
+                    INFO     Loading bureau...                                            data_loading_multitable.py:124
+Loading bureau... [01/29/26 14:43:03] INFO     ✅ (1,716,428 rows × 17 cols)                                data_loading_multitable.py:124
+✅ (1,716,428 rows × 17 cols)
+                    INFO     Loading previous_application...                              data_loading_multitable.py:124
+Loading previous_application... [01/29/26 14:43:06] INFO     ✅ (1,670,214 rows × 37 cols)                                data_loading_multitable.py:124
+✅ (1,670,214 rows × 37 cols)
+                    INFO     Loading pos_cash...                                          data_loading_multitable.py:124
+Loading pos_cash... [01/29/26 14:43:09] INFO     ✅ (10,001,358 rows × 8 cols)                                data_loading_multitable.py:124
+✅ (10,001,358 rows × 8 cols)
+                    INFO     Loading credit_card...                                       data_loading_multitable.py:124
+Loading credit_card... [01/29/26 14:43:13] INFO     ✅ (3,840,312 rows × 23 cols)                                data_loading_multitable.py:124
+✅ (3,840,312 rows × 23 cols)
+                    INFO     Loading installments...                                      data_loading_multitable.py:124
+Loading installments... [01/29/26 14:43:19] INFO     ✅ (13,605,401 rows × 8 cols)                                data_loading_multitable.py:124
+✅ (13,605,401 rows × 8 cols)
+                    INFO                                                                  data_loading_multitable.py:124
+                             ============================================================                               
+                             ====================                                                                       
+
+================================================================================
+                    INFO     🔄 AGGREGATING MANY-TO-ONE RELATIONSHIPS                     data_loading_multitable.py:124
+🔄 AGGREGATING MANY-TO-ONE RELATIONSHIPS
+                    INFO     ============================================================ data_loading_multitable.py:124
+                             ====================                                                                       
+                                                                                                                        
+================================================================================
+
+                    INFO     Aggregating bureau...                                        data_loading_multitable.py:124
+Aggregating bureau...
+[01/29/26 14:43:20] INFO       ✅ Aggregated from 1,716,428 to 305,811 rows               data_loading_multitable.py:124
+  ✅ Aggregated from 1,716,428 to 305,811 rows
+                    INFO          Features created: 8                                     data_loading_multitable.py:124
+     Features created: 8
+                    INFO     Aggregating previous_application...                          data_loading_multitable.py:124
+Aggregating previous_application...
+                    INFO       ✅ Aggregated from 1,670,214 to 338,857 rows               data_loading_multitable.py:124
+  ✅ Aggregated from 1,670,214 to 338,857 rows
+                    INFO          Features created: 6                                     data_loading_multitable.py:124
+     Features created: 6
+                    INFO     Aggregating pos_cash...                                      data_loading_multitable.py:124
+Aggregating pos_cash...
+[01/29/26 14:43:21] INFO       ✅ Aggregated from 10,001,358 to 337,252 rows              data_loading_multitable.py:124
+  ✅ Aggregated from 10,001,358 to 337,252 rows
+                    INFO          Features created: 3                                     data_loading_multitable.py:124
+     Features created: 3
+                    INFO     Aggregating credit_card...                                   data_loading_multitable.py:124
+Aggregating credit_card...
+                    INFO       ✅ Aggregated from 3,840,312 to 103,558 rows               data_loading_multitable.py:124
+  ✅ Aggregated from 3,840,312 to 103,558 rows
+                    INFO          Features created: 5                                     data_loading_multitable.py:124
+     Features created: 5
+                    INFO     Aggregating installments...                                  data_loading_multitable.py:124
+Aggregating installments...
+[01/29/26 14:43:22] INFO       ✅ Aggregated from 13,605,401 to 339,587 rows              data_loading_multitable.py:124
+  ✅ Aggregated from 13,605,401 to 339,587 rows
+                    INFO          Features created: 4                                     data_loading_multitable.py:124
+     Features created: 4
+                    INFO                                                                  data_loading_multitable.py:124
+                             ============================================================                               
+                             ====================                                                                       
+
+================================================================================
+                    INFO     🔗 JOINING TABLES                                            data_loading_multitable.py:124
+🔗 JOINING TABLES
+                    INFO     ============================================================ data_loading_multitable.py:124
+                             ====================                                                                       
+                                                                                                                        
+================================================================================
+
+                    INFO     Starting with application: (307511, 122)                     data_loading_multitable.py:124
+Starting with application: (307511, 122)
+                    INFO                                                                  data_loading_multitable.py:124
+                             Joining application ← bureau                                                               
+
+Joining application ← bureau
+                    INFO       Type: left                                                 data_loading_multitable.py:124
+  Type: left
+                    INFO       On: application.SK_ID_CURR = bureau.SK_ID_CURR             data_loading_multitable.py:124
+  On: application.SK_ID_CURR = bureau.SK_ID_CURR
+                    INFO       Result: 307,511 rows × 140 cols                            data_loading_multitable.py:124
+  Result: 307,511 rows × 140 cols
+                    INFO                                                                  data_loading_multitable.py:124
+                             Joining application ← previous_application                                                 
+
+Joining application ← previous_application
+                    INFO       Type: left                                                 data_loading_multitable.py:124
+  Type: left
+                    INFO       On: application.SK_ID_CURR =                               data_loading_multitable.py:124
+                             previous_application.SK_ID_CURR                                                            
+  On: application.SK_ID_CURR = previous_application.SK_ID_CURR
+                    INFO       Result: 307,511 rows × 152 cols                            data_loading_multitable.py:124
+  Result: 307,511 rows × 152 cols
+                    INFO                                                                  data_loading_multitable.py:124
+                             Joining application ← pos_cash                                                             
+
+Joining application ← pos_cash
+                    INFO       Type: left                                                 data_loading_multitable.py:124
+  Type: left
+                    INFO       On: application.SK_ID_CURR = pos_cash.SK_ID_CURR           data_loading_multitable.py:124
+  On: application.SK_ID_CURR = pos_cash.SK_ID_CURR
+                    INFO       Result: 307,511 rows × 159 cols                            data_loading_multitable.py:124
+  Result: 307,511 rows × 159 cols
+                    INFO                                                                  data_loading_multitable.py:124
+                             Joining application ← credit_card                                                          
+
+Joining application ← credit_card
+                    INFO       Type: left                                                 data_loading_multitable.py:124
+  Type: left
+                    INFO       On: application.SK_ID_CURR = credit_card.SK_ID_CURR        data_loading_multitable.py:124
+  On: application.SK_ID_CURR = credit_card.SK_ID_CURR
+                    INFO       Result: 307,511 rows × 171 cols                            data_loading_multitable.py:124
+  Result: 307,511 rows × 171 cols
+                    INFO                                                                  data_loading_multitable.py:124
+                             Joining application ← installments                                                         
+
+Joining application ← installments
+                    INFO       Type: left                                                 data_loading_multitable.py:124
+  Type: left
+                    INFO       On: application.SK_ID_CURR = installments.SK_ID_CURR       data_loading_multitable.py:124
+  On: application.SK_ID_CURR = installments.SK_ID_CURR
+                    INFO       Result: 307,511 rows × 181 cols                            data_loading_multitable.py:124
+  Result: 307,511 rows × 181 cols
+                    INFO                                                                  data_loading_multitable.py:124
+                             ============================================================                               
+                             ====================                                                                       
+
+================================================================================
+                    INFO     ✅ DATA LOADING COMPLETE                                     data_loading_multitable.py:124
+✅ DATA LOADING COMPLETE
+                    INFO     ============================================================ data_loading_multitable.py:124
+                             ====================                                                                       
+================================================================================
+                    INFO     Final shape: 307,511 rows × 181 columns                      data_loading_multitable.py:124
+Final shape: 307,511 rows × 181 columns
+                    INFO     🎯 Separating target column: TARGET                                      data_loading.py:89
+                    INFO     ✅ Features: (307511, 180) | Target: (307511,)                           data_loading.py:97
+                    INFO     📊 Splitting data (test_size=0.2)                                       data_loading.py:121
+[01/29/26 14:43:23] INFO     ✅ Train: (246008, 180) | Test: (61503, 180)                            data_loading.py:132
+                    INFO                                                                             data_loading.py:185
+                             =======================================================================                    
+                             =========                                                                                  
+                    INFO     ✅ DATA LOADING COMPLETE                                                data_loading.py:186
+                    INFO        Train: (246008, 180) | Test: (61503, 180)                            data_loading.py:187
+                    INFO     ======================================================================= data_loading.py:188
+                             =========                                                                                  
+                                                                                                                        
+                    INFO     Saving data to X_train_raw (CSVDataset)...                             data_catalog.py:1008
+[01/29/26 14:43:35] INFO     Saving data to X_test_raw (CSVDataset)...                              data_catalog.py:1008
+[01/29/26 14:43:39] INFO     Saving data to y_train_raw (PickleDataset)...                          data_catalog.py:1008
+                    INFO     Saving data to y_test_raw (PickleDataset)...                           data_catalog.py:1008
+                    INFO     Completed node: load_data_node                                                runner.py:245
+                    INFO     Completed 3 out of 20 tasks                                                   runner.py:246
+                    INFO     Loading data from raw_data (CSVDataset)...                             data_catalog.py:1048
+                    INFO     Running node: validate_data_quality_node: validate_data_quality() ->            node.py:420
+                    INFO     🔍 Validating data quality...                                         data_validation.py:20
+                    INFO        Rows: 32561                                                        data_validation.py:24
+                    INFO        Columns: 15                                                        data_validation.py:25
+                    INFO        Memory: 17.65 MB                                                   data_validation.py:26
+                    WARNING     ⚠️  24 duplicate rows found                                        data_validation.py:34
+                    INFO        ✅ Validation passed                                               data_validation.py:37
+                    INFO     Saving data to data_validation_report (MemoryDataset)...               data_catalog.py:1008
+                    INFO     Completed node: validate_data_quality_node                                    runner.py:245
+                    INFO     Completed 4 out of 20 tasks                                                   runner.py:246
+                    INFO     Loading data from X_train_final (CSVDataset)...                        data_catalog.py:1048
+[01/29/26 14:43:44] INFO     Loading data from X_test_final (CSVDataset)...                         data_catalog.py:1048
+[01/29/26 14:43:45] INFO     Loading data from y_train (PickleDataset)...                           data_catalog.py:1048
+[01/29/26 14:43:46] INFO     Loading data from params:feature_selection (MemoryDataset)...          data_catalog.py:1048
+                    INFO     Running node: feature_selection:                                                node.py:420
+                             feature_selection([X_train_final;X_test_final;y_train;params:feature_selection]            
+                             ) -> [X_train_selected;X_test_selected]                                                    
+
+================================================================================
+🎯 FEATURE SELECTION NODE (100% WORKING)
+================================================================================
+
+   Input features:
+      Train: (246008, 202)
+      Test: (61503, 202)
+   Selecting: 56 features
+   Problem type: Classification
+
+   Transforming test data with selected features...
+
+   ✅ Selected 56 features:
+      ['AMT_CREDIT_scaled', 'AMT_GOODS_PRICE_scaled', 'REGION_POPULATION_RELATIVE_scaled', 'DAYS_BIRTH_scaled', 'DAYS_EMPLOYED_scaled', 'DAYS_REGISTRATION_scaled', 'FLAG_EMP_PHONE_scaled', 'FLAG_WORK_PHONE_scaled', 'REGION_RATING_CLIENT_scaled', 'REGION_RATING_CLIENT_W_CITY_scaled', 'REG_CITY_NOT_LIVE_CITY_scaled', 'REG_CITY_NOT_WORK_CITY_scaled', 'LIVE_CITY_NOT_WORK_CITY_scaled', 'EXT_SOURCE_1_scaled', 'EXT_SOURCE_2_scaled', 'EXT_SOURCE_3_scaled', 'FLOORSMAX_AVG_scaled', 'FLOORSMAX_MODE_scaled', 'FLOORSMAX_MEDI_scaled', 'DEF_30_CNT_SOCIAL_CIRCLE_scaled', 'DEF_60_CNT_SOCIAL_CIRCLE_scaled', 'DAYS_LAST_PHONE_CHANGE_scaled', 'FLAG_DOCUMENT_3_scaled', 'FLAG_DOCUMENT_6_scaled', "BUREAU_('DAYS_CREDIT', 'min')_scaled", "BUREAU_('DAYS_CREDIT', 'max')_scaled", "BUREAU_('DAYS_CREDIT', 'mean')_scaled", "BUREAU_('DAYS_CREDIT_ENDDATE', 'min')_scaled", "BUREAU_('DAYS_CREDIT_ENDDATE', 'max')_scaled", "PREV_('DAYS_DECISION', 'min')_scaled", "PREV_('NAME_CONTRACT_STATUS', 'nunique')_scaled", "POS_('MONTHS_BALANCE', 'count')_scaled", "POS_('MONTHS_BALANCE', 'min')_scaled", "CC_('MONTHS_BALANCE', 'count')_scaled", "CC_('MONTHS_BALANCE', 'min')_scaled", "CC_('AMT_BALANCE', 'mean')_scaled", "CC_('AMT_BALANCE', 'max')_scaled", "CC_('AMT_DRAWINGS_ATM_CURRENT', 'mean')_scaled", "CC_('CNT_DRAWINGS_CURRENT', 'sum')_scaled", "CC_('CNT_DRAWINGS_CURRENT', 'mean')_scaled", "INSTALL_('DAYS_ENTRY_PAYMENT', 'min')_scaled", "INSTALL_('DAYS_ENTRY_PAYMENT', 'mean')_scaled", 'NAME_CONTRACT_TYPE_Revolving loans', 'CODE_GENDER_M', 'NAME_INCOME_TYPE_Pensioner', 'NAME_INCOME_TYPE_Working', 'NAME_EDUCATION_TYPE_Higher education', 'NAME_EDUCATION_TYPE_Secondary / secondary special', 'NAME_FAMILY_STATUS_Single / not married', 'NAME_HOUSING_TYPE_House / apartment', 'NAME_HOUSING_TYPE_With parents', 'FONDKAPREMONT_MODE_nan', 'HOUSETYPE_MODE_nan', 'WALLSMATERIAL_MODE_Panel', 'WALLSMATERIAL_MODE_nan', 'EMERGENCYSTATE_MODE_nan']
+
+   Output shapes:
+      X_train_selected: (246008, 56)
+      X_test_selected: (61503, 56)
+      ✅ SHAPES MATCH: False
+================================================================================
+
+                    INFO     Saving data to X_train_selected (CSVDataset)...                        data_catalog.py:1008
+[01/29/26 14:43:56] INFO     Saving data to X_test_selected (CSVDataset)...                         data_catalog.py:1008
+[01/29/26 14:43:59] INFO     Completed node: feature_selection                                             runner.py:245
+                    INFO     Completed 5 out of 20 tasks                                                   runner.py:246
+                    INFO     Loading data from X_train_selected (CSVDataset)...                     data_catalog.py:1048
+[01/29/26 14:44:00] INFO     Loading data from X_test_selected (CSVDataset)...                      data_catalog.py:1048
+                    INFO     Loading data from y_train (PickleDataset)...                           data_catalog.py:1048
+                    INFO     Running node: phase3_scale_features:                                            node.py:420
+                             scale_features([X_train_selected;X_test_selected;y_train]) ->                              
+                             [X_train_scaled;X_test_scaled;y_train_balanced;scalers]                                    
+                    INFO     ====================================================================== model_training.py:55
+                             ==========                                                                                 
+                    INFO     🔄 PHASE 3.0: FEATURE SCALING (PATH B) + SMOTE (OPTION D)              model_training.py:56
+                    INFO     ====================================================================== model_training.py:61
+                             ==========                                                                                 
+                    INFO     Found 56 numeric columns to scale                                      model_training.py:67
+                    INFO     Found 0 categorical columns (unchanged)                                model_training.py:68
+                    INFO     Using StandardScaler (default)                                         model_training.py:78
+                    INFO     ✅ Scaled 56 numeric columns                                           model_training.py:90
+                    INFO        Train shape: (246008, 56)                                           model_training.py:91
+                    INFO        Test shape: (61503, 56)                                             model_training.py:92
+                    INFO                                                                            model_training.py:97
+                             ======================================================================                     
+                             ==========                                                                                 
+                    INFO     🎯 OPTION D: HANDLING CLASS IMBALANCE WITH SMOTE                       model_training.py:98
+                    INFO     ====================================================================== model_training.py:99
+                             ==========                                                                                 
+[01/29/26 14:44:01] INFO     Detected classification problem (2 classes)                           model_training.py:107
+                    INFO     Before SMOTE:                                                         model_training.py:111
+                    INFO        Class 0: 226148 samples (91.9%)                                    model_training.py:113
+                    INFO        Class 1: 19860 samples (8.1%)                                      model_training.py:113
+                    INFO                                                                           model_training.py:116
+                             Applying SMOTE to balance classes...                                                       
+[01/29/26 14:44:02] INFO     After SMOTE:                                                          model_training.py:124
+                    INFO        Class 0: 226148 samples (50.0%)                                    model_training.py:127
+                    INFO        Class 1: 226148 samples (50.0%)                                    model_training.py:127
+                    INFO     ✅ Classes balanced with SMOTE!                                       model_training.py:129
+                    INFO     ===================================================================== model_training.py:140
+                             ===========                                                                                
+                    INFO     Saving data to X_train_scaled (CSVDataset)...                          data_catalog.py:1008
+[01/29/26 14:44:24] INFO     Saving data to X_test_scaled (CSVDataset)...                           data_catalog.py:1008
+[01/29/26 14:44:27] INFO     Saving data to y_train_balanced (PickleDataset)...                     data_catalog.py:1008
+                    INFO     Saving data to scalers (PickleDataset)...                              data_catalog.py:1008
+                    INFO     Completed node: phase3_scale_features                                         runner.py:245
+                    INFO     Completed 6 out of 20 tasks                                                   runner.py:246
+                    INFO     Loading data from X_train_scaled (CSVDataset)...                       data_catalog.py:1048
+[01/29/26 14:44:29] INFO     Loading data from y_train_balanced (PickleDataset)...                  data_catalog.py:1048
+                    INFO     Loading data from params:problem_type (MemoryDataset)...               data_catalog.py:1048
+                    INFO     Running node: phase3_train_baseline:                                            node.py:420
+                             train_baseline_model([X_train_scaled;y_train_balanced;params:problem_type]) ->             
+                    INFO     ===================================================================== model_training.py:178
+                             ===========                                                                                
+                    INFO     📊 PHASE 3.2: TRAINING BASELINE MODEL                                 model_training.py:179
+                    INFO     ===================================================================== model_training.py:180
+                             ===========                                                                                
+                    INFO     Detected problem type: classification                                 model_training.py:187
+                    INFO     Using LogisticRegression as baseline                                  model_training.py:191
+[01/29/26 14:45:00] INFO     ✅ Baseline trained with score: 0.6915                                model_training.py:199
+                    INFO     ===================================================================== model_training.py:200
+                             ===========                                                                                
+                    INFO     Saving data to baseline_model (PickleDataset)...                       data_catalog.py:1008
+                    INFO     Saving data to baseline_metrics (PickleDataset)...                     data_catalog.py:1008
+                    INFO     Saving data to problem_type (TextDataset)...                           data_catalog.py:1008
+                    INFO     Completed node: phase3_train_baseline                                         runner.py:245
+                    INFO     Completed 7 out of 20 tasks                                                   runner.py:246
+                    INFO     Loading data from X_train_scaled (CSVDataset)...                       data_catalog.py:1048
+[01/29/26 14:45:02] INFO     Loading data from y_train_balanced (PickleDataset)...                  data_catalog.py:1048
+                    INFO     Loading data from problem_type (TextDataset)...                        data_catalog.py:1048
+                    INFO     Loading data from params:feature_selection (MemoryDataset)...          data_catalog.py:1048
+                    INFO     Running node: phase3_hyperparameter_tuning:                                     node.py:420
+                             hyperparameter_tuning([X_train_scaled;y_train_balanced;problem_type;params:feat            
+                             ure_selection]) ->                                                                         
+                    INFO     ===================================================================== model_training.py:219
+                             ===========                                                                                
+                    INFO     ⏭️  PHASE 3.3: TESTING MODE (Skipping Hyperparameter Tuning)          model_training.py:220
+                    INFO     ===================================================================== model_training.py:221
+                             ===========                                                                                
+                    INFO     🎯 Classification: RandomForestClassifier (DEFAULT PARAMS)            model_training.py:228
+                    INFO     Training model with default parameters...                             model_training.py:239
+[01/29/26 14:45:22] INFO     ✅ Model trained successfully                                         model_training.py:244
+                    INFO     ✅ Training score: 0.8329                                             model_training.py:245
+                    INFO     ===================================================================== model_training.py:283
+                             ===========                                                                                
+                                                                                                                        
+                    INFO     Saving data to best_model (PickleDataset)...                           data_catalog.py:1008
+                    INFO     Saving data to tuning_info (PickleDataset)...                          data_catalog.py:1008
+                    INFO     Completed node: phase3_hyperparameter_tuning                                  runner.py:245
+                    INFO     Completed 8 out of 20 tasks                                                   runner.py:246
+                    INFO     Loading data from X_train_selected (CSVDataset)...                     data_catalog.py:1048
+[01/29/26 14:45:23] INFO     Loading data from X_test_selected (CSVDataset)...                      data_catalog.py:1048
+                    INFO     Loading data from y_train (PickleDataset)...                           data_catalog.py:1048
+                    INFO     Loading data from y_test (PickleDataset)...                            data_catalog.py:1048
+                    INFO     Loading data from problem_type (TextDataset)...                        data_catalog.py:1048
+                    INFO     Loading data from params:problem_type (MemoryDataset)...               data_catalog.py:1048
+                    INFO     Running node: phase4_train_all:                                                 node.py:420
+                             phase4_train_all_algorithms([X_train_selected;X_test_selected;y_train;y_test;pr            
+                             oblem_type;params:problem_type]) ->                                                        
+                    INFO     ================================================================== phase4_algorithms.py:243
+                             ==============                                                                             
+                    INFO     🚀 TRAINING ALL ALGORITHMS (50+)                                   phase4_algorithms.py:244
+                    INFO     ================================================================== phase4_algorithms.py:245
+                             ==============                                                                             
+                    INFO     Problem type: classification                                       phase4_algorithms.py:248
+                    INFO     Loading classification algorithms...                               phase4_algorithms.py:126
+                    INFO     ✅ XGBClassifier loaded                                            phase4_algorithms.py:166
+                    INFO     ✅ LGBMClassifier loaded                                           phase4_algorithms.py:180
+                    INFO     ✅ CatBoostClassifier loaded                                       phase4_algorithms.py:193
+                    INFO     ✅ StackingClassifier loaded                                       phase4_algorithms.py:211
+                    INFO     ✅ Loaded 24 classification algorithms                             phase4_algorithms.py:225
+                    INFO     Training LogisticRegression...                                     phase4_algorithms.py:260
+[01/29/26 14:45:28] INFO       ✅ LogisticRegression: Train=0.9192, Test=0.9194                 phase4_algorithms.py:274
+                    INFO     Training RidgeClassifier...                                        phase4_algorithms.py:260
+[01/29/26 14:45:29] INFO       ✅ RidgeClassifier: Train=0.9193, Test=0.9193                    phase4_algorithms.py:274
+                    INFO     Training SGDClassifier...                                          phase4_algorithms.py:260
+[01/29/26 14:45:30] INFO       ✅ SGDClassifier: Train=0.9193, Test=0.9193                      phase4_algorithms.py:274
+                    INFO     Training PassiveAggressiveClassifier...                            phase4_algorithms.py:260
+[01/29/26 14:45:31] INFO       ✅ PassiveAggressiveClassifier: Train=0.8925, Test=0.8924        phase4_algorithms.py:274
+                    INFO     Training Perceptron...                                             phase4_algorithms.py:260
+[01/29/26 14:45:32] INFO       ✅ Perceptron: Train=0.8421, Test=0.8445                         phase4_algorithms.py:274
+                    INFO     Training DecisionTreeClassifier...                                 phase4_algorithms.py:260
+[01/29/26 14:45:36] INFO       ✅ DecisionTreeClassifier: Train=0.9231, Test=0.9160             phase4_algorithms.py:274
+                    INFO     Training RandomForestClassifier...                                 phase4_algorithms.py:260
+[01/29/26 14:45:50] INFO       ✅ RandomForestClassifier: Train=0.9999, Test=0.9193             phase4_algorithms.py:274
+                    INFO     Training ExtraTreesClassifier...                                   phase4_algorithms.py:260
+[01/29/26 14:45:59] INFO       ✅ ExtraTreesClassifier: Train=1.0000, Test=0.9194               phase4_algorithms.py:274
+                    INFO     Training GradientBoostingClassifier...                             phase4_algorithms.py:260
+[01/29/26 14:48:17] INFO       ✅ GradientBoostingClassifier: Train=0.9199, Test=0.9196         phase4_algorithms.py:274
+                    INFO     Training AdaBoostClassifier...                                     phase4_algorithms.py:260
+[01/29/26 14:48:58] INFO       ✅ AdaBoostClassifier: Train=0.9193, Test=0.9195                 phase4_algorithms.py:274
+                    INFO     Training BaggingClassifier...                                      phase4_algorithms.py:260
+[01/29/26 14:51:10] INFO       ✅ BaggingClassifier: Train=1.0000, Test=0.9192                  phase4_algorithms.py:274
+                    INFO     Training SVC...                                                    phase
