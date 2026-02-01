@@ -1,8 +1,15 @@
-2026-02-01 03:20:02,987 INFO sqlalchemy.engine.Engine [generated in 0.00082s] ('ashok@gmail.com', 1, 0)
-2026-02-01 03:20:02,987 - sqlalchemy.engine.Engine - INFO - [generated in 0.00082s] ('ashok@gmail.com', 1, 0)
-2026-02-01 03:20:02,991 INFO sqlalchemy.engine.Engine ROLLBACK
-2026-02-01 03:20:02,991 - sqlalchemy.engine.Engine - INFO - ROLLBACK
-INFO:     192.168.1.26:64570 - "POST /auth/login HTTP/1.1" 500 Internal Server Error
+WHERE users.id = ?
+ LIMIT ? OFFSET ?
+2026-02-01 03:22:44,510 - sqlalchemy.engine.Engine - INFO - SELECT users.id AS users_id, users.email AS users_email, users.username AS users_username, users.password_hash AS users_password_hash, users.full_name AS users_full_name, users.is_active AS users_is_active, users.is_verified AS users_is_verified, users.is_superuser AS users_is_superuser, users.created_at AS users_created_at, users.updated_at AS users_updated_at 
+FROM users 
+WHERE users.id = ?
+ LIMIT ? OFFSET ?
+2026-02-01 03:22:44,511 INFO sqlalchemy.engine.Engine [cached since 0.1556s ago] ('25c15118-f7a8-47a9-a16a-adb2c6016e25', 1, 0)
+2026-02-01 03:22:44,511 - sqlalchemy.engine.Engine - INFO - [cached since 0.1556s ago] ('25c15118-f7a8-47a9-a16a-adb2c6016e25', 1, 0)
+2026-02-01 03:22:44,520 - app.api.workspaces - INFO - 🆕 Creating workspace: My Workspace
+2026-02-01 03:22:44,533 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-02-01 03:22:44,533 - sqlalchemy.engine.Engine - INFO - ROLLBACK
+INFO:     192.168.1.26:62945 - "POST /api/workspaces HTTP/1.1" 500 Internal Server Error
 ERROR:    Exception in ASGI application
 Traceback (most recent call last):
   File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
@@ -56,15 +63,36 @@ Traceback (most recent call last):
   File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/anyio/_backends/_asyncio.py", line 807, in run
     result = context.run(func, *args)
              ^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/app/api/auth.py", line 182, in login
-    if not verify_password(user_data.password, db_user.hashed_password):
-                                               ^^^^^^^^^^^^^^^^^^^^^^^
-AttributeError: 'User' object has no attribute 'hashed_password'
-INFO:     192.168.1.26:65192 - "GET /health HTTP/1.1" 200 OK
-2026-02-01 03:20:03,072 - app.core.auth - WARNING - ⚠️  Token verification failed: Not enough segments
-2026-02-01 03:20:03,072 - app.api.projects - WARNING - ❌ Invalid token
-INFO:     192.168.1.26:65192 - "GET /api/projects HTTP/1.1" 401 Unauthorized
-INFO:     192.168.1.26:51359 - "GET /health HTTP/1.1" 200 OK
-2026-02-01 03:20:03,094 - app.core.auth - WARNING - ⚠️  Token verification failed: Not enough segments
-2026-02-01 03:20:03,095 - app.api.workspaces - WARNING - ❌ Invalid token
-INFO:     192.168.1.26:51359 - "GET /api/workspaces HTTP/1.1" 401 Unauthorized
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/app/api/workspaces.py", line 192, in create_workspace
+    Workspace.slug == workspace_data.slug,
+    ^^^^^^^^^^^^^^
+AttributeError: type object 'Workspace' has no attribute 'slug'
+INFO:     192.168.1.26:60242 - "OPTIONS /api/projects/workspaces/550e8400-e29b-41d4-a716-446655440575 HTTP/1.1" 200 OK
+2026-02-01 03:23:11,657 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-02-01 03:23:11,657 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-02-01 03:23:11,658 INFO sqlalchemy.engine.Engine SELECT users.id AS users_id, users.email AS users_email, users.username AS users_username, users.password_hash AS users_password_hash, users.full_name AS users_full_name, users.is_active AS users_is_active, users.is_verified AS users_is_verified, users.is_superuser AS users_is_superuser, users.created_at AS users_created_at, users.updated_at AS users_updated_at 
+FROM users 
+WHERE users.id = ?
+ LIMIT ? OFFSET ?
+2026-02-01 03:23:11,658 - sqlalchemy.engine.Engine - INFO - SELECT users.id AS users_id, users.email AS users_email, users.username AS users_username, users.password_hash AS users_password_hash, users.full_name AS users_full_name, users.is_active AS users_is_active, users.is_verified AS users_is_verified, users.is_superuser AS users_is_superuser, users.created_at AS users_created_at, users.updated_at AS users_updated_at 
+FROM users 
+WHERE users.id = ?
+ LIMIT ? OFFSET ?
+2026-02-01 03:23:11,658 INFO sqlalchemy.engine.Engine [cached since 27.3s ago] ('25c15118-f7a8-47a9-a16a-adb2c6016e25', 1, 0)
+2026-02-01 03:23:11,658 - sqlalchemy.engine.Engine - INFO - [cached since 27.3s ago] ('25c15118-f7a8-47a9-a16a-adb2c6016e25', 1, 0)
+2026-02-01 03:23:11,660 - app.api.projects - INFO - 🆕 Creating project in workspace: 550e8400-e29b-41d4-a716-446655440575
+2026-02-01 03:23:11,661 INFO sqlalchemy.engine.Engine SELECT workspaces.id AS workspaces_id, workspaces.owner_id AS workspaces_owner_id, workspaces.name AS workspaces_name, workspaces.description AS workspaces_description, workspaces.is_active AS workspaces_is_active, workspaces.created_at AS workspaces_created_at, workspaces.updated_at AS workspaces_updated_at 
+FROM workspaces 
+WHERE workspaces.id = ? AND workspaces.owner_id = ?
+ LIMIT ? OFFSET ?
+2026-02-01 03:23:11,661 - sqlalchemy.engine.Engine - INFO - SELECT workspaces.id AS workspaces_id, workspaces.owner_id AS workspaces_owner_id, workspaces.name AS workspaces_name, workspaces.description AS workspaces_description, workspaces.is_active AS workspaces_is_active, workspaces.created_at AS workspaces_created_at, workspaces.updated_at AS workspaces_updated_at 
+FROM workspaces 
+WHERE workspaces.id = ? AND workspaces.owner_id = ?
+ LIMIT ? OFFSET ?
+2026-02-01 03:23:11,661 INFO sqlalchemy.engine.Engine [generated in 0.00028s] ('550e8400-e29b-41d4-a716-446655440575', '25c15118-f7a8-47a9-a16a-adb2c6016e25', 1, 0)
+2026-02-01 03:23:11,661 - sqlalchemy.engine.Engine - INFO - [generated in 0.00028s] ('550e8400-e29b-41d4-a716-446655440575', '25c15118-f7a8-47a9-a16a-adb2c6016e25', 1, 0)
+2026-02-01 03:23:11,663 - app.api.projects - WARNING - ❌ Workspace not found: 550e8400-e29b-41d4-a716-446655440575
+2026-02-01 03:23:11,665 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-02-01 03:23:11,665 - sqlalchemy.engine.Engine - INFO - ROLLBACK
+INFO:     192.168.1.26:60242 - "POST /api/projects/workspaces/550e8400-e29b-41d4-a716-446655440575 HTTP/1.1" 404 Not Found
+
