@@ -1,49 +1,122 @@
-venv) ashok@ubuntu:~/work/latest/kedro-integrated-fast-api$ python main.py 
-======================================================================
-🚀 Starting ML Platform API...
-🔄 Initializing database...
-======================================================================
-  → Importing database engine...
-  ✅ Database engine imported
-  → Importing models (Phase 0-3)...
-  ✅ All models imported and registered
-  → Creating database tables...
-2026-02-01 02:54:31,705 INFO sqlalchemy.engine.Engine BEGIN (implicit)
-2026-02-01 02:54:31,705 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
-2026-02-01 02:54:31,705 INFO sqlalchemy.engine.Engine COMMIT
-2026-02-01 02:54:31,705 - sqlalchemy.engine.Engine - INFO - COMMIT
-  ✅ All tables created
-
-✅ Database initialization SUCCESSFUL!
-📊 Tables created:
-   - Phase 0: users, workspaces
    - Phase 1: projects
    - Phase 2-3: datasources, datasets, models, activities
 ======================================================================
 
-2026-02-01 02:54:31,706 - __main__ - INFO - ✅ Database initialization complete!
-2026-02-01 02:54:31,706 - __main__ - INFO - 🔄 Registering API routes...
-2026-02-01 02:54:31,768 - app.core.auth - WARNING - ⚠️  Using default SECRET_KEY. Change in production!
-2026-02-01 02:54:31,773 - __main__ - INFO - ✅ Auth routes
-2026-02-01 02:54:31,801 - __main__ - INFO - ✅ Workspaces routes
-2026-02-01 02:54:31,814 - __main__ - INFO - ✅ Projects routes
-2026-02-01 02:54:31,829 - __main__ - INFO - ✅ Models routes
-2026-02-01 02:54:31,833 - __main__ - INFO - ✅ Activities routes
-2026-02-01 02:54:31,843 - __main__ - INFO - ✅ Datasources routes
-2026-02-01 02:54:31,854 - __main__ - INFO - ✅ Datasets routes
-2026-02-01 02:54:31,854 - __main__ - INFO - ✅ All routes registered!
+2026-02-01 02:59:29,870 - __main__ - INFO - ✅ Database initialization complete!
+2026-02-01 02:59:29,870 - __main__ - INFO - 🔄 Registering API routes...
+2026-02-01 02:59:29,932 - app.core.auth - WARNING - ⚠️  Using default SECRET_KEY. Change in production!
+2026-02-01 02:59:29,939 - __main__ - INFO - ✅ Auth routes
+2026-02-01 02:59:29,950 - __main__ - INFO - ✅ Workspaces routes
+2026-02-01 02:59:29,967 - __main__ - INFO - ✅ Projects routes
+2026-02-01 02:59:29,982 - __main__ - INFO - ✅ Models routes
+2026-02-01 02:59:29,985 - __main__ - INFO - ✅ Activities routes
+2026-02-01 02:59:29,998 - __main__ - INFO - ✅ Datasources routes
+2026-02-01 02:59:30,009 - __main__ - INFO - ✅ Datasets routes
+2026-02-01 02:59:30,009 - __main__ - INFO - ✅ All routes registered!
 
 🎉 API Ready!
 
-INFO:     Started server process [27396]
+INFO:     Started server process [27497]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-
-(venv) ashok@ubuntu:~/work/latest/kedro-integrated-fast-api$ sqlite3 ml_platform.db 
-SQLite version 3.45.1 2024-01-30 16:01:20
-Enter ".help" for usage hints.
-sqlite> .tables
-sqlite> 
-
+/home/ashok/work/latest/kedro-integrated-fast-api/main.py:108: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  "timestamp": datetime.utcnow().isoformat(),
+INFO:     192.168.1.26:54496 - "GET /health HTTP/1.1" 200 OK
+2026-02-01 02:59:47,840 - app.api.auth - INFO - 📝 Registration attempt: ashok@gmail.com
+2026-02-01 02:59:47,911 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-02-01 02:59:47,911 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-02-01 02:59:47,927 INFO sqlalchemy.engine.Engine SELECT users.id AS users_id, users.email AS users_email, users.username AS users_username, users.password_hash AS users_password_hash, users.full_name AS users_full_name, users.is_active AS users_is_active, users.is_verified AS users_is_verified, users.is_superuser AS users_is_superuser, users.created_at AS users_created_at, users.updated_at AS users_updated_at 
+FROM users 
+WHERE users.email = ? OR users.username = ?
+ LIMIT ? OFFSET ?
+2026-02-01 02:59:47,927 - sqlalchemy.engine.Engine - INFO - SELECT users.id AS users_id, users.email AS users_email, users.username AS users_username, users.password_hash AS users_password_hash, users.full_name AS users_full_name, users.is_active AS users_is_active, users.is_verified AS users_is_verified, users.is_superuser AS users_is_superuser, users.created_at AS users_created_at, users.updated_at AS users_updated_at 
+FROM users 
+WHERE users.email = ? OR users.username = ?
+ LIMIT ? OFFSET ?
+2026-02-01 02:59:47,927 INFO sqlalchemy.engine.Engine [generated in 0.00037s] ('ashok@gmail.com', 'ashok', 1, 0)
+2026-02-01 02:59:47,927 - sqlalchemy.engine.Engine - INFO - [generated in 0.00037s] ('ashok@gmail.com', 'ashok', 1, 0)
+2026-02-01 02:59:47,928 - passlib.handlers.bcrypt - WARNING - (trapped) error reading bcrypt version
+Traceback (most recent call last):
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/passlib/handlers/bcrypt.py", line 620, in _load_backend_mixin
+    version = _bcrypt.__about__.__version__
+              ^^^^^^^^^^^^^^^^^
+AttributeError: module 'bcrypt' has no attribute '__about__'
+2026-02-01 02:59:48,488 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-02-01 02:59:48,488 - sqlalchemy.engine.Engine - INFO - ROLLBACK
+INFO:     192.168.1.26:54496 - "POST /auth/register HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/applications.py", line 1106, in __call__
+    await super().__call__(scope, receive, send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/applications.py", line 122, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/errors.py", line 184, in __call__
+    raise exc
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/errors.py", line 162, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/cors.py", line 91, in __call__
+    await self.simple_response(scope, receive, send, request_headers=headers)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/cors.py", line 146, in simple_response
+    await self.app(scope, receive, send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/exceptions.py", line 79, in __call__
+    raise exc
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/exceptions.py", line 68, in __call__
+    await self.app(scope, receive, sender)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py", line 20, in __call__
+    raise e
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py", line 17, in __call__
+    await self.app(scope, receive, send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/routing.py", line 718, in __call__
+    await route.handle(scope, receive, send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/routing.py", line 276, in handle
+    await self.app(scope, receive, send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/routing.py", line 66, in app
+    response = await func(request)
+               ^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/routing.py", line 274, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/routing.py", line 193, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/concurrency.py", line 41, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func, *args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/anyio/to_thread.py", line 33, in run_sync
+    return await get_asynclib().run_sync_in_worker_thread(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/anyio/_backends/_asyncio.py", line 877, in run_sync_in_worker_thread
+    return await future
+           ^^^^^^^^^^^^
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/anyio/_backends/_asyncio.py", line 807, in run
+    result = context.run(func, *args)
+             ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/app/api/auth.py", line 98, in register
+    db_user = User(
+              ^^^^^
+  File "<string>", line 4, in __init__
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/orm/state.py", line 566, in _initialize_instance
+    with util.safe_reraise():
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/orm/state.py", line 564, in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/orm/decl_base.py", line 2142, in _declarative_constructor
+    raise TypeError(
+TypeError: 'hashed_password' is an invalid keyword argument for User
+INFO:     192.168.1.26:51295 - "GET /health HTTP/1.1" 200 OK
+INFO:     192.168.1.26:51295 - "GET /health HTTP/1.1" 200 OK
+2026-02-01 02:59:48,556 - app.core.auth - WARNING - ⚠️  Token verification failed: Not enough segments
+2026-02-01 02:59:48,557 - app.api.workspaces - WARNING - ❌ Invalid token
+2026-02-01 02:59:48,557 - app.core.auth - WARNING - ⚠️  Token verification failed: Not enough segments
+2026-02-01 02:59:48,559 - app.api.projects - WARNING - ❌ Invalid token
+INFO:     192.168.1.26:51295 - "GET /api/workspaces HTTP/1.1" 401 Unauthorized
+INFO:     192.168.1.26:52657 - "GET /api/projects HTTP/1.1" 401 Unauthorized
 
