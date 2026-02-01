@@ -1,8 +1,65 @@
-2026-02-01 17:00:09,992 - app.api.eda - INFO - 🚀 Background analysis task started for job: 8f93c40a-8a8e-45f7-b28c-26f906541f50
-INFO:     192.168.1.26:64312 - "POST /api/eda/dataset/d05fdb35-372d-4a8a-88b9-9caa1538787d/analyze HTTP/1.1" 202 Accepted
-2026-02-01 17:00:10,001 - app.api.eda - ERROR - ❌ EDA analysis failed: 'str' object does not support item assignment
-INFO:     192.168.1.26:64312 - "OPTIONS /api/eda/jobs/8f93c40a-8a8e-45f7-b28c-26f906541f50 HTTP/1.1" 200 OK
-2026-02-01 17:00:10,005 - __main__ - ERROR - ❌ Unhandled exception: name 'request' is not defined
+(venv) ashok@ubuntu:~/work/latest/kedro-integrated-fast-api$ git pull
+Already up to date.
+(venv) ashok@ubuntu:~/work/latest/kedro-integrated-fast-api$ rm -rf ml_platform.db 
+(venv) ashok@ubuntu:~/work/latest/kedro-integrated-fast-api$ python main.py 
+⚠️ Redis not available, using in-memory cache
+2026-02-01 17:01:57,299 - __main__ - INFO - 🎯 ML Platform starting on http://localhost:8000
+INFO:     Started server process [36518]
+INFO:     Waiting for application startup.
+2026-02-01 17:01:57,309 - __main__ - INFO - 🚀 Starting ML Platform Application...
+2026-02-01 17:01:57,309 - __main__ - INFO - 📦 Initializing database tables...
+2026-02-01 17:01:57,431 - __main__ - INFO - ✅ Database tables created/verified
+2026-02-01 17:01:57,431 - __main__ - INFO - ✅ Default data initialized
+2026-02-01 17:01:57,431 - __main__ - INFO - ======================================================================
+2026-02-01 17:01:57,431 - __main__ - INFO - ✅ ML PLATFORM READY!
+2026-02-01 17:01:57,431 - __main__ - INFO - ======================================================================
+2026-02-01 17:01:57,431 - __main__ - INFO - 📍 API Documentation: http://localhost:8000/docs
+2026-02-01 17:01:57,431 - __main__ - INFO - 📍 EDA Health: GET /api/eda/health
+2026-02-01 17:01:57,431 - __main__ - INFO - ======================================================================
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     192.168.1.26:53235 - "GET /health HTTP/1.1" 200 OK
+INFO:     192.168.1.26:53235 - "GET /api/auth/me HTTP/1.1" 404 Not Found
+INFO:     192.168.1.26:64876 - "OPTIONS /api/auth/register HTTP/1.1" 200 OK
+INFO:     192.168.1.26:63977 - "POST /api/auth/register HTTP/1.1" 200 OK
+INFO:     192.168.1.26:63977 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     192.168.1.26:63977 - "GET /api/projects HTTP/1.1" 307 Temporary Redirect
+INFO:     192.168.1.26:63977 - "GET /api/projects/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:63977 - "OPTIONS /api/activities HTTP/1.1" 200 OK
+INFO:     192.168.1.26:50604 - "GET /api/activities HTTP/1.1" 307 Temporary Redirect
+INFO:     192.168.1.26:50604 - "OPTIONS /api/activities/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:56718 - "GET /api/activities/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:61456 - "GET /health HTTP/1.1" 200 OK
+INFO:     192.168.1.26:61456 - "OPTIONS /api/projects HTTP/1.1" 200 OK
+INFO:     192.168.1.26:61456 - "POST /api/projects HTTP/1.1" 307 Temporary Redirect
+INFO:     192.168.1.26:61456 - "OPTIONS /api/projects/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:61456 - "POST /api/projects/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:61456 - "GET /api/projects HTTP/1.1" 307 Temporary Redirect
+INFO:     192.168.1.26:61456 - "GET /api/projects/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:61456 - "OPTIONS /api/activities?project_id=7a4a6511-19e6-4389-9174-2403ab4e01ad HTTP/1.1" 200 OK
+INFO:     192.168.1.26:61456 - "GET /api/activities?project_id=7a4a6511-19e6-4389-9174-2403ab4e01ad HTTP/1.1" 307 Temporary Redirect
+INFO:     192.168.1.26:60291 - "GET /api/datasets/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:61456 - "OPTIONS /api/activities/?project_id=7a4a6511-19e6-4389-9174-2403ab4e01ad HTTP/1.1" 200 OK
+INFO:     192.168.1.26:61456 - "GET /api/activities/?project_id=7a4a6511-19e6-4389-9174-2403ab4e01ad HTTP/1.1" 200 OK
+INFO:     192.168.1.26:61456 - "OPTIONS /api/datasources/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:60291 - "GET /api/datasets/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:61456 - "GET /api/datasources/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:58626 - "OPTIONS /api/datasets/?name=ddd&project_id=7a4a6511-19e6-4389-9174-2403ab4e01ad HTTP/1.1" 200 OK
+INFO:     192.168.1.26:58626 - "POST /api/datasets/?name=ddd&project_id=7a4a6511-19e6-4389-9174-2403ab4e01ad HTTP/1.1" 200 OK
+INFO:     192.168.1.26:58626 - "GET /api/datasets/ HTTP/1.1" 200 OK
+2026-02-01 17:02:31,214 - app.api.eda - INFO - 🏥 EDA health check requested
+INFO:     192.168.1.26:58626 - "GET /api/eda/health HTTP/1.1" 200 OK
+INFO:     192.168.1.26:62753 - "GET /api/datasets/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:62753 - "OPTIONS /api/eda/dataset/a6b22eb3-7bb9-45fb-b89e-5cdade2384a5/analyze HTTP/1.1" 200 OK
+2026-02-01 17:02:33,487 - app.api.eda - INFO - 📊 EDA analysis requested for dataset: a6b22eb3-7bb9-45fb-b89e-5cdade2384a5
+2026-02-01 17:02:33,488 - app.api.eda - INFO - 👤 User authenticated: mock-user-id
+2026-02-01 17:02:33,502 - app.api.eda - INFO - ✅ Dataset verified: sample_data.csv
+2026-02-01 17:02:33,502 - app.api.eda - INFO - 🔄 Job created: 69c81628-339c-4e86-a56c-beedf3880eb2
+2026-02-01 17:02:33,520 - app.api.eda - INFO - 📝 Activity logged
+2026-02-01 17:02:33,520 - app.api.eda - INFO - 🚀 Background analysis task started for job: 69c81628-339c-4e86-a56c-beedf3880eb2
+INFO:     192.168.1.26:58626 - "POST /api/eda/dataset/a6b22eb3-7bb9-45fb-b89e-5cdade2384a5/analyze HTTP/1.1" 202 Accepted
+2026-02-01 17:02:33,525 - app.api.eda - ERROR - ❌ EDA analysis failed: 'str' object does not support item assignment
+2026-02-01 17:02:33,536 - __main__ - ERROR - ❌ Unhandled exception: name 'request' is not defined
 Traceback (most recent call last):
   File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/errors.py", line 164, in __call__
     await self.app(scope, receive, _send)
@@ -94,12 +151,14 @@ Traceback (most recent call last):
     auth_header = request.headers.get("authorization") or request.headers.get("Authorization")
                   ^^^^^^^
 NameError: name 'request' is not defined. Did you mean: 'Request'?
-2026-02-01 17:00:10,023 - app.api.eda - INFO - 🔍 Job status requested: 8f93c40a-8a8e-45f7-b28c-26f906541f50
-2026-02-01 17:00:10,024 - app.api.eda - ERROR - ❌ Error fetching job status: 'progress'
+INFO:     192.168.1.26:58626 - "OPTIONS /api/eda/jobs/69c81628-339c-4e86-a56c-beedf3880eb2 HTTP/1.1" 200 OK
+INFO:     192.168.1.26:50372 - "OPTIONS /api/eda/jobs/69c81628-339c-4e86-a56c-beedf3880eb2 HTTP/1.1" 200 OK
+2026-02-01 17:02:33,567 - app.api.eda - INFO - 🔍 Job status requested: 69c81628-339c-4e86-a56c-beedf3880eb2
+2026-02-01 17:02:33,567 - app.api.eda - ERROR - ❌ Error fetching job status: 'progress'
 Traceback (most recent call last):
   File "/home/ashok/work/latest/kedro-integrated-fast-api/app/api/eda.py", line 394, in get_job_status
     logger.info(f"✅ Job status: {job['status']} (progress: {job['progress']}%)")
                                                              ~~~^^^^^^^^^^^^
 KeyError: 'progress'
-INFO:     192.168.1.26:54182 - "GET /api/eda/jobs/8f93c40a-8a8e-45f7-b28c-26f906541f50 HTTP/1.1" 500 Internal Server Error
+INFO:     192.168.1.26:57032 - "GET /api/eda/jobs/69c81628-339c-4e86-a56c-beedf3880eb2 HTTP/1.1" 500 Internal Server Error
 
