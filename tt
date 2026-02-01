@@ -1,164 +1,34 @@
-(venv) ashok@ubuntu:~/work/latest/kedro-integrated-fast-api$ git pull
-Already up to date.
-(venv) ashok@ubuntu:~/work/latest/kedro-integrated-fast-api$ rm -rf ml_platform.db 
-(venv) ashok@ubuntu:~/work/latest/kedro-integrated-fast-api$ python main.py 
-⚠️ Redis not available, using in-memory cache
-2026-02-01 17:01:57,299 - __main__ - INFO - 🎯 ML Platform starting on http://localhost:8000
-INFO:     Started server process [36518]
-INFO:     Waiting for application startup.
-2026-02-01 17:01:57,309 - __main__ - INFO - 🚀 Starting ML Platform Application...
-2026-02-01 17:01:57,309 - __main__ - INFO - 📦 Initializing database tables...
-2026-02-01 17:01:57,431 - __main__ - INFO - ✅ Database tables created/verified
-2026-02-01 17:01:57,431 - __main__ - INFO - ✅ Default data initialized
-2026-02-01 17:01:57,431 - __main__ - INFO - ======================================================================
-2026-02-01 17:01:57,431 - __main__ - INFO - ✅ ML PLATFORM READY!
-2026-02-01 17:01:57,431 - __main__ - INFO - ======================================================================
-2026-02-01 17:01:57,431 - __main__ - INFO - 📍 API Documentation: http://localhost:8000/docs
-2026-02-01 17:01:57,431 - __main__ - INFO - 📍 EDA Health: GET /api/eda/health
-2026-02-01 17:01:57,431 - __main__ - INFO - ======================================================================
-INFO:     Application startup complete.
-INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-INFO:     192.168.1.26:53235 - "GET /health HTTP/1.1" 200 OK
-INFO:     192.168.1.26:53235 - "GET /api/auth/me HTTP/1.1" 404 Not Found
-INFO:     192.168.1.26:64876 - "OPTIONS /api/auth/register HTTP/1.1" 200 OK
-INFO:     192.168.1.26:63977 - "POST /api/auth/register HTTP/1.1" 200 OK
-INFO:     192.168.1.26:63977 - "POST /api/auth/login HTTP/1.1" 200 OK
-INFO:     192.168.1.26:63977 - "GET /api/projects HTTP/1.1" 307 Temporary Redirect
-INFO:     192.168.1.26:63977 - "GET /api/projects/ HTTP/1.1" 200 OK
-INFO:     192.168.1.26:63977 - "OPTIONS /api/activities HTTP/1.1" 200 OK
-INFO:     192.168.1.26:50604 - "GET /api/activities HTTP/1.1" 307 Temporary Redirect
-INFO:     192.168.1.26:50604 - "OPTIONS /api/activities/ HTTP/1.1" 200 OK
-INFO:     192.168.1.26:56718 - "GET /api/activities/ HTTP/1.1" 200 OK
-INFO:     192.168.1.26:61456 - "GET /health HTTP/1.1" 200 OK
-INFO:     192.168.1.26:61456 - "OPTIONS /api/projects HTTP/1.1" 200 OK
-INFO:     192.168.1.26:61456 - "POST /api/projects HTTP/1.1" 307 Temporary Redirect
-INFO:     192.168.1.26:61456 - "OPTIONS /api/projects/ HTTP/1.1" 200 OK
-INFO:     192.168.1.26:61456 - "POST /api/projects/ HTTP/1.1" 200 OK
-INFO:     192.168.1.26:61456 - "GET /api/projects HTTP/1.1" 307 Temporary Redirect
-INFO:     192.168.1.26:61456 - "GET /api/projects/ HTTP/1.1" 200 OK
-INFO:     192.168.1.26:61456 - "OPTIONS /api/activities?project_id=7a4a6511-19e6-4389-9174-2403ab4e01ad HTTP/1.1" 200 OK
-INFO:     192.168.1.26:61456 - "GET /api/activities?project_id=7a4a6511-19e6-4389-9174-2403ab4e01ad HTTP/1.1" 307 Temporary Redirect
-INFO:     192.168.1.26:60291 - "GET /api/datasets/ HTTP/1.1" 200 OK
-INFO:     192.168.1.26:61456 - "OPTIONS /api/activities/?project_id=7a4a6511-19e6-4389-9174-2403ab4e01ad HTTP/1.1" 200 OK
-INFO:     192.168.1.26:61456 - "GET /api/activities/?project_id=7a4a6511-19e6-4389-9174-2403ab4e01ad HTTP/1.1" 200 OK
-INFO:     192.168.1.26:61456 - "OPTIONS /api/datasources/ HTTP/1.1" 200 OK
-INFO:     192.168.1.26:60291 - "GET /api/datasets/ HTTP/1.1" 200 OK
-INFO:     192.168.1.26:61456 - "GET /api/datasources/ HTTP/1.1" 200 OK
-INFO:     192.168.1.26:58626 - "OPTIONS /api/datasets/?name=ddd&project_id=7a4a6511-19e6-4389-9174-2403ab4e01ad HTTP/1.1" 200 OK
-INFO:     192.168.1.26:58626 - "POST /api/datasets/?name=ddd&project_id=7a4a6511-19e6-4389-9174-2403ab4e01ad HTTP/1.1" 200 OK
-INFO:     192.168.1.26:58626 - "GET /api/datasets/ HTTP/1.1" 200 OK
-2026-02-01 17:02:31,214 - app.api.eda - INFO - 🏥 EDA health check requested
-INFO:     192.168.1.26:58626 - "GET /api/eda/health HTTP/1.1" 200 OK
-INFO:     192.168.1.26:62753 - "GET /api/datasets/ HTTP/1.1" 200 OK
-INFO:     192.168.1.26:62753 - "OPTIONS /api/eda/dataset/a6b22eb3-7bb9-45fb-b89e-5cdade2384a5/analyze HTTP/1.1" 200 OK
-2026-02-01 17:02:33,487 - app.api.eda - INFO - 📊 EDA analysis requested for dataset: a6b22eb3-7bb9-45fb-b89e-5cdade2384a5
-2026-02-01 17:02:33,488 - app.api.eda - INFO - 👤 User authenticated: mock-user-id
-2026-02-01 17:02:33,502 - app.api.eda - INFO - ✅ Dataset verified: sample_data.csv
-2026-02-01 17:02:33,502 - app.api.eda - INFO - 🔄 Job created: 69c81628-339c-4e86-a56c-beedf3880eb2
-2026-02-01 17:02:33,520 - app.api.eda - INFO - 📝 Activity logged
-2026-02-01 17:02:33,520 - app.api.eda - INFO - 🚀 Background analysis task started for job: 69c81628-339c-4e86-a56c-beedf3880eb2
-INFO:     192.168.1.26:58626 - "POST /api/eda/dataset/a6b22eb3-7bb9-45fb-b89e-5cdade2384a5/analyze HTTP/1.1" 202 Accepted
-2026-02-01 17:02:33,525 - app.api.eda - ERROR - ❌ EDA analysis failed: 'str' object does not support item assignment
-2026-02-01 17:02:33,536 - __main__ - ERROR - ❌ Unhandled exception: name 'request' is not defined
+2026-02-01 17:06:56,297 - app.api.eda - INFO - 👤 User authenticated: mock-user-id
+2026-02-01 17:06:56,299 - app.api.eda - INFO - ✅ Dataset verified: sample_data.csv
+2026-02-01 17:06:56,299 - app.api.eda - INFO - 🔄 Job created: e7289afc-2cb2-43f3-9b26-2aad7e95fd2f
+2026-02-01 17:06:56,316 - app.api.eda - INFO - 📝 Activity logged
+2026-02-01 17:06:56,317 - app.api.eda - INFO - 🚀 Background analysis task started for job: e7289afc-2cb2-43f3-9b26-2aad7e95fd2f
+INFO:     192.168.1.26:55193 - "POST /api/eda/dataset/38b4bd68-d36c-4be4-81dc-8c8005a0ddd0/analyze HTTP/1.1" 202 Accepted
+2026-02-01 17:06:56,318 - app.api.eda - ERROR - ❌ EDA analysis failed: 'str' object does not support item assignment
+INFO:     192.168.1.26:55193 - "OPTIONS /api/eda/jobs/e7289afc-2cb2-43f3-9b26-2aad7e95fd2f HTTP/1.1" 200 OK
+2026-02-01 17:06:56,330 - app.api.eda - INFO - 🔍 Job status requested: e7289afc-2cb2-43f3-9b26-2aad7e95fd2f
+2026-02-01 17:06:56,331 - app.api.eda - INFO - ✅ Job status: failed (progress: 0%)
+2026-02-01 17:06:56,331 - app.api.eda - ERROR - ❌ Error fetching job status: 2 validation errors for JobStatusResponse
+dataset_id
+  Field required [type=missing, input_value={'job_id': 'e7289afc-2cb2...-02-01T17:06:56.318821'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+created_at
+  Field required [type=missing, input_value={'job_id': 'e7289afc-2cb2...-02-01T17:06:56.318821'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
 Traceback (most recent call last):
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/errors.py", line 164, in __call__
-    await self.app(scope, receive, _send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/cors.py", line 93, in __call__
-    await self.simple_response(scope, receive, send, request_headers=headers)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/cors.py", line 144, in simple_response
-    await self.app(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
-    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
-    await self.app(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/routing.py", line 716, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/routing.py", line 736, in app
-    await route.handle(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/routing.py", line 290, in handle
-    await self.app(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/routing.py", line 115, in app
-    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/routing.py", line 102, in app
-    await response(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/responses.py", line 167, in __call__
-    await self.background()
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/background.py", line 36, in __call__
-    await task()
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/background.py", line 21, in __call__
-    await self.func(*self.args, **self.kwargs)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/app/api/eda.py", line 169, in run_eda_analysis
-    auth_header = request.headers.get("authorization") or request.headers.get("Authorization")
-                  ^^^^^^^
-NameError: name 'request' is not defined. Did you mean: 'Request'?
-ERROR:    Exception in ASGI application
-Traceback (most recent call last):
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/uvicorn/protocols/http/h11_impl.py", line 410, in run_asgi
-    result = await app(  # type: ignore[func-returns-value]
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/uvicorn/middleware/proxy_headers.py", line 60, in __call__
-    return await self.app(scope, receive, send)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/applications.py", line 1135, in __call__
-    await super().__call__(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/applications.py", line 107, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/errors.py", line 186, in __call__
-    raise exc
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/errors.py", line 164, in __call__
-    await self.app(scope, receive, _send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/cors.py", line 93, in __call__
-    await self.simple_response(scope, receive, send, request_headers=headers)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/cors.py", line 144, in simple_response
-    await self.app(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
-    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
-    await self.app(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/routing.py", line 716, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/routing.py", line 736, in app
-    await route.handle(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/routing.py", line 290, in handle
-    await self.app(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/routing.py", line 115, in app
-    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/routing.py", line 102, in app
-    await response(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/responses.py", line 167, in __call__
-    await self.background()
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/background.py", line 36, in __call__
-    await task()
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/background.py", line 21, in __call__
-    await self.func(*self.args, **self.kwargs)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/app/api/eda.py", line 169, in run_eda_analysis
-    auth_header = request.headers.get("authorization") or request.headers.get("Authorization")
-                  ^^^^^^^
-NameError: name 'request' is not defined. Did you mean: 'Request'?
-INFO:     192.168.1.26:58626 - "OPTIONS /api/eda/jobs/69c81628-339c-4e86-a56c-beedf3880eb2 HTTP/1.1" 200 OK
-INFO:     192.168.1.26:50372 - "OPTIONS /api/eda/jobs/69c81628-339c-4e86-a56c-beedf3880eb2 HTTP/1.1" 200 OK
-2026-02-01 17:02:33,567 - app.api.eda - INFO - 🔍 Job status requested: 69c81628-339c-4e86-a56c-beedf3880eb2
-2026-02-01 17:02:33,567 - app.api.eda - ERROR - ❌ Error fetching job status: 'progress'
-Traceback (most recent call last):
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/app/api/eda.py", line 394, in get_job_status
-    logger.info(f"✅ Job status: {job['status']} (progress: {job['progress']}%)")
-                                                             ~~~^^^^^^^^^^^^
-KeyError: 'progress'
-INFO:     192.168.1.26:57032 - "GET /api/eda/jobs/69c81628-339c-4e86-a56c-beedf3880eb2 HTTP/1.1" 500 Internal Server Error
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/app/api/eda.py", line 377, in get_job_status
+    return JobStatusResponse(**job)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/pydantic/main.py", line 250, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+pydantic_core._pydantic_core.ValidationError: 2 validation errors for JobStatusResponse
+dataset_id
+  Field required [type=missing, input_value={'job_id': 'e7289afc-2cb2...-02-01T17:06:56.318821'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+created_at
+  Field required [type=missing, input_value={'job_id': 'e7289afc-2cb2...-02-01T17:06:56.318821'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+INFO:     192.168.1.26:55193 - "GET /api/eda/jobs/e7289afc-2cb2-43f3-9b26-2aad7e95fd2f HTTP/1.1" 500 Internal Server Error
+
 
