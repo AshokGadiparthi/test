@@ -1,11 +1,4 @@
-NFO:     192.168.1.26:63522 - "GET /api/datasets/ HTTP/1.1" 200 OK
-INFO:     192.168.1.26:63522 - "OPTIONS /api/eda/health HTTP/1.1" 200 OK
-2026-02-01 17:43:48,082 - app.api.eda - INFO - 🏥 EDA health check requested
-2026-02-01 17:43:48,083 - __main__ - ERROR - ❌ Unhandled exception: 1 validation error:
-  {'type': 'missing', 'loc': ('response', 'components'), 'msg': 'Field required', 'input': {'status': 'healthy', 'service': 'EDA Engine', 'version': '1.0.0', 'timestamp': '2026-02-01T17:43:48.082532'}}
-
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/app/api/eda.py", line 243, in eda_health_check
-    GET /api/eda/health
+2026-02-01 19:24:18,866 - __main__ - ERROR - ❌ Unhandled exception: Out of range float values are not JSON compliant: nan
 Traceback (most recent call last):
   File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/errors.py", line 164, in __call__
     await self.app(scope, receive, _send)
@@ -36,17 +29,28 @@ Traceback (most recent call last):
   File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/routing.py", line 101, in app
     response = await f(request)
                ^^^^^^^^^^^^^^^^
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/routing.py", line 377, in app
-    content = await serialize_response(
-              ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/routing.py", line 215, in serialize_response
-    raise ResponseValidationError(
-fastapi.exceptions.ResponseValidationError: 1 validation error:
-  {'type': 'missing', 'loc': ('response', 'components'), 'msg': 'Field required', 'input': {'status': 'healthy', 'service': 'EDA Engine', 'version': '1.0.0', 'timestamp': '2026-02-01T17:43:48.082532'}}
-
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/app/api/eda.py", line 243, in eda_health_check
-    GET /api/eda/health
-INFO:     192.168.1.26:61848 - "GET /api/eda/health HTTP/1.1" 500 Internal Server Error
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/routing.py", line 389, in app
+    response = actual_response_class(content, **response_args)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/responses.py", line 189, in __init__
+    super().__init__(content, status_code, headers, media_type, background)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/responses.py", line 46, in __init__
+    self.body = self.render(content)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/responses.py", line 192, in render
+    return json.dumps(
+           ^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/__init__.py", line 238, in dumps
+    **kw).encode(obj)
+          ^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/encoder.py", line 200, in encode
+    chunks = self.iterencode(o, _one_shot=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/encoder.py", line 258, in iterencode
+    return _iterencode(o, 0)
+           ^^^^^^^^^^^^^^^^^
+ValueError: Out of range float values are not JSON compliant: nan
+INFO:     192.168.1.26:64309 - "GET /api/datasets/9a3e897d-2c14-4277-a5ab-6c0c05aa6227/preview?rows=100 HTTP/1.1" 500 Internal Server Error
 ERROR:    Exception in ASGI application
 Traceback (most recent call last):
   File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/uvicorn/protocols/http/h11_impl.py", line 410, in run_asgi
@@ -90,14 +94,24 @@ Traceback (most recent call last):
   File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/routing.py", line 101, in app
     response = await f(request)
                ^^^^^^^^^^^^^^^^
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/routing.py", line 377, in app
-    content = await serialize_response(
-              ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/routing.py", line 215, in serialize_response
-    raise ResponseValidationError(
-fastapi.exceptions.ResponseValidationError: 1 validation error:
-  {'type': 'missing', 'loc': ('response', 'components'), 'msg': 'Field required', 'input': {'status': 'healthy', 'service': 'EDA Engine', 'version': '1.0.0', 'timestamp': '2026-02-01T17:43:48.082532'}}
-
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/app/api/eda.py", line 243, in eda_health_check
-    GET /api/eda/health
-INFO:     192.168.1.26:62975 - "GET /api/datasets/ HTTP/1.1" 200 OK
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/routing.py", line 389, in app
+    response = actual_response_class(content, **response_args)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/responses.py", line 189, in __init__
+    super().__init__(content, status_code, headers, media_type, background)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/responses.py", line 46, in __init__
+    self.body = self.render(content)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/responses.py", line 192, in render
+    return json.dumps(
+           ^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/__init__.py", line 238, in dumps
+    **kw).encode(obj)
+          ^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/encoder.py", line 200, in encode
+    chunks = self.iterencode(o, _one_shot=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/encoder.py", line 258, in iterencode
+    return _iterencode(o, 0)
+           ^^^^^^^^^^^^^^^^^
+ValueError: Out of range float values are not JSON compliant: nan
