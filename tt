@@ -1,41 +1,33 @@
-026-02-01 17:20:41,620 - app.api.eda - INFO - 👤 User authenticated: mock-user-id
-2026-02-01 17:20:41,625 - app.api.eda - INFO - ✅ Dataset verified: sample_data.csv
-2026-02-01 17:20:41,626 - app.api.eda - INFO - 🔄 Job created: c1b1670a-6091-44ee-a7b3-b51c9c4eff37
-2026-02-01 17:20:41,653 - app.api.eda - INFO - 📝 Activity logged
-2026-02-01 17:20:41,653 - app.api.eda - INFO - 🚀 Background analysis task started for job: c1b1670a-6091-44ee-a7b3-b51c9c4eff37
-INFO:     192.168.1.26:59649 - "POST /api/eda/dataset/03004c8c-90ab-496c-b0a0-6c3b6b0076ed/analyze HTTP/1.1" 202 Accepted
-2026-02-01 17:20:41,680 - app.api.eda - INFO - ✅ EDA analysis completed: c1b1670a-6091-44ee-a7b3-b51c9c4eff37
-INFO:     192.168.1.26:59649 - "OPTIONS /api/eda/jobs/c1b1670a-6091-44ee-a7b3-b51c9c4eff37 HTTP/1.1" 200 OK
-2026-02-01 17:20:41,694 - app.api.eda - INFO - 🔍 Job status requested: c1b1670a-6091-44ee-a7b3-b51c9c4eff37
-2026-02-01 17:20:41,694 - app.api.eda - INFO - ✅ Job status: completed (progress: 100%)
-INFO:     192.168.1.26:59649 - "GET /api/eda/jobs/c1b1670a-6091-44ee-a7b3-b51c9c4eff37 HTTP/1.1" 200 OK
-INFO:     192.168.1.26:59649 - "OPTIONS /api/eda/03004c8c-90ab-496c-b0a0-6c3b6b0076ed/summary HTTP/1.1" 200 OK
-INFO:     192.168.1.26:50670 - "OPTIONS /api/eda/03004c8c-90ab-496c-b0a0-6c3b6b0076ed/statistics HTTP/1.1" 200 OK
-INFO:     192.168.1.26:59356 - "OPTIONS /api/eda/03004c8c-90ab-496c-b0a0-6c3b6b0076ed/quality-report HTTP/1.1" 200 OK
-INFO:     192.168.1.26:54617 - "OPTIONS /api/eda/03004c8c-90ab-496c-b0a0-6c3b6b0076ed/correlations?threshold=0.3 HTTP/1.1" 200 OK
-2026-02-01 17:20:41,719 - app.api.eda - INFO - 📋 Summary requested for dataset: 03004c8c-90ab-496c-b0a0-6c3b6b0076ed
-2026-02-01 17:20:41,719 - app.api.eda - WARNING - ⚠️ Summary not found for dataset: 03004c8c-90ab-496c-b0a0-6c3b6b0076ed
-2026-02-01 17:20:41,719 - app.api.eda - INFO - 📊 Statistics requested for dataset: 03004c8c-90ab-496c-b0a0-6c3b6b0076ed
-2026-02-01 17:20:41,719 - app.api.eda - WARNING - ⚠️ Statistics not found for dataset: 03004c8c-90ab-496c-b0a0-6c3b6b0076ed
-INFO:     192.168.1.26:59649 - "GET /api/eda/03004c8c-90ab-496c-b0a0-6c3b6b0076ed/summary HTTP/1.1" 404 Not Found
-INFO:     192.168.1.26:62277 - "GET /api/eda/03004c8c-90ab-496c-b0a0-6c3b6b0076ed/statistics HTTP/1.1" 404 Not Found
-2026-02-01 17:20:41,729 - app.api.eda - INFO - 🔍 Quality report requested for dataset: 03004c8c-90ab-496c-b0a0-6c3b6b0076ed
-2026-02-01 17:20:41,730 - app.api.eda - WARNING - ⚠️ Quality report not found for dataset: 03004c8c-90ab-496c-b0a0-6c3b6b0076ed
-2026-02-01 17:20:41,730 - app.api.eda - INFO - 🔗 Correlations requested for dataset: 03004c8c-90ab-496c-b0a0-6c3b6b0076ed
-2026-02-01 17:20:41,731 - app.api.eda - WARNING - ⚠️ Correlations not found for dataset: 03004c8c-90ab-496c-b0a0-6c3b6b0076ed
-INFO:     192.168.1.26:55411 - "GET /api/eda/03004c8c-90ab-496c-b0a0-6c3b6b0076ed/quality-report HTTP/1.1" 404 Not Found
-INFO:     192.168.1.26:56986 - "GET /api/eda/03004c8c-90ab-496c-b0a0-6c3b6b0076ed/correlations?threshold=0.3 HTTP/1.1" 404 Not Found
-2026-02-01 17:20:41,739 - app.api.eda - INFO - 📋 Summary requested for dataset: 03004c8c-90ab-496c-b0a0-6c3b6b0076ed
-2026-02-01 17:20:41,739 - app.api.eda - WARNING - ⚠️ Summary not found for dataset: 03004c8c-90ab-496c-b0a0-6c3b6b0076ed
-INFO:     192.168.1.26:65013 - "GET /api/eda/03004c8c-90ab-496c-b0a0-6c3b6b0076ed/summary HTTP/1.1" 404 Not Found
-2026-02-01 17:21:12,257 - app.api.eda - INFO - 🔍 Quality report requested for dataset: 03004c8c-90ab-496c-b0a0-6c3b6b0076ed
-2026-02-01 17:21:12,258 - app.api.eda - WARNING - ⚠️ Quality report not found for dataset: 03004c8c-90ab-496c-b0a0-6c3b6b0076ed
-INFO:     192.168.1.26:52062 - "GET /api/eda/03004c8c-90ab-496c-b0a0-6c3b6b0076ed/quality-report HTTP/1.1" 404 Not Found
-2026-02-01 17:21:13,229 - app.api.eda - INFO - 📊 Statistics requested for dataset: 03004c8c-90ab-496c-b0a0-6c3b6b0076ed
-2026-02-01 17:21:13,229 - app.api.eda - WARNING - ⚠️ Statistics not found for dataset: 03004c8c-90ab-496c-b0a0-6c3b6b0076ed
-INFO:     192.168.1.26:52062 - "GET /api/eda/03004c8c-90ab-496c-b0a0-6c3b6b0076ed/statistics HTTP/1.1" 404 Not Found
-2026-02-01 17:21:14,401 - app.api.eda - INFO - 🔗 Correlations requested for dataset: 03004c8c-90ab-496c-b0a0-6c3b6b0076ed
-2026-02-01 17:21:14,401 - app.api.eda - WARNING - ⚠️ Correlations not found for dataset: 03004c8c-90ab-496c-b0a0-6c3b6b0076ed
-INFO:     192.168.1.26:52062 - "GET /api/eda/03004c8c-90ab-496c-b0a0-6c3b6b0076ed/correlations?threshold=0.3 HTTP/1.1" 404 Not Found
+2026-02-01 17:27:40,172 - app.api.eda - INFO - 👤 User authenticated: mock-user-id
+2026-02-01 17:27:40,173 - app.api.eda - INFO - ✅ Dataset verified: sample_data.csv
+2026-02-01 17:27:40,174 - app.api.eda - INFO - 🔄 Job created: 52566676-303f-4a6b-b856-635f1acf4832
+2026-02-01 17:27:40,198 - app.api.eda - INFO - 📝 Activity logged
+2026-02-01 17:27:40,198 - app.api.eda - INFO - 🚀 Background analysis task started for job: 52566676-303f-4a6b-b856-635f1acf4832
+INFO:     192.168.1.26:53189 - "POST /api/eda/dataset/d33852b2-cd99-4f16-b13c-7413a0484236/analyze HTTP/1.1" 202 Accepted
+2026-02-01 17:27:40,228 - app.api.eda - INFO - ✅ EDA analysis completed: 52566676-303f-4a6b-b856-635f1acf4832
+INFO:     192.168.1.26:53189 - "OPTIONS /api/eda/jobs/52566676-303f-4a6b-b856-635f1acf4832 HTTP/1.1" 200 OK
+2026-02-01 17:27:40,236 - app.api.eda - INFO - 🔍 Job status requested: 52566676-303f-4a6b-b856-635f1acf4832
+2026-02-01 17:27:40,236 - app.api.eda - INFO - ✅ Job status: completed (progress: 100%)
+INFO:     192.168.1.26:53189 - "GET /api/eda/jobs/52566676-303f-4a6b-b856-635f1acf4832 HTTP/1.1" 200 OK
+INFO:     192.168.1.26:53189 - "OPTIONS /api/eda/d33852b2-cd99-4f16-b13c-7413a0484236/summary HTTP/1.1" 200 OK
+INFO:     192.168.1.26:56264 - "OPTIONS /api/eda/d33852b2-cd99-4f16-b13c-7413a0484236/statistics HTTP/1.1" 200 OK
+INFO:     192.168.1.26:49666 - "OPTIONS /api/eda/d33852b2-cd99-4f16-b13c-7413a0484236/quality-report HTTP/1.1" 200 OK
+INFO:     192.168.1.26:50546 - "OPTIONS /api/eda/d33852b2-cd99-4f16-b13c-7413a0484236/correlations?threshold=0.3 HTTP/1.1" 200 OK
+INFO:     192.168.1.26:65394 - "OPTIONS /api/eda/d33852b2-cd99-4f16-b13c-7413a0484236/summary HTTP/1.1" 200 OK
+2026-02-01 17:27:40,297 - app.api.eda - INFO - 📊 Statistics requested for dataset: d33852b2-cd99-4f16-b13c-7413a0484236
+2026-02-01 17:27:40,297 - app.api.eda - WARNING - ⚠️ Statistics not found for dataset: d33852b2-cd99-4f16-b13c-7413a0484236
+2026-02-01 17:27:40,297 - app.api.eda - INFO - 📋 Summary requested for dataset: d33852b2-cd99-4f16-b13c-7413a0484236
+2026-02-01 17:27:40,297 - app.api.eda - WARNING - ⚠️ Summary not found for dataset: d33852b2-cd99-4f16-b13c-7413a0484236
+2026-02-01 17:27:40,298 - app.api.eda - INFO - 🔍 Quality report requested for dataset: d33852b2-cd99-4f16-b13c-7413a0484236
+2026-02-01 17:27:40,298 - app.api.eda - WARNING - ⚠️ Quality report not found for dataset: d33852b2-cd99-4f16-b13c-7413a0484236
+2026-02-01 17:27:40,310 - app.api.eda - INFO - 🔗 Correlations requested for dataset: d33852b2-cd99-4f16-b13c-7413a0484236
+2026-02-01 17:27:40,311 - app.api.eda - WARNING - ⚠️ Correlations not found for dataset: d33852b2-cd99-4f16-b13c-7413a0484236
+INFO:     192.168.1.26:50546 - "GET /api/eda/d33852b2-cd99-4f16-b13c-7413a0484236/quality-report HTTP/1.1" 404 Not Found
+INFO:     192.168.1.26:63383 - "GET /api/eda/d33852b2-cd99-4f16-b13c-7413a0484236/summary HTTP/1.1" 404 Not Found
+INFO:     192.168.1.26:49666 - "GET /api/eda/d33852b2-cd99-4f16-b13c-7413a0484236/statistics HTTP/1.1" 404 Not Found
+INFO:     192.168.1.26:56264 - "GET /api/eda/d33852b2-cd99-4f16-b13c-7413a0484236/correlations?threshold=0.3 HTTP/1.1" 404 Not Found
+2026-02-01 17:27:40,342 - app.api.eda - INFO - 📋 Summary requested for dataset: d33852b2-cd99-4f16-b13c-7413a0484236
+2026-02-01 17:27:40,342 - app.api.eda - WARNING - ⚠️ Summary not found for dataset: d33852b2-cd99-4f16-b13c-7413a0484236
+INFO:     192.168.1.26:50546 - "GET /api/eda/d33852b2-cd99-4f16-b13c-7413a0484236/summary HTTP/1.1" 404 Not Found
 
 
