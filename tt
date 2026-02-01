@@ -1,77 +1,83 @@
-026-02-01 16:34:53,313 - app.api.eda - INFO - 🔄 Job created: fbdc124a-05b1-4cbb-b020-1319995e577d
-/home/ashok/work/latest/kedro-integrated-fast-api/app/api/eda.py:235: SAWarning: Column 'activities.id' is marked as a member of the primary key for table 'activities', but has no Python-side or server-side default generator indicated, nor does it indicate 'autoincrement=True' or 'nullable=True', and no explicit value is passed.  Primary key columns typically may not store NULL.
-  db.commit()
-2026-02-01 16:34:53,318 - app.api.eda - ERROR - ❌ Error starting analysis: (sqlite3.ProgrammingError) Error binding parameter 6: type 'dict' is not supported
-[SQL: INSERT INTO activities (user_id, project_id, action, entity_type, entity_id, details) VALUES (?, ?, ?, ?, ?, ?) RETURNING created_at]
-[parameters: ('mock-user-id', 'e4f361cd-43e1-41cd-8cdf-a8ffbddc8b69', 'started', 'eda_analysis', 'fbdc124a-05b1-4cbb-b020-1319995e577d', {'dataset_id': '7b8f1d60-3cdf-4039-bab6-bfc33f6a5c26', 'file_name': 'sample_data.csv', 'file_size_bytes': 35687})]
-(Background on this error at: https://sqlalche.me/e/20/f405)
-Traceback (most recent call last):
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
-    self.dialect.do_execute(
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
-    cursor.execute(statement, parameters)
-sqlite3.ProgrammingError: Error binding parameter 6: type 'dict' is not supported
-
-The above exception was the direct cause of the following exception:
-
-Traceback (most recent call last):
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/app/api/eda.py", line 235, in start_eda_analysis
-    db.commit()
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 2030, in commit
-    trans.commit(_to_root=True)
-  File "<string>", line 2, in commit
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/orm/state_changes.py", line 137, in _go
-    ret_value = fn(self, *arg, **kw)
-                ^^^^^^^^^^^^^^^^^^^^
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 1311, in commit
-    self._prepare_impl()
-  File "<string>", line 2, in _prepare_impl
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/orm/state_changes.py", line 137, in _go
-    ret_value = fn(self, *arg, **kw)
-                ^^^^^^^^^^^^^^^^^^^^
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 1286, in _prepare_impl
-    self.session.flush()
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 4331, in flush
-    self._flush(objects)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 4466, in _flush
-    with util.safe_reraise():
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py", line 224, in __exit__
-    raise exc_value.with_traceback(exc_tb)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 4427, in _flush
-    flush_context.execute()
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/orm/unitofwork.py", line 466, in execute
-    rec.execute(self)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/orm/unitofwork.py", line 642, in execute
-    util.preloaded.orm_persistence.save_obj(
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/orm/persistence.py", line 93, in save_obj
-    _emit_insert_statements(
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/orm/persistence.py", line 1233, in _emit_insert_statements
-    result = connection.execute(
-             ^^^^^^^^^^^^^^^^^^^
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1419, in execute
-    return meth(
-           ^^^^^
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/sql/elements.py", line 527, in _execute_on_connection
-    return connection._execute_clauseelement(
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1641, in _execute_clauseelement
-    ret = self._execute_context(
-          ^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
-    return self._exec_single_context(
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
-    self._handle_dbapi_exception(
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2363, in _handle_dbapi_exception
-    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
-    self.dialect.do_execute(
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
-    cursor.execute(statement, parameters)
-sqlalchemy.exc.ProgrammingError: (sqlite3.ProgrammingError) Error binding parameter 6: type 'dict' is not supported
-[SQL: INSERT INTO activities (user_id, project_id, action, entity_type, entity_id, details) VALUES (?, ?, ?, ?, ?, ?) RETURNING created_at]
-[parameters: ('mock-user-id', 'e4f361cd-43e1-41cd-8cdf-a8ffbddc8b69', 'started', 'eda_analysis', 'fbdc124a-05b1-4cbb-b020-1319995e577d', {'dataset_id': '7b8f1d60-3cdf-4039-bab6-bfc33f6a5c26', 'file_name': 'sample_data.csv', 'file_size_bytes': 35687})]
-(Background on this error at: https://sqlalche.me/e/20/f405)
-INFO:     192.168.1.26:64009 - "POST /api/eda/dataset/7b8f1d60-3cdf-4039-bab6-bfc33f6a5c26/analyze HTTP/1.1" 500 Internal Server Error
-
+(venv) ashok@ubuntu:~/work/latest/kedro-integrated-fast-api$ python main.py 
+⚠️ Redis not available, using in-memory cache
+2026-02-01 16:37:35,023 - __main__ - INFO - 🎯 ML Platform starting on http://localhost:8000
+INFO:     Started server process [36109]
+INFO:     Waiting for application startup.
+2026-02-01 16:37:35,035 - __main__ - INFO - 🚀 Starting ML Platform Application...
+2026-02-01 16:37:35,035 - __main__ - INFO - 📦 Initializing database tables...
+2026-02-01 16:37:35,150 - __main__ - INFO - ✅ Database tables created/verified
+2026-02-01 16:37:35,150 - __main__ - INFO - ✅ Default data initialized
+2026-02-01 16:37:35,150 - __main__ - INFO - ======================================================================
+2026-02-01 16:37:35,150 - __main__ - INFO - ✅ ML PLATFORM READY!
+2026-02-01 16:37:35,151 - __main__ - INFO - ======================================================================
+2026-02-01 16:37:35,151 - __main__ - INFO - 📍 API Documentation: http://localhost:8000/docs
+2026-02-01 16:37:35,151 - __main__ - INFO - 📍 EDA Health: GET /api/eda/health
+2026-02-01 16:37:35,151 - __main__ - INFO - ======================================================================
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     192.168.1.26:50917 - "GET /health HTTP/1.1" 200 OK
+INFO:     192.168.1.26:50917 - "GET /api/auth/me HTTP/1.1" 404 Not Found
+INFO:     192.168.1.26:57114 - "OPTIONS /api/auth/register HTTP/1.1" 200 OK
+INFO:     192.168.1.26:57114 - "POST /api/auth/register HTTP/1.1" 200 OK
+INFO:     192.168.1.26:57114 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     192.168.1.26:57114 - "OPTIONS /api/projects HTTP/1.1" 200 OK
+INFO:     192.168.1.26:57114 - "GET /api/projects HTTP/1.1" 307 Temporary Redirect
+INFO:     192.168.1.26:57114 - "OPTIONS /api/projects/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:56202 - "GET /api/projects/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:56202 - "OPTIONS /api/activities HTTP/1.1" 200 OK
+INFO:     192.168.1.26:59059 - "GET /api/activities HTTP/1.1" 307 Temporary Redirect
+INFO:     192.168.1.26:59059 - "OPTIONS /api/activities/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:58581 - "GET /api/activities/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:56734 - "GET /health HTTP/1.1" 200 OK
+INFO:     192.168.1.26:56734 - "OPTIONS /api/projects HTTP/1.1" 200 OK
+INFO:     192.168.1.26:56734 - "POST /api/projects HTTP/1.1" 307 Temporary Redirect
+INFO:     192.168.1.26:56734 - "OPTIONS /api/projects/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:56734 - "POST /api/projects/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:56734 - "GET /api/projects HTTP/1.1" 307 Temporary Redirect
+INFO:     192.168.1.26:56734 - "GET /api/projects/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:56734 - "OPTIONS /api/activities?project_id=2a034a3d-9a71-4845-9dd5-98d24510bc2a HTTP/1.1" 200 OK
+INFO:     192.168.1.26:56734 - "GET /api/activities?project_id=2a034a3d-9a71-4845-9dd5-98d24510bc2a HTTP/1.1" 307 Temporary Redirect
+INFO:     192.168.1.26:64330 - "GET /api/datasets/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:56734 - "OPTIONS /api/activities/?project_id=2a034a3d-9a71-4845-9dd5-98d24510bc2a HTTP/1.1" 200 OK
+INFO:     192.168.1.26:56734 - "GET /api/activities/?project_id=2a034a3d-9a71-4845-9dd5-98d24510bc2a HTTP/1.1" 200 OK
+INFO:     192.168.1.26:56734 - "OPTIONS /api/datasources/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:64330 - "GET /api/datasets/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:49666 - "GET /api/datasources/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:62058 - "OPTIONS /api/datasets/?name=dsfd&project_id=2a034a3d-9a71-4845-9dd5-98d24510bc2a HTTP/1.1" 200 OK
+INFO:     192.168.1.26:62058 - "POST /api/datasets/?name=dsfd&project_id=2a034a3d-9a71-4845-9dd5-98d24510bc2a HTTP/1.1" 200 OK
+INFO:     192.168.1.26:62058 - "GET /api/datasets/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:62058 - "OPTIONS /api/eda/health HTTP/1.1" 200 OK
+INFO:     192.168.1.26:49893 - "GET /api/datasets/ HTTP/1.1" 200 OK
+2026-02-01 16:38:10,974 - app.api.eda - INFO - 🏥 EDA health check requested
+INFO:     192.168.1.26:51582 - "GET /api/eda/health HTTP/1.1" 200 OK
+INFO:     192.168.1.26:51582 - "OPTIONS /api/eda/dataset/d05fdb35-372d-4a8a-88b9-9caa1538787d/analyze HTTP/1.1" 200 OK
+2026-02-01 16:38:13,463 - app.api.eda - INFO - 📊 EDA analysis requested for dataset: d05fdb35-372d-4a8a-88b9-9caa1538787d
+2026-02-01 16:38:13,463 - app.api.eda - INFO - 👤 User authenticated: mock-user-id
+2026-02-01 16:38:13,470 - app.api.eda - INFO - ✅ Dataset verified: sample_data.csv
+2026-02-01 16:38:13,471 - app.api.eda - INFO - 🔄 Job created: ed48fdd0-263d-49fe-9a45-f7b543dfa718
+2026-02-01 16:38:13,488 - app.api.eda - INFO - 📝 Activity logged
+INFO:     192.168.1.26:51582 - "POST /api/eda/dataset/d05fdb35-372d-4a8a-88b9-9caa1538787d/analyze HTTP/1.1" 202 Accepted
+INFO:     192.168.1.26:51582 - "OPTIONS /api/eda/jobs/ed48fdd0-263d-49fe-9a45-f7b543dfa718 HTTP/1.1" 200 OK
+2026-02-01 16:38:13,505 - app.api.eda - INFO - 🔍 Job status requested: ed48fdd0-263d-49fe-9a45-f7b543dfa718
+INFO:     192.168.1.26:51582 - "GET /api/eda/jobs/ed48fdd0-263d-49fe-9a45-f7b543dfa718 HTTP/1.1" 401 Unauthorized
+INFO:     192.168.1.26:54410 - "GET /health HTTP/1.1" 200 OK
+INFO:     192.168.1.26:54410 - "GET /api/auth/me HTTP/1.1" 404 Not Found
+INFO:     192.168.1.26:61902 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     192.168.1.26:61902 - "GET /api/projects HTTP/1.1" 307 Temporary Redirect
+INFO:     192.168.1.26:61902 - "GET /api/projects/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:61902 - "GET /api/activities?project_id=2a034a3d-9a71-4845-9dd5-98d24510bc2a HTTP/1.1" 307 Temporary Redirect
+INFO:     192.168.1.26:64920 - "GET /api/datasets/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:61902 - "GET /api/activities/?project_id=2a034a3d-9a71-4845-9dd5-98d24510bc2a HTTP/1.1" 200 OK
+2026-02-01 16:40:01,673 - app.api.eda - INFO - 🏥 EDA health check requested
+INFO:     192.168.1.26:61902 - "GET /api/eda/health HTTP/1.1" 200 OK
+INFO:     192.168.1.26:64920 - "GET /api/datasets/ HTTP/1.1" 200 OK
+2026-02-01 16:40:04,950 - app.api.eda - INFO - 📊 EDA analysis requested for dataset: d05fdb35-372d-4a8a-88b9-9caa1538787d
+2026-02-01 16:40:04,950 - app.api.eda - INFO - 👤 User authenticated: mock-user-id
+2026-02-01 16:40:04,951 - app.api.eda - INFO - ✅ Dataset verified: sample_data.csv
+2026-02-01 16:40:04,952 - app.api.eda - INFO - 🔄 Job created: 6285f7a8-3e2a-4c07-8680-91e41442bd45
+2026-02-01 16:40:04,974 - app.api.eda - INFO - 📝 Activity logged
+INFO:     192.168.1.26:64920 - "POST /api/eda/dataset/d05fdb35-372d-4a8a-88b9-9caa1538787d/analyze HTTP/1.1" 202 Accepted
+INFO:     192.168.1.26:64920 - "OPTIONS /api/eda/jobs/6285f7a8-3e2a-4c07-8680-91e41442bd45 HTTP/1.1" 200 OK
+2026-02-01 16:40:05,007 - app.api.eda - INFO - 🔍 Job status requested: 6285f7a8-3e2a-4c07-8680-91e41442bd45
+INFO:     192.168.1.26:64920 - "GET /api/eda/jobs/6285f7a8-3e2a-4c07-8680-91e41442bd45 HTTP/1.1" 401 Unauthorized
 
