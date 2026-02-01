@@ -1,117 +1,584 @@
-2026-02-01 19:24:18,866 - __main__ - ERROR - ❌ Unhandled exception: Out of range float values are not JSON compliant: nan
-Traceback (most recent call last):
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/errors.py", line 164, in __call__
-    await self.app(scope, receive, _send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/cors.py", line 93, in __call__
-    await self.simple_response(scope, receive, send, request_headers=headers)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/cors.py", line 144, in simple_response
-    await self.app(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
-    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
-    await self.app(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/routing.py", line 716, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/routing.py", line 736, in app
-    await route.handle(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/routing.py", line 290, in handle
-    await self.app(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/routing.py", line 115, in app
-    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/routing.py", line 101, in app
-    response = await f(request)
-               ^^^^^^^^^^^^^^^^
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/routing.py", line 389, in app
-    response = actual_response_class(content, **response_args)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/responses.py", line 189, in __init__
-    super().__init__(content, status_code, headers, media_type, background)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/responses.py", line 46, in __init__
-    self.body = self.render(content)
-                ^^^^^^^^^^^^^^^^^^^^
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/responses.py", line 192, in render
-    return json.dumps(
-           ^^^^^^^^^^^
-  File "/usr/lib/python3.12/json/__init__.py", line 238, in dumps
-    **kw).encode(obj)
-          ^^^^^^^^^^^
-  File "/usr/lib/python3.12/json/encoder.py", line 200, in encode
-    chunks = self.iterencode(o, _one_shot=True)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/lib/python3.12/json/encoder.py", line 258, in iterencode
-    return _iterencode(o, 0)
-           ^^^^^^^^^^^^^^^^^
-ValueError: Out of range float values are not JSON compliant: nan
-INFO:     192.168.1.26:64309 - "GET /api/datasets/9a3e897d-2c14-4277-a5ab-6c0c05aa6227/preview?rows=100 HTTP/1.1" 500 Internal Server Error
-ERROR:    Exception in ASGI application
-Traceback (most recent call last):
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/uvicorn/protocols/http/h11_impl.py", line 410, in run_asgi
-    result = await app(  # type: ignore[func-returns-value]
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/uvicorn/middleware/proxy_headers.py", line 60, in __call__
-    return await self.app(scope, receive, send)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/applications.py", line 1135, in __call__
-    await super().__call__(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/applications.py", line 107, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/errors.py", line 186, in __call__
-    raise exc
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/errors.py", line 164, in __call__
-    await self.app(scope, receive, _send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/cors.py", line 93, in __call__
-    await self.simple_response(scope, receive, send, request_headers=headers)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/cors.py", line 144, in simple_response
-    await self.app(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
-    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
-    await self.app(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/routing.py", line 716, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/routing.py", line 736, in app
-    await route.handle(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/routing.py", line 290, in handle
-    await self.app(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/routing.py", line 115, in app
-    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/routing.py", line 101, in app
-    response = await f(request)
-               ^^^^^^^^^^^^^^^^
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/routing.py", line 389, in app
-    response = actual_response_class(content, **response_args)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/responses.py", line 189, in __init__
-    super().__init__(content, status_code, headers, media_type, background)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/responses.py", line 46, in __init__
-    self.body = self.render(content)
-                ^^^^^^^^^^^^^^^^^^^^
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/responses.py", line 192, in render
-    return json.dumps(
-           ^^^^^^^^^^^
-  File "/usr/lib/python3.12/json/__init__.py", line 238, in dumps
-    **kw).encode(obj)
-          ^^^^^^^^^^^
-  File "/usr/lib/python3.12/json/encoder.py", line 200, in encode
-    chunks = self.iterencode(o, _one_shot=True)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/lib/python3.12/json/encoder.py", line 258, in iterencode
-    return _iterencode(o, 0)
-           ^^^^^^^^^^^^^^^^^
-ValueError: Out of range float values are not JSON compliant: nan
+
+(venv) ashok@ubuntu:~/work/latest/kedro-integrated-fast-api$ python main.py 
+⚠️ Redis not available, using in-memory cache
+2026-02-01 20:16:06,741 - __main__ - INFO - 🎯 ML Platform starting on http://localhost:8000
+INFO:     Started server process [39006]
+INFO:     Waiting for application startup.
+2026-02-01 20:16:06,753 - __main__ - INFO - 🚀 Starting ML Platform Application...
+2026-02-01 20:16:06,753 - __main__ - INFO - 📦 Initializing database tables...
+2026-02-01 20:16:06,933 - __main__ - INFO - ✅ Database tables created/verified
+2026-02-01 20:16:06,933 - __main__ - INFO - ✅ Default data initialized
+2026-02-01 20:16:06,933 - __main__ - INFO - ======================================================================
+2026-02-01 20:16:06,933 - __main__ - INFO - ✅ ML PLATFORM READY!
+2026-02-01 20:16:06,933 - __main__ - INFO - ======================================================================
+2026-02-01 20:16:06,933 - __main__ - INFO - 📍 API Documentation: http://localhost:8000/docs
+2026-02-01 20:16:06,933 - __main__ - INFO - 📍 EDA Health: GET /api/eda/health
+2026-02-01 20:16:06,933 - __main__ - INFO - ======================================================================
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     192.168.1.26:61429 - "GET /health HTTP/1.1" 200 OK
+INFO:     192.168.1.26:61429 - "GET /api/auth/me HTTP/1.1" 404 Not Found
+INFO:     192.168.1.26:52999 - "GET /docs HTTP/1.1" 200 OK
+INFO:     192.168.1.26:52999 - "GET /openapi.json HTTP/1.1" 200 OK
+INFO:     192.168.1.26:54772 - "GET /health HTTP/1.1" 200 OK
+INFO:     192.168.1.26:54772 - "OPTIONS /api/auth/register HTTP/1.1" 200 OK
+INFO:     192.168.1.26:64801 - "POST /api/auth/register HTTP/1.1" 200 OK
+INFO:     192.168.1.26:64801 - "OPTIONS /api/auth/login HTTP/1.1" 200 OK
+INFO:     192.168.1.26:60145 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     192.168.1.26:60145 - "OPTIONS /api/projects HTTP/1.1" 200 OK
+INFO:     192.168.1.26:60145 - "GET /api/projects HTTP/1.1" 307 Temporary Redirect
+INFO:     192.168.1.26:60145 - "OPTIONS /api/projects/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:59403 - "GET /api/projects/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:59403 - "OPTIONS /api/activities HTTP/1.1" 200 OK
+INFO:     192.168.1.26:59403 - "GET /api/activities HTTP/1.1" 307 Temporary Redirect
+INFO:     192.168.1.26:59403 - "OPTIONS /api/activities/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:61479 - "GET /api/activities/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:61479 - "OPTIONS /health HTTP/1.1" 200 OK
+INFO:     192.168.1.26:61479 - "GET /health HTTP/1.1" 200 OK
+INFO:     192.168.1.26:61479 - "OPTIONS /api/projects HTTP/1.1" 200 OK
+INFO:     192.168.1.26:61479 - "POST /api/projects HTTP/1.1" 307 Temporary Redirect
+INFO:     192.168.1.26:61479 - "OPTIONS /api/projects/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:61479 - "POST /api/projects/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:61479 - "GET /api/projects HTTP/1.1" 307 Temporary Redirect
+INFO:     192.168.1.26:61479 - "GET /api/projects/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:61479 - "OPTIONS /api/activities?project_id=8ce50150-6232-4d9a-b203-28c8f6bf8a25 HTTP/1.1" 200 OK
+INFO:     192.168.1.26:52763 - "OPTIONS /api/datasets/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:61479 - "GET /api/activities?project_id=8ce50150-6232-4d9a-b203-28c8f6bf8a25 HTTP/1.1" 307 Temporary Redirect
+INFO:     192.168.1.26:61479 - "OPTIONS /api/activities/?project_id=8ce50150-6232-4d9a-b203-28c8f6bf8a25 HTTP/1.1" 200 OK
+INFO:     192.168.1.26:52763 - "GET /api/datasets/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:61479 - "GET /api/activities/?project_id=8ce50150-6232-4d9a-b203-28c8f6bf8a25 HTTP/1.1" 200 OK
+INFO:     192.168.1.26:61479 - "OPTIONS /api/datasources/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:52763 - "GET /api/datasets/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:61479 - "GET /api/datasources/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:61618 - "OPTIONS /api/datasets/?name=dd&project_id=8ce50150-6232-4d9a-b203-28c8f6bf8a25 HTTP/1.1" 200 OK
+INFO:     192.168.1.26:61618 - "POST /api/datasets/?name=dd&project_id=8ce50150-6232-4d9a-b203-28c8f6bf8a25 HTTP/1.1" 200 OK
+INFO:     192.168.1.26:61618 - "GET /api/datasets/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:61618 - "OPTIONS /api/datasets/98a6613b-f12a-4af7-a899-165ab886c6a4/preview?rows=100 HTTP/1.1" 200 OK
+INFO:     192.168.1.26:57189 - "GET /api/datasets/98a6613b-f12a-4af7-a899-165ab886c6a4/preview?rows=100 HTTP/1.1" 200 OK
+INFO:     192.168.1.26:57189 - "OPTIONS /api/eda/health HTTP/1.1" 200 OK
+2026-02-01 20:31:01,307 - app.api.eda - INFO - 🏥 EDA health check requested
+INFO:     192.168.1.26:65149 - "GET /api/eda/health HTTP/1.1" 200 OK
+INFO:     192.168.1.26:64577 - "GET /api/datasets/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:50821 - "OPTIONS /api/eda/dataset/98a6613b-f12a-4af7-a899-165ab886c6a4/analyze HTTP/1.1" 200 OK
+2026-02-01 20:31:06,404 - app.api.eda - INFO - 📊 EDA analysis requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:31:06,405 - app.api.eda - INFO - 👤 User authenticated: mock-user-id
+2026-02-01 20:31:06,407 - app.api.eda - INFO - ✅ Dataset verified: sample_data.csv
+2026-02-01 20:31:06,408 - app.api.eda - INFO - 🔄 Job created: 42c9bce8-3c2a-4981-9b20-5ec86eb050e7
+2026-02-01 20:31:06,428 - app.api.eda - INFO - 📝 Activity logged
+2026-02-01 20:31:06,429 - app.api.eda - INFO - 🚀 Background analysis task started for job: 42c9bce8-3c2a-4981-9b20-5ec86eb050e7
+INFO:     192.168.1.26:60910 - "POST /api/eda/dataset/98a6613b-f12a-4af7-a899-165ab886c6a4/analyze HTTP/1.1" 202 Accepted
+2026-02-01 20:31:06,582 - app.api.eda - INFO - ✅ Stored EDA results in database for: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:31:06,582 - app.api.eda - INFO - ✅ EDA analysis completed: 42c9bce8-3c2a-4981-9b20-5ec86eb050e7
+INFO:     192.168.1.26:60910 - "OPTIONS /api/eda/jobs/42c9bce8-3c2a-4981-9b20-5ec86eb050e7 HTTP/1.1" 200 OK
+2026-02-01 20:31:06,588 - app.api.eda - INFO - 🔍 Job status requested: 42c9bce8-3c2a-4981-9b20-5ec86eb050e7
+2026-02-01 20:31:06,588 - app.api.eda - INFO - ✅ Job status: completed (progress: 100%)
+INFO:     192.168.1.26:60910 - "GET /api/eda/jobs/42c9bce8-3c2a-4981-9b20-5ec86eb050e7 HTTP/1.1" 200 OK
+INFO:     192.168.1.26:60910 - "OPTIONS /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/summary HTTP/1.1" 200 OK
+INFO:     192.168.1.26:63634 - "OPTIONS /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/statistics HTTP/1.1" 200 OK
+INFO:     192.168.1.26:55560 - "OPTIONS /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/quality-report HTTP/1.1" 200 OK
+2026-02-01 20:31:06,609 - app.api.eda - INFO - 📋 Summary requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:31:06,612 - app.api.eda - INFO - ✅ Summary retrieved from database
+INFO:     192.168.1.26:55560 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/summary HTTP/1.1" 200 OK
+INFO:     192.168.1.26:55560 - "OPTIONS /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/correlations?threshold=0.3 HTTP/1.1" 200 OK
+2026-02-01 20:31:06,629 - app.api.eda - INFO - 📊 Statistics requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:31:06,633 - app.api.eda - INFO - ✅ Statistics retrieved from database
+INFO:     192.168.1.26:63634 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/statistics HTTP/1.1" 200 OK
+2026-02-01 20:31:06,635 - app.api.eda - INFO - 🔍 Quality report requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:31:06,636 - app.api.eda - INFO - ✅ Quality report retrieved from database
+INFO:     192.168.1.26:65114 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/quality-report HTTP/1.1" 200 OK
+2026-02-01 20:31:06,638 - app.api.eda - INFO - 📋 Summary requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:31:06,640 - app.api.eda - INFO - ✅ Summary retrieved from database
+INFO:     192.168.1.26:59735 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/summary HTTP/1.1" 200 OK
+2026-02-01 20:31:06,643 - app.api.eda - INFO - 🔗 Correlations requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4 (threshold: 0.3)
+2026-02-01 20:31:06,644 - app.api.eda - INFO - ✅ Correlations retrieved from database
+INFO:     192.168.1.26:55560 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/correlations?threshold=0.3 HTTP/1.1" 200 OK
+2026-02-01 20:31:08,801 - app.api.eda - INFO - 🔍 Quality report requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:31:08,807 - app.api.eda - INFO - ✅ Quality report retrieved from database
+INFO:     192.168.1.26:55560 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/quality-report HTTP/1.1" 200 OK
+2026-02-01 20:31:09,495 - app.api.eda - INFO - 📊 Statistics requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:31:09,519 - app.api.eda - INFO - ✅ Statistics retrieved from database
+INFO:     192.168.1.26:55560 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/statistics HTTP/1.1" 200 OK
+2026-02-01 20:31:10,334 - app.api.eda - INFO - 🔗 Correlations requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4 (threshold: 0.3)
+2026-02-01 20:31:10,337 - app.api.eda - INFO - ✅ Correlations retrieved from database
+INFO:     192.168.1.26:55560 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/correlations?threshold=0.3 HTTP/1.1" 200 OK
+INFO:     192.168.1.26:57365 - "GET /health HTTP/1.1" 200 OK
+INFO:     192.168.1.26:57365 - "OPTIONS /api/auth/me HTTP/1.1" 200 OK
+INFO:     192.168.1.26:57365 - "GET /api/auth/me HTTP/1.1" 404 Not Found
+INFO:     192.168.1.26:52332 - "GET /health HTTP/1.1" 200 OK
+INFO:     192.168.1.26:52332 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     192.168.1.26:52332 - "GET /api/projects HTTP/1.1" 307 Temporary Redirect
+INFO:     192.168.1.26:52332 - "GET /api/projects/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:52332 - "GET /api/activities?project_id=8ce50150-6232-4d9a-b203-28c8f6bf8a25 HTTP/1.1" 307 Temporary Redirect
+INFO:     192.168.1.26:54159 - "GET /api/datasets/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:52332 - "GET /api/activities/?project_id=8ce50150-6232-4d9a-b203-28c8f6bf8a25 HTTP/1.1" 200 OK
+2026-02-01 20:34:19,812 - app.api.eda - INFO - 🏥 EDA health check requested
+INFO:     192.168.1.26:52332 - "GET /api/eda/health HTTP/1.1" 200 OK
+INFO:     192.168.1.26:54159 - "GET /api/datasets/ HTTP/1.1" 200 OK
+2026-02-01 20:34:22,346 - app.api.eda - INFO - 📊 EDA analysis requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:34:22,346 - app.api.eda - INFO - 👤 User authenticated: mock-user-id
+2026-02-01 20:34:22,347 - app.api.eda - INFO - ✅ Dataset verified: sample_data.csv
+2026-02-01 20:34:22,347 - app.api.eda - INFO - 🔄 Job created: 9f128235-0f73-4b39-8c56-70289302b9ad
+2026-02-01 20:34:22,363 - app.api.eda - INFO - 📝 Activity logged
+2026-02-01 20:34:22,363 - app.api.eda - INFO - 🚀 Background analysis task started for job: 9f128235-0f73-4b39-8c56-70289302b9ad
+INFO:     192.168.1.26:54159 - "POST /api/eda/dataset/98a6613b-f12a-4af7-a899-165ab886c6a4/analyze HTTP/1.1" 202 Accepted
+2026-02-01 20:34:22,415 - app.api.eda - INFO - ✅ Updated EDA results in database for: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:34:22,416 - app.api.eda - INFO - ✅ EDA analysis completed: 9f128235-0f73-4b39-8c56-70289302b9ad
+INFO:     192.168.1.26:54159 - "OPTIONS /api/eda/jobs/9f128235-0f73-4b39-8c56-70289302b9ad HTTP/1.1" 200 OK
+2026-02-01 20:34:22,422 - app.api.eda - INFO - 🔍 Job status requested: 9f128235-0f73-4b39-8c56-70289302b9ad
+2026-02-01 20:34:22,423 - app.api.eda - INFO - ✅ Job status: completed (progress: 100%)
+INFO:     192.168.1.26:54159 - "GET /api/eda/jobs/9f128235-0f73-4b39-8c56-70289302b9ad HTTP/1.1" 200 OK
+2026-02-01 20:34:22,441 - app.api.eda - INFO - 📋 Summary requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:34:22,443 - app.api.eda - INFO - ✅ Summary retrieved from database
+INFO:     192.168.1.26:54159 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/summary HTTP/1.1" 200 OK
+2026-02-01 20:34:22,448 - app.api.eda - INFO - 📊 Statistics requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:34:22,450 - app.api.eda - INFO - ✅ Statistics retrieved from database
+INFO:     192.168.1.26:52332 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/statistics HTTP/1.1" 200 OK
+2026-02-01 20:34:22,451 - app.api.eda - INFO - 🔍 Quality report requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:34:22,453 - app.api.eda - INFO - ✅ Quality report retrieved from database
+INFO:     192.168.1.26:61058 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/quality-report HTTP/1.1" 200 OK
+2026-02-01 20:34:22,454 - app.api.eda - INFO - 🔗 Correlations requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4 (threshold: 0.3)
+2026-02-01 20:34:22,455 - app.api.eda - INFO - ✅ Correlations retrieved from database
+INFO:     192.168.1.26:49800 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/correlations?threshold=0.3 HTTP/1.1" 200 OK
+2026-02-01 20:34:22,462 - app.api.eda - INFO - 📋 Summary requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:34:22,466 - app.api.eda - INFO - ✅ Summary retrieved from database
+INFO:     192.168.1.26:54808 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/summary HTTP/1.1" 200 OK
+INFO:     192.168.1.26:59577 - "GET /health HTTP/1.1" 200 OK
+INFO:     192.168.1.26:59577 - "GET /api/auth/me HTTP/1.1" 404 Not Found
+INFO:     192.168.1.26:53312 - "GET /health HTTP/1.1" 200 OK
+INFO:     192.168.1.26:53312 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     192.168.1.26:53312 - "GET /api/projects HTTP/1.1" 307 Temporary Redirect
+INFO:     192.168.1.26:53312 - "GET /api/projects/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:53312 - "GET /api/activities?project_id=8ce50150-6232-4d9a-b203-28c8f6bf8a25 HTTP/1.1" 307 Temporary Redirect
+INFO:     192.168.1.26:61312 - "GET /api/datasets/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:53312 - "GET /api/activities/?project_id=8ce50150-6232-4d9a-b203-28c8f6bf8a25 HTTP/1.1" 200 OK
+2026-02-01 20:40:16,077 - app.api.eda - INFO - 🏥 EDA health check requested
+INFO:     192.168.1.26:53312 - "GET /api/eda/health HTTP/1.1" 200 OK
+INFO:     192.168.1.26:61312 - "GET /api/datasets/ HTTP/1.1" 200 OK
+2026-02-01 20:40:18,435 - app.api.eda - INFO - 📊 EDA analysis requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:40:18,436 - app.api.eda - INFO - 👤 User authenticated: mock-user-id
+2026-02-01 20:40:18,438 - app.api.eda - INFO - ✅ Dataset verified: sample_data.csv
+2026-02-01 20:40:18,439 - app.api.eda - INFO - 🔄 Job created: 9b1099e5-5967-4df3-824b-a8b4497c4b65
+2026-02-01 20:40:18,459 - app.api.eda - INFO - 📝 Activity logged
+2026-02-01 20:40:18,459 - app.api.eda - INFO - 🚀 Background analysis task started for job: 9b1099e5-5967-4df3-824b-a8b4497c4b65
+INFO:     192.168.1.26:61312 - "POST /api/eda/dataset/98a6613b-f12a-4af7-a899-165ab886c6a4/analyze HTTP/1.1" 202 Accepted
+2026-02-01 20:40:18,491 - app.api.eda - INFO - ✅ Updated EDA results in database for: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:40:18,491 - app.api.eda - INFO - ✅ EDA analysis completed: 9b1099e5-5967-4df3-824b-a8b4497c4b65
+INFO:     192.168.1.26:61312 - "OPTIONS /api/eda/jobs/9b1099e5-5967-4df3-824b-a8b4497c4b65 HTTP/1.1" 200 OK
+2026-02-01 20:40:18,497 - app.api.eda - INFO - 🔍 Job status requested: 9b1099e5-5967-4df3-824b-a8b4497c4b65
+2026-02-01 20:40:18,497 - app.api.eda - INFO - ✅ Job status: completed (progress: 100%)
+INFO:     192.168.1.26:53312 - "GET /api/eda/jobs/9b1099e5-5967-4df3-824b-a8b4497c4b65 HTTP/1.1" 200 OK
+2026-02-01 20:40:18,515 - app.api.eda - INFO - 📋 Summary requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:40:18,518 - app.api.eda - INFO - ✅ Summary retrieved from database
+INFO:     192.168.1.26:53312 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/summary HTTP/1.1" 200 OK
+2026-02-01 20:40:18,521 - app.api.eda - INFO - 📊 Statistics requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:40:18,525 - app.api.eda - INFO - ✅ Statistics retrieved from database
+INFO:     192.168.1.26:57653 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/statistics HTTP/1.1" 200 OK
+2026-02-01 20:40:18,528 - app.api.eda - INFO - 🔍 Quality report requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:40:18,530 - app.api.eda - INFO - ✅ Quality report retrieved from database
+INFO:     192.168.1.26:54014 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/quality-report HTTP/1.1" 200 OK
+2026-02-01 20:40:18,532 - app.api.eda - INFO - 🔗 Correlations requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4 (threshold: 0.3)
+2026-02-01 20:40:18,532 - app.api.eda - INFO - ✅ Correlations retrieved from database
+INFO:     192.168.1.26:52926 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/correlations?threshold=0.3 HTTP/1.1" 200 OK
+2026-02-01 20:40:18,544 - app.api.eda - INFO - 📋 Summary requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:40:18,545 - app.api.eda - INFO - ✅ Summary retrieved from database
+INFO:     192.168.1.26:53312 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/summary HTTP/1.1" 200 OK
+INFO:     192.168.1.26:55434 - "OPTIONS /health HTTP/1.1" 200 OK
+INFO:     192.168.1.26:55434 - "GET /health HTTP/1.1" 200 OK
+INFO:     192.168.1.26:55434 - "GET /api/auth/me HTTP/1.1" 404 Not Found
+INFO:     192.168.1.26:51227 - "OPTIONS /api/auth/login HTTP/1.1" 200 OK
+INFO:     192.168.1.26:51227 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     192.168.1.26:51227 - "OPTIONS /api/projects HTTP/1.1" 200 OK
+INFO:     192.168.1.26:51227 - "GET /api/projects HTTP/1.1" 307 Temporary Redirect
+INFO:     192.168.1.26:51227 - "OPTIONS /api/projects/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:51227 - "GET /api/projects/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:51227 - "OPTIONS /api/activities?project_id=8ce50150-6232-4d9a-b203-28c8f6bf8a25 HTTP/1.1" 200 OK
+INFO:     192.168.1.26:57634 - "OPTIONS /api/datasets/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:57634 - "GET /api/activities?project_id=8ce50150-6232-4d9a-b203-28c8f6bf8a25 HTTP/1.1" 307 Temporary Redirect
+INFO:     192.168.1.26:51227 - "GET /api/datasets/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:57634 - "OPTIONS /api/activities/?project_id=8ce50150-6232-4d9a-b203-28c8f6bf8a25 HTTP/1.1" 200 OK
+INFO:     192.168.1.26:57634 - "GET /api/activities/?project_id=8ce50150-6232-4d9a-b203-28c8f6bf8a25 HTTP/1.1" 200 OK
+INFO:     192.168.1.26:57634 - "OPTIONS /api/eda/health HTTP/1.1" 200 OK
+2026-02-01 20:43:41,136 - app.api.eda - INFO - 🏥 EDA health check requested
+INFO:     192.168.1.26:57634 - "GET /api/eda/health HTTP/1.1" 200 OK
+INFO:     192.168.1.26:51227 - "GET /api/datasets/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:51227 - "OPTIONS /api/eda/dataset/98a6613b-f12a-4af7-a899-165ab886c6a4/analyze HTTP/1.1" 200 OK
+2026-02-01 20:43:43,397 - app.api.eda - INFO - 📊 EDA analysis requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:43:43,397 - app.api.eda - INFO - 👤 User authenticated: mock-user-id
+2026-02-01 20:43:43,399 - app.api.eda - INFO - ✅ Dataset verified: sample_data.csv
+2026-02-01 20:43:43,399 - app.api.eda - INFO - 🔄 Job created: 0edec0c2-bebf-4815-b03b-60fd88ea0856
+2026-02-01 20:43:43,422 - app.api.eda - INFO - 📝 Activity logged
+2026-02-01 20:43:43,422 - app.api.eda - INFO - 🚀 Background analysis task started for job: 0edec0c2-bebf-4815-b03b-60fd88ea0856
+INFO:     192.168.1.26:51227 - "POST /api/eda/dataset/98a6613b-f12a-4af7-a899-165ab886c6a4/analyze HTTP/1.1" 202 Accepted
+2026-02-01 20:43:43,460 - app.api.eda - INFO - ✅ Updated EDA results in database for: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:43:43,460 - app.api.eda - INFO - ✅ EDA analysis completed: 0edec0c2-bebf-4815-b03b-60fd88ea0856
+INFO:     192.168.1.26:51227 - "OPTIONS /api/eda/jobs/0edec0c2-bebf-4815-b03b-60fd88ea0856 HTTP/1.1" 200 OK
+2026-02-01 20:43:43,465 - app.api.eda - INFO - 🔍 Job status requested: 0edec0c2-bebf-4815-b03b-60fd88ea0856
+2026-02-01 20:43:43,466 - app.api.eda - INFO - ✅ Job status: completed (progress: 100%)
+INFO:     192.168.1.26:51227 - "GET /api/eda/jobs/0edec0c2-bebf-4815-b03b-60fd88ea0856 HTTP/1.1" 200 OK
+INFO:     192.168.1.26:51227 - "OPTIONS /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/summary HTTP/1.1" 200 OK
+INFO:     192.168.1.26:57634 - "OPTIONS /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/statistics HTTP/1.1" 200 OK
+INFO:     192.168.1.26:50227 - "OPTIONS /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/quality-report HTTP/1.1" 200 OK
+INFO:     192.168.1.26:51227 - "OPTIONS /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/correlations?threshold=0.3 HTTP/1.1" 200 OK
+2026-02-01 20:43:43,490 - app.api.eda - INFO - 📋 Summary requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:43:43,493 - app.api.eda - INFO - ✅ Summary retrieved from database
+INFO:     192.168.1.26:57634 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/summary HTTP/1.1" 200 OK
+2026-02-01 20:43:43,498 - app.api.eda - INFO - 🔍 Quality report requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:43:43,503 - app.api.eda - INFO - ✅ Quality report retrieved from database
+INFO:     192.168.1.26:50227 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/quality-report HTTP/1.1" 200 OK
+2026-02-01 20:43:43,507 - app.api.eda - INFO - 📊 Statistics requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:43:43,525 - app.api.eda - INFO - ✅ Statistics retrieved from database
+INFO:     192.168.1.26:59383 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/statistics HTTP/1.1" 200 OK
+2026-02-01 20:43:43,540 - app.api.eda - INFO - 🔗 Correlations requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4 (threshold: 0.3)
+2026-02-01 20:43:43,543 - app.api.eda - INFO - ✅ Correlations retrieved from database
+INFO:     192.168.1.26:51227 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/correlations?threshold=0.3 HTTP/1.1" 200 OK
+2026-02-01 20:43:43,548 - app.api.eda - INFO - 📋 Summary requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:43:43,550 - app.api.eda - INFO - ✅ Summary retrieved from database
+INFO:     192.168.1.26:57634 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/summary HTTP/1.1" 200 OK
+INFO:     192.168.1.26:63815 - "GET /health HTTP/1.1" 200 OK
+INFO:     192.168.1.26:63815 - "OPTIONS /api/auth/me HTTP/1.1" 200 OK
+INFO:     192.168.1.26:63815 - "GET /api/auth/me HTTP/1.1" 404 Not Found
+INFO:     192.168.1.26:52414 - "GET /health HTTP/1.1" 200 OK
+INFO:     192.168.1.26:52414 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     192.168.1.26:52414 - "GET /api/projects HTTP/1.1" 307 Temporary Redirect
+INFO:     192.168.1.26:52414 - "GET /api/projects/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:52414 - "GET /api/activities?project_id=8ce50150-6232-4d9a-b203-28c8f6bf8a25 HTTP/1.1" 307 Temporary Redirect
+INFO:     192.168.1.26:60861 - "GET /api/datasets/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:52414 - "GET /api/activities/?project_id=8ce50150-6232-4d9a-b203-28c8f6bf8a25 HTTP/1.1" 200 OK
+2026-02-01 20:46:48,513 - app.api.eda - INFO - 🏥 EDA health check requested
+INFO:     192.168.1.26:52414 - "GET /api/eda/health HTTP/1.1" 200 OK
+INFO:     192.168.1.26:60861 - "GET /api/datasets/ HTTP/1.1" 200 OK
+2026-02-01 20:46:52,924 - app.api.eda - INFO - 📊 EDA analysis requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:46:52,924 - app.api.eda - INFO - 👤 User authenticated: mock-user-id
+2026-02-01 20:46:52,928 - app.api.eda - INFO - ✅ Dataset verified: sample_data.csv
+2026-02-01 20:46:52,929 - app.api.eda - INFO - 🔄 Job created: 795337cc-3e66-452c-a48e-7aa4579dbae7
+2026-02-01 20:46:52,950 - app.api.eda - INFO - 📝 Activity logged
+2026-02-01 20:46:52,950 - app.api.eda - INFO - 🚀 Background analysis task started for job: 795337cc-3e66-452c-a48e-7aa4579dbae7
+INFO:     192.168.1.26:60861 - "POST /api/eda/dataset/98a6613b-f12a-4af7-a899-165ab886c6a4/analyze HTTP/1.1" 202 Accepted
+2026-02-01 20:46:53,008 - app.api.eda - INFO - ✅ Updated EDA results in database for: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:46:53,008 - app.api.eda - INFO - ✅ EDA analysis completed: 795337cc-3e66-452c-a48e-7aa4579dbae7
+INFO:     192.168.1.26:60861 - "OPTIONS /api/eda/jobs/795337cc-3e66-452c-a48e-7aa4579dbae7 HTTP/1.1" 200 OK
+2026-02-01 20:46:53,017 - app.api.eda - INFO - 🔍 Job status requested: 795337cc-3e66-452c-a48e-7aa4579dbae7
+2026-02-01 20:46:53,018 - app.api.eda - INFO - ✅ Job status: completed (progress: 100%)
+INFO:     192.168.1.26:52414 - "GET /api/eda/jobs/795337cc-3e66-452c-a48e-7aa4579dbae7 HTTP/1.1" 200 OK
+2026-02-01 20:46:53,029 - app.api.eda - INFO - 📋 Summary requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:46:53,031 - app.api.eda - INFO - ✅ Summary retrieved from database
+INFO:     192.168.1.26:52414 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/summary HTTP/1.1" 200 OK
+2026-02-01 20:46:53,046 - app.api.eda - INFO - 📊 Statistics requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:46:53,047 - app.api.eda - INFO - ✅ Statistics retrieved from database
+INFO:     192.168.1.26:61242 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/statistics HTTP/1.1" 200 OK
+2026-02-01 20:46:53,049 - app.api.eda - INFO - 🔗 Correlations requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4 (threshold: 0.3)
+2026-02-01 20:46:53,050 - app.api.eda - INFO - ✅ Correlations retrieved from database
+INFO:     192.168.1.26:53583 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/correlations?threshold=0.3 HTTP/1.1" 200 OK
+2026-02-01 20:46:53,051 - app.api.eda - INFO - 🔍 Quality report requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:46:53,052 - app.api.eda - INFO - ✅ Quality report retrieved from database
+INFO:     192.168.1.26:59483 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/quality-report HTTP/1.1" 200 OK
+2026-02-01 20:46:53,055 - app.api.eda - INFO - 📋 Summary requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:46:53,057 - app.api.eda - INFO - ✅ Summary retrieved from database
+INFO:     192.168.1.26:52414 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/summary HTTP/1.1" 200 OK
+INFO:     192.168.1.26:56928 - "OPTIONS /health HTTP/1.1" 200 OK
+INFO:     192.168.1.26:58531 - "GET /health HTTP/1.1" 200 OK
+INFO:     192.168.1.26:58531 - "GET /api/auth/me HTTP/1.1" 404 Not Found
+INFO:     192.168.1.26:62992 - "GET /health HTTP/1.1" 200 OK
+INFO:     192.168.1.26:62992 - "OPTIONS /api/auth/login HTTP/1.1" 200 OK
+INFO:     192.168.1.26:62992 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     192.168.1.26:62992 - "OPTIONS /api/projects HTTP/1.1" 200 OK
+INFO:     192.168.1.26:62992 - "GET /api/projects HTTP/1.1" 307 Temporary Redirect
+INFO:     192.168.1.26:62992 - "OPTIONS /api/projects/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:62992 - "GET /api/projects/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:62992 - "OPTIONS /api/activities?project_id=8ce50150-6232-4d9a-b203-28c8f6bf8a25 HTTP/1.1" 200 OK
+INFO:     192.168.1.26:60148 - "OPTIONS /api/datasets/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:62992 - "GET /api/activities?project_id=8ce50150-6232-4d9a-b203-28c8f6bf8a25 HTTP/1.1" 307 Temporary Redirect
+INFO:     192.168.1.26:53456 - "GET /api/datasets/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:62992 - "OPTIONS /api/activities/?project_id=8ce50150-6232-4d9a-b203-28c8f6bf8a25 HTTP/1.1" 200 OK
+INFO:     192.168.1.26:62992 - "GET /api/activities/?project_id=8ce50150-6232-4d9a-b203-28c8f6bf8a25 HTTP/1.1" 200 OK
+INFO:     192.168.1.26:62992 - "OPTIONS /api/eda/health HTTP/1.1" 200 OK
+2026-02-01 20:53:55,410 - app.api.eda - INFO - 🏥 EDA health check requested
+INFO:     192.168.1.26:53456 - "GET /api/eda/health HTTP/1.1" 200 OK
+INFO:     192.168.1.26:62992 - "GET /api/datasets/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:62992 - "OPTIONS /api/eda/dataset/98a6613b-f12a-4af7-a899-165ab886c6a4/analyze HTTP/1.1" 200 OK
+2026-02-01 20:53:58,768 - app.api.eda - INFO - 📊 EDA analysis requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:53:58,769 - app.api.eda - INFO - 👤 User authenticated: mock-user-id
+2026-02-01 20:53:58,770 - app.api.eda - INFO - ✅ Dataset verified: sample_data.csv
+2026-02-01 20:53:58,771 - app.api.eda - INFO - 🔄 Job created: 01f88ed6-dc2f-42d6-b1b0-3e5f9cc122a5
+2026-02-01 20:53:58,792 - app.api.eda - INFO - 📝 Activity logged
+2026-02-01 20:53:58,792 - app.api.eda - INFO - 🚀 Background analysis task started for job: 01f88ed6-dc2f-42d6-b1b0-3e5f9cc122a5
+INFO:     192.168.1.26:62992 - "POST /api/eda/dataset/98a6613b-f12a-4af7-a899-165ab886c6a4/analyze HTTP/1.1" 202 Accepted
+2026-02-01 20:53:58,848 - app.api.eda - INFO - ✅ Updated EDA results in database for: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:53:58,849 - app.api.eda - INFO - ✅ EDA analysis completed: 01f88ed6-dc2f-42d6-b1b0-3e5f9cc122a5
+INFO:     192.168.1.26:62992 - "OPTIONS /api/eda/jobs/01f88ed6-dc2f-42d6-b1b0-3e5f9cc122a5 HTTP/1.1" 200 OK
+2026-02-01 20:53:58,859 - app.api.eda - INFO - 🔍 Job status requested: 01f88ed6-dc2f-42d6-b1b0-3e5f9cc122a5
+2026-02-01 20:53:58,859 - app.api.eda - INFO - ✅ Job status: completed (progress: 100%)
+INFO:     192.168.1.26:62992 - "GET /api/eda/jobs/01f88ed6-dc2f-42d6-b1b0-3e5f9cc122a5 HTTP/1.1" 200 OK
+INFO:     192.168.1.26:62992 - "OPTIONS /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/summary HTTP/1.1" 200 OK
+INFO:     192.168.1.26:53456 - "OPTIONS /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/statistics HTTP/1.1" 200 OK
+INFO:     192.168.1.26:64346 - "OPTIONS /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/quality-report HTTP/1.1" 200 OK
+INFO:     192.168.1.26:55213 - "OPTIONS /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/correlations?threshold=0.3 HTTP/1.1" 200 OK
+2026-02-01 20:53:58,883 - app.api.eda - INFO - 📊 Statistics requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:53:58,885 - app.api.eda - INFO - ✅ Statistics retrieved from database
+INFO:     192.168.1.26:62992 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/statistics HTTP/1.1" 200 OK
+2026-02-01 20:53:58,888 - app.api.eda - INFO - 📋 Summary requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:53:58,889 - app.api.eda - INFO - ✅ Summary retrieved from database
+INFO:     192.168.1.26:53456 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/summary HTTP/1.1" 200 OK
+2026-02-01 20:53:58,891 - app.api.eda - INFO - 🔍 Quality report requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:53:58,892 - app.api.eda - INFO - ✅ Quality report retrieved from database
+INFO:     192.168.1.26:55213 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/quality-report HTTP/1.1" 200 OK
+2026-02-01 20:53:58,895 - app.api.eda - INFO - 🔗 Correlations requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4 (threshold: 0.3)
+2026-02-01 20:53:58,896 - app.api.eda - INFO - ✅ Correlations retrieved from database
+INFO:     192.168.1.26:64346 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/correlations?threshold=0.3 HTTP/1.1" 200 OK
+2026-02-01 20:53:58,905 - app.api.eda - INFO - 📋 Summary requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:53:58,906 - app.api.eda - INFO - ✅ Summary retrieved from database
+INFO:     192.168.1.26:62992 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/summary HTTP/1.1" 200 OK
+INFO:     192.168.1.26:64346 - "OPTIONS /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/phase2/histograms?bins=15 HTTP/1.1" 200 OK
+INFO:     192.168.1.26:55213 - "OPTIONS /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/phase2/outliers HTTP/1.1" 200 OK
+INFO:     192.168.1.26:53456 - "OPTIONS /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/phase2/normality HTTP/1.1" 200 OK
+INFO:     192.168.1.26:62992 - "OPTIONS /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/phase2/categorical?top_n=10 HTTP/1.1" 200 OK
+INFO:     192.168.1.26:52242 - "OPTIONS /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/phase2/distributions HTTP/1.1" 200 OK
+INFO:     192.168.1.26:62810 - "OPTIONS /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/phase2/correlations-enhanced?threshold=0.3 HTTP/1.1" 200 OK
+2026-02-01 20:53:58,930 - app.api.eda - INFO - 🔍 Phase 2 Outliers requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:53:58,943 - app.api.eda - INFO - ✅ Outlier detection completed
+INFO:     192.168.1.26:55213 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/phase2/outliers HTTP/1.1" 200 OK
+2026-02-01 20:53:58,946 - app.api.eda - INFO - 📈 Phase 2 Normality tests requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:53:58,955 - app.api.eda - INFO - ✅ Normality tests completed
+INFO:     192.168.1.26:53456 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/phase2/normality HTTP/1.1" 200 OK
+2026-02-01 20:53:58,963 - app.api.eda - INFO - 📊 Phase 2 Histograms requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:53:58,978 - app.api.eda - INFO - ✅ Generated 4 histograms
+INFO:     192.168.1.26:63029 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/phase2/histograms?bins=15 HTTP/1.1" 200 OK
+2026-02-01 20:53:58,980 - app.api.eda - INFO - 🎯 Phase 2 Distribution analysis requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:53:58,983 - app.api.eda - INFO - ✅ Distribution analysis completed
+INFO:     192.168.1.26:52242 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/phase2/distributions HTTP/1.1" 200 OK
+2026-02-01 20:53:58,985 - app.api.eda - INFO - 🔗 Phase 2 Enhanced correlations requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:53:59,009 - app.api.eda - ERROR - ❌ Error analyzing correlations: Object of type bool is not JSON serializable
+2026-02-01 20:53:59,011 - app.api.eda - INFO - 📋 Phase 2 Categorical distributions requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:53:59,018 - app.api.eda - INFO - ✅ Categorical analysis completed
+INFO:     192.168.1.26:52878 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/phase2/categorical?top_n=10 HTTP/1.1" 200 OK
+INFO:     192.168.1.26:62810 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/phase2/correlations-enhanced?threshold=0.3 HTTP/1.1" 500 Internal Server Error
+INFO:     192.168.1.26:56046 - "GET /health HTTP/1.1" 200 OK
+INFO:     192.168.1.26:56046 - "OPTIONS /api/auth/me HTTP/1.1" 200 OK
+INFO:     192.168.1.26:51739 - "GET /api/auth/me HTTP/1.1" 404 Not Found
+INFO:     192.168.1.26:62457 - "GET /health HTTP/1.1" 200 OK
+INFO:     192.168.1.26:62457 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     192.168.1.26:62457 - "GET /api/projects HTTP/1.1" 307 Temporary Redirect
+INFO:     192.168.1.26:62457 - "GET /api/projects/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:62457 - "GET /api/activities?project_id=8ce50150-6232-4d9a-b203-28c8f6bf8a25 HTTP/1.1" 307 Temporary Redirect
+INFO:     192.168.1.26:53151 - "GET /api/datasets/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:62457 - "GET /api/activities/?project_id=8ce50150-6232-4d9a-b203-28c8f6bf8a25 HTTP/1.1" 200 OK
+2026-02-01 20:56:43,393 - app.api.eda - INFO - 🏥 EDA health check requested
+INFO:     192.168.1.26:62457 - "GET /api/eda/health HTTP/1.1" 200 OK
+INFO:     192.168.1.26:53151 - "GET /api/datasets/ HTTP/1.1" 200 OK
+2026-02-01 20:56:48,050 - app.api.eda - INFO - 📊 EDA analysis requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:56:48,051 - app.api.eda - INFO - 👤 User authenticated: mock-user-id
+2026-02-01 20:56:48,053 - app.api.eda - INFO - ✅ Dataset verified: sample_data.csv
+2026-02-01 20:56:48,054 - app.api.eda - INFO - 🔄 Job created: e2f11ab7-cb72-406a-87d6-f9b2b9c7ba93
+2026-02-01 20:56:48,073 - app.api.eda - INFO - 📝 Activity logged
+2026-02-01 20:56:48,073 - app.api.eda - INFO - 🚀 Background analysis task started for job: e2f11ab7-cb72-406a-87d6-f9b2b9c7ba93
+INFO:     192.168.1.26:53151 - "POST /api/eda/dataset/98a6613b-f12a-4af7-a899-165ab886c6a4/analyze HTTP/1.1" 202 Accepted
+2026-02-01 20:56:48,131 - app.api.eda - INFO - ✅ Updated EDA results in database for: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:56:48,132 - app.api.eda - INFO - ✅ EDA analysis completed: e2f11ab7-cb72-406a-87d6-f9b2b9c7ba93
+INFO:     192.168.1.26:53151 - "OPTIONS /api/eda/jobs/e2f11ab7-cb72-406a-87d6-f9b2b9c7ba93 HTTP/1.1" 200 OK
+2026-02-01 20:56:48,139 - app.api.eda - INFO - 🔍 Job status requested: e2f11ab7-cb72-406a-87d6-f9b2b9c7ba93
+2026-02-01 20:56:48,139 - app.api.eda - INFO - ✅ Job status: completed (progress: 100%)
+INFO:     192.168.1.26:53151 - "GET /api/eda/jobs/e2f11ab7-cb72-406a-87d6-f9b2b9c7ba93 HTTP/1.1" 200 OK
+2026-02-01 20:56:48,176 - app.api.eda - INFO - 📋 Summary requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:56:48,177 - app.api.eda - INFO - ✅ Summary retrieved from database
+INFO:     192.168.1.26:53151 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/summary HTTP/1.1" 200 OK
+2026-02-01 20:56:48,178 - app.api.eda - INFO - 📊 Statistics requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:56:48,180 - app.api.eda - INFO - ✅ Statistics retrieved from database
+INFO:     192.168.1.26:62457 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/statistics HTTP/1.1" 200 OK
+2026-02-01 20:56:48,194 - app.api.eda - INFO - 🔍 Quality report requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:56:48,196 - app.api.eda - INFO - ✅ Quality report retrieved from database
+INFO:     192.168.1.26:49348 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/quality-report HTTP/1.1" 200 OK
+2026-02-01 20:56:48,198 - app.api.eda - INFO - 📋 Summary requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:56:48,199 - app.api.eda - INFO - ✅ Summary retrieved from database
+INFO:     192.168.1.26:53151 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/summary HTTP/1.1" 200 OK
+2026-02-01 20:56:48,202 - app.api.eda - INFO - 🔗 Correlations requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4 (threshold: 0.3)
+2026-02-01 20:56:48,204 - app.api.eda - INFO - ✅ Correlations retrieved from database
+INFO:     192.168.1.26:51841 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/correlations?threshold=0.3 HTTP/1.1" 200 OK
+2026-02-01 20:56:48,251 - app.api.eda - INFO - 📊 Phase 2 Histograms requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:56:48,267 - app.api.eda - INFO - ✅ Generated 4 histograms
+INFO:     192.168.1.26:51841 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/phase2/histograms?bins=15 HTTP/1.1" 200 OK
+2026-02-01 20:56:48,274 - app.api.eda - INFO - 📈 Phase 2 Normality tests requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:56:48,280 - app.api.eda - INFO - ✅ Normality tests completed
+INFO:     192.168.1.26:49348 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/phase2/normality HTTP/1.1" 200 OK
+2026-02-01 20:56:48,281 - app.api.eda - INFO - 🔍 Phase 2 Outliers requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:56:48,288 - app.api.eda - INFO - ✅ Outlier detection completed
+INFO:     192.168.1.26:53151 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/phase2/outliers HTTP/1.1" 200 OK
+2026-02-01 20:56:48,290 - app.api.eda - INFO - 🎯 Phase 2 Distribution analysis requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:56:48,291 - app.api.eda - INFO - ✅ Distribution analysis completed
+INFO:     192.168.1.26:62457 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/phase2/distributions HTTP/1.1" 200 OK
+2026-02-01 20:56:48,294 - app.api.eda - INFO - 📋 Phase 2 Categorical distributions requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:56:48,297 - app.api.eda - INFO - ✅ Categorical analysis completed
+INFO:     192.168.1.26:49378 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/phase2/categorical?top_n=10 HTTP/1.1" 200 OK
+2026-02-01 20:56:48,301 - app.api.eda - INFO - 🔗 Phase 2 Enhanced correlations requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:56:48,311 - app.api.eda - ERROR - ❌ Error analyzing correlations: Object of type bool is not JSON serializable
+INFO:     192.168.1.26:61019 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/phase2/correlations-enhanced?threshold=0.3 HTTP/1.1" 500 Internal Server Error
+INFO:     192.168.1.26:56704 - "GET /health HTTP/1.1" 200 OK
+INFO:     192.168.1.26:56704 - "GET /api/auth/me HTTP/1.1" 404 Not Found
+INFO:     192.168.1.26:61843 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     192.168.1.26:61843 - "GET /api/projects HTTP/1.1" 307 Temporary Redirect
+INFO:     192.168.1.26:61843 - "GET /api/projects/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:61843 - "GET /api/activities?project_id=8ce50150-6232-4d9a-b203-28c8f6bf8a25 HTTP/1.1" 307 Temporary Redirect
+INFO:     192.168.1.26:54409 - "GET /api/datasets/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:61843 - "GET /api/activities/?project_id=8ce50150-6232-4d9a-b203-28c8f6bf8a25 HTTP/1.1" 200 OK
+2026-02-01 20:57:09,120 - app.api.eda - INFO - 🏥 EDA health check requested
+INFO:     192.168.1.26:61843 - "GET /api/eda/health HTTP/1.1" 200 OK
+INFO:     192.168.1.26:54409 - "GET /api/datasets/ HTTP/1.1" 200 OK
+2026-02-01 20:57:12,453 - app.api.eda - INFO - 📊 EDA analysis requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:57:12,454 - app.api.eda - INFO - 👤 User authenticated: mock-user-id
+2026-02-01 20:57:12,455 - app.api.eda - INFO - ✅ Dataset verified: sample_data.csv
+2026-02-01 20:57:12,456 - app.api.eda - INFO - 🔄 Job created: 2ddb360d-96d0-4cc0-97bd-159840fc22a2
+2026-02-01 20:57:12,483 - app.api.eda - INFO - 📝 Activity logged
+2026-02-01 20:57:12,483 - app.api.eda - INFO - 🚀 Background analysis task started for job: 2ddb360d-96d0-4cc0-97bd-159840fc22a2
+INFO:     192.168.1.26:54409 - "POST /api/eda/dataset/98a6613b-f12a-4af7-a899-165ab886c6a4/analyze HTTP/1.1" 202 Accepted
+2026-02-01 20:57:12,518 - app.api.eda - INFO - ✅ Updated EDA results in database for: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:57:12,519 - app.api.eda - INFO - ✅ EDA analysis completed: 2ddb360d-96d0-4cc0-97bd-159840fc22a2
+INFO:     192.168.1.26:54409 - "OPTIONS /api/eda/jobs/2ddb360d-96d0-4cc0-97bd-159840fc22a2 HTTP/1.1" 200 OK
+2026-02-01 20:57:12,525 - app.api.eda - INFO - 🔍 Job status requested: 2ddb360d-96d0-4cc0-97bd-159840fc22a2
+2026-02-01 20:57:12,526 - app.api.eda - INFO - ✅ Job status: completed (progress: 100%)
+INFO:     192.168.1.26:54409 - "GET /api/eda/jobs/2ddb360d-96d0-4cc0-97bd-159840fc22a2 HTTP/1.1" 200 OK
+2026-02-01 20:57:12,535 - app.api.eda - INFO - 📋 Summary requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:57:12,539 - app.api.eda - INFO - ✅ Summary retrieved from database
+INFO:     192.168.1.26:54409 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/summary HTTP/1.1" 200 OK
+2026-02-01 20:57:12,556 - app.api.eda - INFO - 📊 Statistics requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:57:12,558 - app.api.eda - INFO - ✅ Statistics retrieved from database
+INFO:     192.168.1.26:61843 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/statistics HTTP/1.1" 200 OK
+2026-02-01 20:57:12,590 - app.api.eda - INFO - 🔍 Quality report requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:57:12,593 - app.api.eda - INFO - ✅ Quality report retrieved from database
+INFO:     192.168.1.26:61492 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/quality-report HTTP/1.1" 200 OK
+2026-02-01 20:57:12,596 - app.api.eda - INFO - 🔗 Correlations requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4 (threshold: 0.3)
+2026-02-01 20:57:12,597 - app.api.eda - INFO - ✅ Correlations retrieved from database
+INFO:     192.168.1.26:64418 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/correlations?threshold=0.3 HTTP/1.1" 200 OK
+2026-02-01 20:57:12,599 - app.api.eda - INFO - 📋 Summary requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:57:12,600 - app.api.eda - INFO - ✅ Summary retrieved from database
+INFO:     192.168.1.26:54409 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/summary HTTP/1.1" 200 OK
+2026-02-01 20:57:12,637 - app.api.eda - INFO - 📊 Phase 2 Histograms requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:57:12,658 - app.api.eda - INFO - ✅ Generated 4 histograms
+INFO:     192.168.1.26:54409 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/phase2/histograms?bins=15 HTTP/1.1" 200 OK
+2026-02-01 20:57:12,662 - app.api.eda - INFO - 📋 Phase 2 Categorical distributions requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:57:12,667 - app.api.eda - INFO - ✅ Categorical analysis completed
+INFO:     192.168.1.26:64656 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/phase2/categorical?top_n=10 HTTP/1.1" 200 OK
+2026-02-01 20:57:12,669 - app.api.eda - INFO - 🔍 Phase 2 Outliers requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:57:12,680 - app.api.eda - INFO - ✅ Outlier detection completed
+INFO:     192.168.1.26:64418 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/phase2/outliers HTTP/1.1" 200 OK
+2026-02-01 20:57:12,682 - app.api.eda - INFO - 📈 Phase 2 Normality tests requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:57:12,687 - app.api.eda - INFO - ✅ Normality tests completed
+INFO:     192.168.1.26:61492 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/phase2/normality HTTP/1.1" 200 OK
+2026-02-01 20:57:12,688 - app.api.eda - INFO - 🎯 Phase 2 Distribution analysis requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:57:12,690 - app.api.eda - INFO - ✅ Distribution analysis completed
+INFO:     192.168.1.26:61843 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/phase2/distributions HTTP/1.1" 200 OK
+2026-02-01 20:57:12,694 - app.api.eda - INFO - 🔗 Phase 2 Enhanced correlations requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:57:12,706 - app.api.eda - ERROR - ❌ Error analyzing correlations: Object of type bool is not JSON serializable
+INFO:     192.168.1.26:60510 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/phase2/correlations-enhanced?threshold=0.3 HTTP/1.1" 500 Internal Server Error
+INFO:     192.168.1.26:64052 - "GET /health HTTP/1.1" 200 OK
+INFO:     192.168.1.26:64052 - "GET /api/auth/me HTTP/1.1" 404 Not Found
+INFO:     192.168.1.26:52147 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     192.168.1.26:52147 - "GET /api/projects HTTP/1.1" 307 Temporary Redirect
+INFO:     192.168.1.26:52147 - "GET /api/projects/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:52147 - "GET /api/activities?project_id=8ce50150-6232-4d9a-b203-28c8f6bf8a25 HTTP/1.1" 307 Temporary Redirect
+INFO:     192.168.1.26:52147 - "GET /api/activities/?project_id=8ce50150-6232-4d9a-b203-28c8f6bf8a25 HTTP/1.1" 200 OK
+INFO:     192.168.1.26:51105 - "GET /api/datasets/ HTTP/1.1" 200 OK
+2026-02-01 20:57:29,000 - app.api.eda - INFO - 🏥 EDA health check requested
+INFO:     192.168.1.26:51105 - "GET /api/eda/health HTTP/1.1" 200 OK
+INFO:     192.168.1.26:52147 - "GET /api/datasets/ HTTP/1.1" 200 OK
+2026-02-01 20:57:31,362 - app.api.eda - INFO - 📊 EDA analysis requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:57:31,363 - app.api.eda - INFO - 👤 User authenticated: mock-user-id
+2026-02-01 20:57:31,365 - app.api.eda - INFO - ✅ Dataset verified: sample_data.csv
+2026-02-01 20:57:31,365 - app.api.eda - INFO - 🔄 Job created: ee1cd503-81a8-4db5-aea9-f7fb1cbe8df6
+2026-02-01 20:57:31,411 - app.api.eda - INFO - 📝 Activity logged
+2026-02-01 20:57:31,411 - app.api.eda - INFO - 🚀 Background analysis task started for job: ee1cd503-81a8-4db5-aea9-f7fb1cbe8df6
+INFO:     192.168.1.26:52147 - "POST /api/eda/dataset/98a6613b-f12a-4af7-a899-165ab886c6a4/analyze HTTP/1.1" 202 Accepted
+2026-02-01 20:57:31,471 - app.api.eda - INFO - ✅ Updated EDA results in database for: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:57:31,472 - app.api.eda - INFO - ✅ EDA analysis completed: ee1cd503-81a8-4db5-aea9-f7fb1cbe8df6
+INFO:     192.168.1.26:52147 - "OPTIONS /api/eda/jobs/ee1cd503-81a8-4db5-aea9-f7fb1cbe8df6 HTTP/1.1" 200 OK
+2026-02-01 20:57:31,478 - app.api.eda - INFO - 🔍 Job status requested: ee1cd503-81a8-4db5-aea9-f7fb1cbe8df6
+2026-02-01 20:57:31,478 - app.api.eda - INFO - ✅ Job status: completed (progress: 100%)
+INFO:     192.168.1.26:51105 - "GET /api/eda/jobs/ee1cd503-81a8-4db5-aea9-f7fb1cbe8df6 HTTP/1.1" 200 OK
+2026-02-01 20:57:31,496 - app.api.eda - INFO - 📋 Summary requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:57:31,500 - app.api.eda - INFO - ✅ Summary retrieved from database
+INFO:     192.168.1.26:51105 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/summary HTTP/1.1" 200 OK
+2026-02-01 20:57:31,514 - app.api.eda - INFO - 📊 Statistics requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:57:31,517 - app.api.eda - INFO - ✅ Statistics retrieved from database
+INFO:     192.168.1.26:58004 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/statistics HTTP/1.1" 200 OK
+2026-02-01 20:57:31,519 - app.api.eda - INFO - 🔍 Quality report requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:57:31,521 - app.api.eda - INFO - ✅ Quality report retrieved from database
+INFO:     192.168.1.26:64768 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/quality-report HTTP/1.1" 200 OK
+2026-02-01 20:57:31,523 - app.api.eda - INFO - 🔗 Correlations requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4 (threshold: 0.3)
+2026-02-01 20:57:31,524 - app.api.eda - INFO - ✅ Correlations retrieved from database
+INFO:     192.168.1.26:62360 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/correlations?threshold=0.3 HTTP/1.1" 200 OK
+2026-02-01 20:57:31,525 - app.api.eda - INFO - 📋 Summary requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:57:31,525 - app.api.eda - INFO - ✅ Summary retrieved from database
+INFO:     192.168.1.26:51105 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/summary HTTP/1.1" 200 OK
+2026-02-01 20:57:31,539 - app.api.eda - INFO - 📋 Phase 2 Categorical distributions requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:57:31,545 - app.api.eda - INFO - ✅ Categorical analysis completed
+INFO:     192.168.1.26:50594 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/phase2/categorical?top_n=10 HTTP/1.1" 200 OK
+2026-02-01 20:57:31,548 - app.api.eda - INFO - 📊 Phase 2 Histograms requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:57:31,595 - app.api.eda - INFO - ✅ Generated 4 histograms
+INFO:     192.168.1.26:51105 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/phase2/histograms?bins=15 HTTP/1.1" 200 OK
+2026-02-01 20:57:31,598 - app.api.eda - INFO - 🎯 Phase 2 Distribution analysis requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:57:31,601 - app.api.eda - INFO - ✅ Distribution analysis completed
+INFO:     192.168.1.26:58004 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/phase2/distributions HTTP/1.1" 200 OK
+2026-02-01 20:57:31,604 - app.api.eda - INFO - 📈 Phase 2 Normality tests requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:57:31,609 - app.api.eda - INFO - ✅ Normality tests completed
+INFO:     192.168.1.26:64768 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/phase2/normality HTTP/1.1" 200 OK
+2026-02-01 20:57:31,611 - app.api.eda - INFO - 🔍 Phase 2 Outliers requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:57:31,625 - app.api.eda - INFO - ✅ Outlier detection completed
+INFO:     192.168.1.26:62360 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/phase2/outliers HTTP/1.1" 200 OK
+2026-02-01 20:57:31,633 - app.api.eda - INFO - 🔗 Phase 2 Enhanced correlations requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:57:31,641 - app.api.eda - ERROR - ❌ Error analyzing correlations: Object of type bool is not JSON serializable
+INFO:     192.168.1.26:54457 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/phase2/correlations-enhanced?threshold=0.3 HTTP/1.1" 500 Internal Server Error
+INFO:     192.168.1.26:60887 - "GET /health HTTP/1.1" 200 OK
+INFO:     192.168.1.26:60887 - "GET /api/auth/me HTTP/1.1" 404 Not Found
+INFO:     192.168.1.26:56437 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     192.168.1.26:56437 - "GET /api/projects HTTP/1.1" 307 Temporary Redirect
+INFO:     192.168.1.26:56437 - "GET /api/projects/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:56437 - "GET /api/activities?project_id=8ce50150-6232-4d9a-b203-28c8f6bf8a25 HTTP/1.1" 307 Temporary Redirect
+INFO:     192.168.1.26:51988 - "GET /api/datasets/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:56437 - "GET /api/activities/?project_id=8ce50150-6232-4d9a-b203-28c8f6bf8a25 HTTP/1.1" 200 OK
+2026-02-01 20:58:17,712 - app.api.eda - INFO - 🏥 EDA health check requested
+INFO:     192.168.1.26:56437 - "GET /api/eda/health HTTP/1.1" 200 OK
+INFO:     192.168.1.26:51988 - "GET /api/datasets/ HTTP/1.1" 200 OK
+2026-02-01 20:58:19,864 - app.api.eda - INFO - 📊 EDA analysis requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:58:19,865 - app.api.eda - INFO - 👤 User authenticated: mock-user-id
+2026-02-01 20:58:19,866 - app.api.eda - INFO - ✅ Dataset verified: sample_data.csv
+2026-02-01 20:58:19,866 - app.api.eda - INFO - 🔄 Job created: f26e1fab-6bdb-4a04-8e0d-97760f5677e4
+2026-02-01 20:58:19,889 - app.api.eda - INFO - 📝 Activity logged
+2026-02-01 20:58:19,889 - app.api.eda - INFO - 🚀 Background analysis task started for job: f26e1fab-6bdb-4a04-8e0d-97760f5677e4
+INFO:     192.168.1.26:51988 - "POST /api/eda/dataset/98a6613b-f12a-4af7-a899-165ab886c6a4/analyze HTTP/1.1" 202 Accepted
+2026-02-01 20:58:19,938 - app.api.eda - INFO - ✅ Updated EDA results in database for: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:58:19,939 - app.api.eda - INFO - ✅ EDA analysis completed: f26e1fab-6bdb-4a04-8e0d-97760f5677e4
+INFO:     192.168.1.26:51988 - "OPTIONS /api/eda/jobs/f26e1fab-6bdb-4a04-8e0d-97760f5677e4 HTTP/1.1" 200 OK
+2026-02-01 20:58:19,945 - app.api.eda - INFO - 🔍 Job status requested: f26e1fab-6bdb-4a04-8e0d-97760f5677e4
+2026-02-01 20:58:19,946 - app.api.eda - INFO - ✅ Job status: completed (progress: 100%)
+INFO:     192.168.1.26:51988 - "GET /api/eda/jobs/f26e1fab-6bdb-4a04-8e0d-97760f5677e4 HTTP/1.1" 200 OK
+2026-02-01 20:58:19,955 - app.api.eda - INFO - 📋 Summary requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:58:19,956 - app.api.eda - INFO - ✅ Summary retrieved from database
+INFO:     192.168.1.26:51988 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/summary HTTP/1.1" 200 OK
+2026-02-01 20:58:19,959 - app.api.eda - INFO - 📊 Statistics requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:58:19,961 - app.api.eda - INFO - ✅ Statistics retrieved from database
+INFO:     192.168.1.26:56437 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/statistics HTTP/1.1" 200 OK
+2026-02-01 20:58:19,967 - app.api.eda - INFO - 🔍 Quality report requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:58:19,968 - app.api.eda - INFO - ✅ Quality report retrieved from database
+INFO:     192.168.1.26:49709 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/quality-report HTTP/1.1" 200 OK
+2026-02-01 20:58:19,970 - app.api.eda - INFO - 🔗 Correlations requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4 (threshold: 0.3)
+2026-02-01 20:58:19,972 - app.api.eda - INFO - ✅ Correlations retrieved from database
+INFO:     192.168.1.26:49360 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/correlations?threshold=0.3 HTTP/1.1" 200 OK
+2026-02-01 20:58:19,975 - app.api.eda - INFO - 📋 Summary requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:58:19,999 - app.api.eda - INFO - ✅ Summary retrieved from database
+INFO:     192.168.1.26:51988 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/summary HTTP/1.1" 200 OK
+2026-02-01 20:58:20,047 - app.api.eda - INFO - 🔍 Phase 2 Outliers requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:58:20,063 - app.api.eda - INFO - ✅ Outlier detection completed
+INFO:     192.168.1.26:49709 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/phase2/outliers HTTP/1.1" 200 OK
+2026-02-01 20:58:20,065 - app.api.eda - INFO - 📊 Phase 2 Histograms requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:58:20,073 - app.api.eda - INFO - ✅ Generated 4 histograms
+INFO:     192.168.1.26:49360 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/phase2/histograms?bins=15 HTTP/1.1" 200 OK
+2026-02-01 20:58:20,075 - app.api.eda - INFO - 📈 Phase 2 Normality tests requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:58:20,081 - app.api.eda - INFO - ✅ Normality tests completed
+INFO:     192.168.1.26:56437 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/phase2/normality HTTP/1.1" 200 OK
+2026-02-01 20:58:20,099 - app.api.eda - INFO - 🎯 Phase 2 Distribution analysis requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:58:20,102 - app.api.eda - INFO - ✅ Distribution analysis completed
+INFO:     192.168.1.26:53938 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/phase2/distributions HTTP/1.1" 200 OK
+2026-02-01 20:58:20,103 - app.api.eda - INFO - 🔗 Phase 2 Enhanced correlations requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:58:20,114 - app.api.eda - ERROR - ❌ Error analyzing correlations: Object of type bool is not JSON serializable
+2026-02-01 20:58:20,116 - app.api.eda - INFO - 📋 Phase 2 Categorical distributions requested for dataset: 98a6613b-f12a-4af7-a899-165ab886c6a4
+2026-02-01 20:58:20,120 - app.api.eda - INFO - ✅ Categorical analysis completed
+INFO:     192.168.1.26:49407 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/phase2/categorical?top_n=10 HTTP/1.1" 200 OK
+INFO:     192.168.1.26:51988 - "GET /api/eda/98a6613b-f12a-4af7-a899-165ab886c6a4/phase2/correlations-enhanced?threshold=0.3 HTTP/1.1" 500 Internal Server Error
