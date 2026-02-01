@@ -1,103 +1,22 @@
--02-01 03:43:32.690959', '2026-02-01 03:43:32.690964')
-2026-02-01 03:43:32,692 INFO sqlalchemy.engine.Engine COMMIT
-2026-02-01 03:43:32,692 - sqlalchemy.engine.Engine - INFO - COMMIT
-2026-02-01 03:43:32,714 INFO sqlalchemy.engine.Engine BEGIN (implicit)
-2026-02-01 03:43:32,714 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
-2026-02-01 03:43:32,720 INFO sqlalchemy.engine.Engine SELECT users.id, users.email, users.username, users.password_hash, users.full_name, users.is_active, users.is_verified, users.is_superuser, users.created_at, users.updated_at 
-FROM users 
-WHERE users.id = ?
-2026-02-01 03:43:32,720 - sqlalchemy.engine.Engine - INFO - SELECT users.id, users.email, users.username, users.password_hash, users.full_name, users.is_active, users.is_verified, users.is_superuser, users.created_at, users.updated_at 
-FROM users 
-WHERE users.id = ?
-2026-02-01 03:43:32,720 INFO sqlalchemy.engine.Engine [generated in 0.00023s] ('85b98439-3324-483d-9e20-d2202c9b9d66',)
-2026-02-01 03:43:32,720 - sqlalchemy.engine.Engine - INFO - [generated in 0.00023s] ('85b98439-3324-483d-9e20-d2202c9b9d66',)
-2026-02-01 03:43:32,720 - app.api.auth - INFO - ✅ User registered: ashok@gmail.com (ID: 85b98439-3324-483d-9e20-d2202c9b9d66)
-INFO:     192.168.1.26:65294 - "POST /auth/register HTTP/1.1" 201 Created
-2026-02-01 03:43:32,725 INFO sqlalchemy.engine.Engine ROLLBACK
-2026-02-01 03:43:32,725 - sqlalchemy.engine.Engine - INFO - ROLLBACK
-INFO:     192.168.1.26:65294 - "OPTIONS /auth/login HTTP/1.1" 200 OK
-2026-02-01 03:43:32,756 - app.api.auth - INFO - 🔑 Login attempt: ashok@gmail.com
-2026-02-01 03:43:32,757 INFO sqlalchemy.engine.Engine BEGIN (implicit)
-2026-02-01 03:43:32,757 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
-2026-02-01 03:43:32,758 INFO sqlalchemy.engine.Engine SELECT users.id AS users_id, users.email AS users_email, users.username AS users_username, users.password_hash AS users_password_hash, users.full_name AS users_full_name, users.is_active AS users_is_active, users.is_verified AS users_is_verified, users.is_superuser AS users_is_superuser, users.created_at AS users_created_at, users.updated_at AS users_updated_at 
-FROM users 
-WHERE users.email = ?
- LIMIT ? OFFSET ?
-2026-02-01 03:43:32,758 - sqlalchemy.engine.Engine - INFO - SELECT users.id AS users_id, users.email AS users_email, users.username AS users_username, users.password_hash AS users_password_hash, users.full_name AS users_full_name, users.is_active AS users_is_active, users.is_verified AS users_is_verified, users.is_superuser AS users_is_superuser, users.created_at AS users_created_at, users.updated_at AS users_updated_at 
-FROM users 
-WHERE users.email = ?
- LIMIT ? OFFSET ?
-2026-02-01 03:43:32,758 INFO sqlalchemy.engine.Engine [generated in 0.00025s] ('ashok@gmail.com', 1, 0)
-2026-02-01 03:43:32,758 - sqlalchemy.engine.Engine - INFO - [generated in 0.00025s] ('ashok@gmail.com', 1, 0)
-2026-02-01 03:43:33,147 - app.core.auth - INFO - ✅ Token created, expires at 2026-02-01 04:13:33.147132
-2026-02-01 03:43:33,149 - app.api.auth - INFO - ✅ User logged in: ashok@gmail.com
-INFO:     192.168.1.26:65294 - "POST /auth/login HTTP/1.1" 200 OK
-2026-02-01 03:43:33,152 INFO sqlalchemy.engine.Engine ROLLBACK
-2026-02-01 03:43:33,152 - sqlalchemy.engine.Engine - INFO - ROLLBACK
-INFO:     192.168.1.26:65294 - "GET /health HTTP/1.1" 200 OK
-INFO:     192.168.1.26:65203 - "OPTIONS /api/projects HTTP/1.1" 200 OK
-INFO:     192.168.1.26:65203 - "GET /api/projects HTTP/1.1" 404 Not Found
-INFO:     192.168.1.26:65294 - "GET /health HTTP/1.1" 200 OK
-INFO:     192.168.1.26:65294 - "OPTIONS /api/workspaces HTTP/1.1" 200 OK
-2026-02-01 03:43:33,250 INFO sqlalchemy.engine.Engine BEGIN (implicit)
-2026-02-01 03:43:33,250 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
-2026-02-01 03:43:33,250 INFO sqlalchemy.engine.Engine SELECT users.id AS users_id, users.email AS users_email, users.username AS users_username, users.password_hash AS users_password_hash, users.full_name AS users_full_name, users.is_active AS users_is_active, users.is_verified AS users_is_verified, users.is_superuser AS users_is_superuser, users.created_at AS users_created_at, users.updated_at AS users_updated_at 
+users_username, users.password_hash AS users_password_hash, users.full_name AS users_full_name, users.is_active AS users_is_active, users.is_verified AS users_is_verified, users.is_superuser AS users_is_superuser, users.created_at AS users_created_at, users.updated_at AS users_updated_at 
 FROM users 
 WHERE users.id = ?
  LIMIT ? OFFSET ?
-2026-02-01 03:43:33,250 - sqlalchemy.engine.Engine - INFO - SELECT users.id AS users_id, users.email AS users_email, users.username AS users_username, users.password_hash AS users_password_hash, users.full_name AS users_full_name, users.is_active AS users_is_active, users.is_verified AS users_is_verified, users.is_superuser AS users_is_superuser, users.created_at AS users_created_at, users.updated_at AS users_updated_at 
-FROM users 
-WHERE users.id = ?
- LIMIT ? OFFSET ?
-2026-02-01 03:43:33,250 INFO sqlalchemy.engine.Engine [cached since 17.42s ago] ('85b98439-3324-483d-9e20-d2202c9b9d66', 1, 0)
-2026-02-01 03:43:33,250 - sqlalchemy.engine.Engine - INFO - [cached since 17.42s ago] ('85b98439-3324-483d-9e20-d2202c9b9d66', 1, 0)
-2026-02-01 03:43:33,265 - app.api.workspaces - INFO - 📋 Listing workspaces for user: ashok
-2026-02-01 03:43:33,275 INFO sqlalchemy.engine.Engine SELECT workspaces.id AS workspaces_id, workspaces.owner_id AS workspaces_owner_id, workspaces.name AS workspaces_name, workspaces.description AS workspaces_description, workspaces.is_active AS workspaces_is_active, workspaces.created_at AS workspaces_created_at, workspaces.updated_at AS workspaces_updated_at 
-FROM workspaces 
-WHERE workspaces.owner_id = ? AND workspaces.is_active = 1
-2026-02-01 03:43:33,275 - sqlalchemy.engine.Engine - INFO - SELECT workspaces.id AS workspaces_id, workspaces.owner_id AS workspaces_owner_id, workspaces.name AS workspaces_name, workspaces.description AS workspaces_description, workspaces.is_active AS workspaces_is_active, workspaces.created_at AS workspaces_created_at, workspaces.updated_at AS workspaces_updated_at 
-FROM workspaces 
-WHERE workspaces.owner_id = ? AND workspaces.is_active = 1
-2026-02-01 03:43:33,277 INFO sqlalchemy.engine.Engine [generated in 0.00973s] ('85b98439-3324-483d-9e20-d2202c9b9d66',)
-2026-02-01 03:43:33,277 - sqlalchemy.engine.Engine - INFO - [generated in 0.00973s] ('85b98439-3324-483d-9e20-d2202c9b9d66',)
-2026-02-01 03:43:33,289 - app.api.workspaces - INFO - ✅ Found 0 workspaces
-INFO:     192.168.1.26:65294 - "GET /api/workspaces HTTP/1.1" 200 OK
-2026-02-01 03:43:33,321 INFO sqlalchemy.engine.Engine ROLLBACK
-2026-02-01 03:43:33,321 - sqlalchemy.engine.Engine - INFO - ROLLBACK
-INFO:     192.168.1.26:65294 - "OPTIONS /api/workspaces HTTP/1.1" 200 OK
-2026-02-01 03:43:33,336 INFO sqlalchemy.engine.Engine BEGIN (implicit)
-2026-02-01 03:43:33,336 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
-2026-02-01 03:43:33,338 INFO sqlalchemy.engine.Engine SELECT users.id AS users_id, users.email AS users_email, users.username AS users_username, users.password_hash AS users_password_hash, users.full_name AS users_full_name, users.is_active AS users_is_active, users.is_verified AS users_is_verified, users.is_superuser AS users_is_superuser, users.created_at AS users_created_at, users.updated_at AS users_updated_at 
-FROM users 
-WHERE users.id = ?
- LIMIT ? OFFSET ?
-2026-02-01 03:43:33,338 - sqlalchemy.engine.Engine - INFO - SELECT users.id AS users_id, users.email AS users_email, users.username AS users_username, users.password_hash AS users_password_hash, users.full_name AS users_full_name, users.is_active AS users_is_active, users.is_verified AS users_is_verified, users.is_superuser AS users_is_superuser, users.created_at AS users_created_at, users.updated_at AS users_updated_at 
-FROM users 
-WHERE users.id = ?
- LIMIT ? OFFSET ?
-2026-02-01 03:43:33,338 INFO sqlalchemy.engine.Engine [cached since 17.51s ago] ('85b98439-3324-483d-9e20-d2202c9b9d66', 1, 0)
-2026-02-01 03:43:33,338 - sqlalchemy.engine.Engine - INFO - [cached since 17.51s ago] ('85b98439-3324-483d-9e20-d2202c9b9d66', 1, 0)
-2026-02-01 03:43:33,340 - app.api.workspaces - INFO - ➕ Creating workspace: My Workspace
-2026-02-01 03:43:33,340 INFO sqlalchemy.engine.Engine INSERT INTO workspaces (id, owner_id, name, description, is_active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)
-2026-02-01 03:43:33,340 - sqlalchemy.engine.Engine - INFO - INSERT INTO workspaces (id, owner_id, name, description, is_active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)
-2026-02-01 03:43:33,340 INFO sqlalchemy.engine.Engine [generated in 0.00016s] ('fe4d97c2-1a51-40f0-ad2f-8a3c15e3298e', '85b98439-3324-483d-9e20-d2202c9b9d66', 'My Workspace', 'Default workspace', 1, '2026-02-01 03:43:33.340868', '2026-02-01 03:43:33.340871')
-2026-02-01 03:43:33,340 - sqlalchemy.engine.Engine - INFO - [generated in 0.00016s] ('fe4d97c2-1a51-40f0-ad2f-8a3c15e3298e', '85b98439-3324-483d-9e20-d2202c9b9d66', 'My Workspace', 'Default workspace', 1, '2026-02-01 03:43:33.340868', '2026-02-01 03:43:33.340871')
-2026-02-01 03:43:33,347 INFO sqlalchemy.engine.Engine COMMIT
-2026-02-01 03:43:33,347 - sqlalchemy.engine.Engine - INFO - COMMIT
-2026-02-01 03:43:33,364 INFO sqlalchemy.engine.Engine BEGIN (implicit)
-2026-02-01 03:43:33,364 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
-2026-02-01 03:43:33,365 INFO sqlalchemy.engine.Engine SELECT workspaces.id, workspaces.owner_id, workspaces.name, workspaces.description, workspaces.is_active, workspaces.created_at, workspaces.updated_at 
-FROM workspaces 
-WHERE workspaces.id = ?
-2026-02-01 03:43:33,365 - sqlalchemy.engine.Engine - INFO - SELECT workspaces.id, workspaces.owner_id, workspaces.name, workspaces.description, workspaces.is_active, workspaces.created_at, workspaces.updated_at 
-FROM workspaces 
-WHERE workspaces.id = ?
-2026-02-01 03:43:33,365 INFO sqlalchemy.engine.Engine [generated in 0.00015s] ('fe4d97c2-1a51-40f0-ad2f-8a3c15e3298e',)
-2026-02-01 03:43:33,365 - sqlalchemy.engine.Engine - INFO - [generated in 0.00015s] ('fe4d97c2-1a51-40f0-ad2f-8a3c15e3298e',)
-2026-02-01 03:43:33,367 - app.api.workspaces - INFO - ✅ Workspace created: fe4d97c2-1a51-40f0-ad2f-8a3c15e3298e
-2026-02-01 03:43:33,369 INFO sqlalchemy.engine.Engine ROLLBACK
-2026-02-01 03:43:33,369 - sqlalchemy.engine.Engine - INFO - ROLLBACK
-INFO:     192.168.1.26:65294 - "POST /api/workspaces HTTP/1.1" 500 Internal Server Error
+2026-02-01 04:19:02,271 INFO sqlalchemy.engine.Engine [cached since 23.74s ago] ('d838e283-bd9d-486b-aa12-36f2b4fd0f4e', 1, 0)
+2026-02-01 04:19:02,271 - sqlalchemy.engine.Engine - INFO - [cached since 23.74s ago] ('d838e283-bd9d-486b-aa12-36f2b4fd0f4e', 1, 0)
+2026-02-01 04:19:02,273 - app.api.projects - INFO - 📋 Listing projects for user: ashok
+2026-02-01 04:19:02,274 INFO sqlalchemy.engine.Engine SELECT projects.id AS projects_id, projects.owner_id AS projects_owner_id, projects.name AS projects_name, projects.description AS projects_description, projects.is_active AS projects_is_active, projects.created_at AS projects_created_at, projects.updated_at AS projects_updated_at 
+FROM projects 
+WHERE projects.owner_id = ? AND projects.is_active = 1
+2026-02-01 04:19:02,274 - sqlalchemy.engine.Engine - INFO - SELECT projects.id AS projects_id, projects.owner_id AS projects_owner_id, projects.name AS projects_name, projects.description AS projects_description, projects.is_active AS projects_is_active, projects.created_at AS projects_created_at, projects.updated_at AS projects_updated_at 
+FROM projects 
+WHERE projects.owner_id = ? AND projects.is_active = 1
+2026-02-01 04:19:02,275 INFO sqlalchemy.engine.Engine [cached since 5.982s ago] ('d838e283-bd9d-486b-aa12-36f2b4fd0f4e',)
+2026-02-01 04:19:02,275 - sqlalchemy.engine.Engine - INFO - [cached since 5.982s ago] ('d838e283-bd9d-486b-aa12-36f2b4fd0f4e',)
+2026-02-01 04:19:02,275 - app.api.projects - INFO - ✅ Found 1 projects
+2026-02-01 04:19:02,278 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-02-01 04:19:02,278 - sqlalchemy.engine.Engine - INFO - ROLLBACK
+INFO:     192.168.1.26:49666 - "GET /api/projects HTTP/1.1" 500 Internal Server Error
 ERROR:    Exception in ASGI application
 Traceback (most recent call last):
   File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
@@ -138,10 +57,8 @@ Traceback (most recent call last):
               ^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/routing.py", line 155, in serialize_response
     raise ResponseValidationError(
-fastapi.exceptions.ResponseValidationError: 1 validation errors:
-  {'type': 'missing', 'loc': ('response', 'slug'), 'msg': 'Field required', 'input': <Workspace My Workspace>, 'url': 'https://errors.pydantic.dev/2.5/v/missing'}
-
-INFO:     192.168.1.26:58411 - "OPTIONS /api/projects/workspaces/550e8400-e29b-41d4-a716-446655440365 HTTP/1.1" 200 OK
-INFO:     192.168.1.26:58411 - "POST /api/projects/workspaces/550e8400-e29b-41d4-a716-446655440365 HTTP/1.1" 404 Not Found
-
+fastapi.exceptions.ResponseValidationError: 3 validation errors:
+  {'type': 'missing', 'loc': ('response', 0, 'workspace_id'), 'msg': 'Field required', 'input': <Project ssdf>, 'url': 'https://errors.pydantic.dev/2.5/v/missing'}
+  {'type': 'missing', 'loc': ('response', 0, 'problem_type'), 'msg': 'Field required', 'input': <Project ssdf>, 'url': 'https://errors.pydantic.dev/2.5/v/missing'}
+  {'type': 'missing', 'loc': ('response', 0, 'status'), 'msg': 'Field required', 'input': <Project ssdf>, 'url': 'https://errors.pydantic.dev/2.5/v/missing'}
 
