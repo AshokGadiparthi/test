@@ -1,83 +1,10 @@
-(venv) ashok@ubuntu:~/work/latest/kedro-integrated-fast-api$ python main.py 
-⚠️ Redis not available, using in-memory cache
-2026-02-01 16:37:35,023 - __main__ - INFO - 🎯 ML Platform starting on http://localhost:8000
-INFO:     Started server process [36109]
-INFO:     Waiting for application startup.
-2026-02-01 16:37:35,035 - __main__ - INFO - 🚀 Starting ML Platform Application...
-2026-02-01 16:37:35,035 - __main__ - INFO - 📦 Initializing database tables...
-2026-02-01 16:37:35,150 - __main__ - INFO - ✅ Database tables created/verified
-2026-02-01 16:37:35,150 - __main__ - INFO - ✅ Default data initialized
-2026-02-01 16:37:35,150 - __main__ - INFO - ======================================================================
-2026-02-01 16:37:35,150 - __main__ - INFO - ✅ ML PLATFORM READY!
-2026-02-01 16:37:35,151 - __main__ - INFO - ======================================================================
-2026-02-01 16:37:35,151 - __main__ - INFO - 📍 API Documentation: http://localhost:8000/docs
-2026-02-01 16:37:35,151 - __main__ - INFO - 📍 EDA Health: GET /api/eda/health
-2026-02-01 16:37:35,151 - __main__ - INFO - ======================================================================
-INFO:     Application startup complete.
-INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-INFO:     192.168.1.26:50917 - "GET /health HTTP/1.1" 200 OK
-INFO:     192.168.1.26:50917 - "GET /api/auth/me HTTP/1.1" 404 Not Found
-INFO:     192.168.1.26:57114 - "OPTIONS /api/auth/register HTTP/1.1" 200 OK
-INFO:     192.168.1.26:57114 - "POST /api/auth/register HTTP/1.1" 200 OK
-INFO:     192.168.1.26:57114 - "POST /api/auth/login HTTP/1.1" 200 OK
-INFO:     192.168.1.26:57114 - "OPTIONS /api/projects HTTP/1.1" 200 OK
-INFO:     192.168.1.26:57114 - "GET /api/projects HTTP/1.1" 307 Temporary Redirect
-INFO:     192.168.1.26:57114 - "OPTIONS /api/projects/ HTTP/1.1" 200 OK
-INFO:     192.168.1.26:56202 - "GET /api/projects/ HTTP/1.1" 200 OK
-INFO:     192.168.1.26:56202 - "OPTIONS /api/activities HTTP/1.1" 200 OK
-INFO:     192.168.1.26:59059 - "GET /api/activities HTTP/1.1" 307 Temporary Redirect
-INFO:     192.168.1.26:59059 - "OPTIONS /api/activities/ HTTP/1.1" 200 OK
-INFO:     192.168.1.26:58581 - "GET /api/activities/ HTTP/1.1" 200 OK
-INFO:     192.168.1.26:56734 - "GET /health HTTP/1.1" 200 OK
-INFO:     192.168.1.26:56734 - "OPTIONS /api/projects HTTP/1.1" 200 OK
-INFO:     192.168.1.26:56734 - "POST /api/projects HTTP/1.1" 307 Temporary Redirect
-INFO:     192.168.1.26:56734 - "OPTIONS /api/projects/ HTTP/1.1" 200 OK
-INFO:     192.168.1.26:56734 - "POST /api/projects/ HTTP/1.1" 200 OK
-INFO:     192.168.1.26:56734 - "GET /api/projects HTTP/1.1" 307 Temporary Redirect
-INFO:     192.168.1.26:56734 - "GET /api/projects/ HTTP/1.1" 200 OK
-INFO:     192.168.1.26:56734 - "OPTIONS /api/activities?project_id=2a034a3d-9a71-4845-9dd5-98d24510bc2a HTTP/1.1" 200 OK
-INFO:     192.168.1.26:56734 - "GET /api/activities?project_id=2a034a3d-9a71-4845-9dd5-98d24510bc2a HTTP/1.1" 307 Temporary Redirect
-INFO:     192.168.1.26:64330 - "GET /api/datasets/ HTTP/1.1" 200 OK
-INFO:     192.168.1.26:56734 - "OPTIONS /api/activities/?project_id=2a034a3d-9a71-4845-9dd5-98d24510bc2a HTTP/1.1" 200 OK
-INFO:     192.168.1.26:56734 - "GET /api/activities/?project_id=2a034a3d-9a71-4845-9dd5-98d24510bc2a HTTP/1.1" 200 OK
-INFO:     192.168.1.26:56734 - "OPTIONS /api/datasources/ HTTP/1.1" 200 OK
-INFO:     192.168.1.26:64330 - "GET /api/datasets/ HTTP/1.1" 200 OK
-INFO:     192.168.1.26:49666 - "GET /api/datasources/ HTTP/1.1" 200 OK
-INFO:     192.168.1.26:62058 - "OPTIONS /api/datasets/?name=dsfd&project_id=2a034a3d-9a71-4845-9dd5-98d24510bc2a HTTP/1.1" 200 OK
-INFO:     192.168.1.26:62058 - "POST /api/datasets/?name=dsfd&project_id=2a034a3d-9a71-4845-9dd5-98d24510bc2a HTTP/1.1" 200 OK
-INFO:     192.168.1.26:62058 - "GET /api/datasets/ HTTP/1.1" 200 OK
-INFO:     192.168.1.26:62058 - "OPTIONS /api/eda/health HTTP/1.1" 200 OK
-INFO:     192.168.1.26:49893 - "GET /api/datasets/ HTTP/1.1" 200 OK
-2026-02-01 16:38:10,974 - app.api.eda - INFO - 🏥 EDA health check requested
-INFO:     192.168.1.26:51582 - "GET /api/eda/health HTTP/1.1" 200 OK
-INFO:     192.168.1.26:51582 - "OPTIONS /api/eda/dataset/d05fdb35-372d-4a8a-88b9-9caa1538787d/analyze HTTP/1.1" 200 OK
-2026-02-01 16:38:13,463 - app.api.eda - INFO - 📊 EDA analysis requested for dataset: d05fdb35-372d-4a8a-88b9-9caa1538787d
-2026-02-01 16:38:13,463 - app.api.eda - INFO - 👤 User authenticated: mock-user-id
-2026-02-01 16:38:13,470 - app.api.eda - INFO - ✅ Dataset verified: sample_data.csv
-2026-02-01 16:38:13,471 - app.api.eda - INFO - 🔄 Job created: ed48fdd0-263d-49fe-9a45-f7b543dfa718
-2026-02-01 16:38:13,488 - app.api.eda - INFO - 📝 Activity logged
-INFO:     192.168.1.26:51582 - "POST /api/eda/dataset/d05fdb35-372d-4a8a-88b9-9caa1538787d/analyze HTTP/1.1" 202 Accepted
-INFO:     192.168.1.26:51582 - "OPTIONS /api/eda/jobs/ed48fdd0-263d-49fe-9a45-f7b543dfa718 HTTP/1.1" 200 OK
-2026-02-01 16:38:13,505 - app.api.eda - INFO - 🔍 Job status requested: ed48fdd0-263d-49fe-9a45-f7b543dfa718
-INFO:     192.168.1.26:51582 - "GET /api/eda/jobs/ed48fdd0-263d-49fe-9a45-f7b543dfa718 HTTP/1.1" 401 Unauthorized
-INFO:     192.168.1.26:54410 - "GET /health HTTP/1.1" 200 OK
-INFO:     192.168.1.26:54410 - "GET /api/auth/me HTTP/1.1" 404 Not Found
-INFO:     192.168.1.26:61902 - "POST /api/auth/login HTTP/1.1" 200 OK
-INFO:     192.168.1.26:61902 - "GET /api/projects HTTP/1.1" 307 Temporary Redirect
-INFO:     192.168.1.26:61902 - "GET /api/projects/ HTTP/1.1" 200 OK
-INFO:     192.168.1.26:61902 - "GET /api/activities?project_id=2a034a3d-9a71-4845-9dd5-98d24510bc2a HTTP/1.1" 307 Temporary Redirect
-INFO:     192.168.1.26:64920 - "GET /api/datasets/ HTTP/1.1" 200 OK
-INFO:     192.168.1.26:61902 - "GET /api/activities/?project_id=2a034a3d-9a71-4845-9dd5-98d24510bc2a HTTP/1.1" 200 OK
-2026-02-01 16:40:01,673 - app.api.eda - INFO - 🏥 EDA health check requested
-INFO:     192.168.1.26:61902 - "GET /api/eda/health HTTP/1.1" 200 OK
-INFO:     192.168.1.26:64920 - "GET /api/datasets/ HTTP/1.1" 200 OK
-2026-02-01 16:40:04,950 - app.api.eda - INFO - 📊 EDA analysis requested for dataset: d05fdb35-372d-4a8a-88b9-9caa1538787d
-2026-02-01 16:40:04,950 - app.api.eda - INFO - 👤 User authenticated: mock-user-id
-2026-02-01 16:40:04,951 - app.api.eda - INFO - ✅ Dataset verified: sample_data.csv
-2026-02-01 16:40:04,952 - app.api.eda - INFO - 🔄 Job created: 6285f7a8-3e2a-4c07-8680-91e41442bd45
-2026-02-01 16:40:04,974 - app.api.eda - INFO - 📝 Activity logged
-INFO:     192.168.1.26:64920 - "POST /api/eda/dataset/d05fdb35-372d-4a8a-88b9-9caa1538787d/analyze HTTP/1.1" 202 Accepted
-INFO:     192.168.1.26:64920 - "OPTIONS /api/eda/jobs/6285f7a8-3e2a-4c07-8680-91e41442bd45 HTTP/1.1" 200 OK
-2026-02-01 16:40:05,007 - app.api.eda - INFO - 🔍 Job status requested: 6285f7a8-3e2a-4c07-8680-91e41442bd45
-INFO:     192.168.1.26:64920 - "GET /api/eda/jobs/6285f7a8-3e2a-4c07-8680-91e41442bd45 HTTP/1.1" 401 Unauthorized
-
+NFO:     192.168.1.26:63816 - "GET /api/eda/health HTTP/1.1" 200 OK
+INFO:     192.168.1.26:52190 - "GET /api/datasets/ HTTP/1.1" 200 OK
+2026-02-01 16:57:21,012 - app.api.eda - INFO - 📊 EDA analysis requested for dataset: d05fdb35-372d-4a8a-88b9-9caa1538787d
+2026-02-01 16:57:21,012 - app.api.eda - ERROR - ❌ Error starting analysis: name 'get_user_id_from_token' is not defined
+Traceback (most recent call last):
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/app/api/eda.py", line 250, in start_eda_analysis
+    user_id = get_user_id_from_token(request)
+              ^^^^^^^^^^^^^^^^^^^^^^
+NameError: name 'get_user_id_from_token' is not defined
+INFO:     192.168.1.26:52190 - "POST /api/eda/dataset/d05fdb35-372d-4a8a-88b9-9caa1538787d/analyze HTTP/1.1" 500 Internal Server Error
