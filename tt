@@ -1,11 +1,103 @@
-026-02-01 17:32:12,150 - app.api.eda - INFO - 📋 Summary requested for dataset: f5529d0e-a390-4ee7-8940-6bfc89c2888b
-2026-02-01 17:32:12,151 - app.api.eda - WARNING - ⚠️ Summary not found for dataset: f5529d0e-a390-4ee7-8940-6bfc89c2888b
-INFO:     192.168.1.26:53426 - "GET /api/eda/f5529d0e-a390-4ee7-8940-6bfc89c2888b/summary HTTP/1.1" 404 Not Found
-2026-02-01 17:32:12,181 - app.api.eda - INFO - 📊 Statistics requested for dataset: f5529d0e-a390-4ee7-8940-6bfc89c2888b
-2026-02-01 17:32:12,181 - app.api.eda - WARNING - ⚠️ Statistics not found for dataset: f5529d0e-a390-4ee7-8940-6bfc89c2888b
-2026-02-01 17:32:12,184 - app.api.eda - INFO - 📋 Summary requested for dataset: f5529d0e-a390-4ee7-8940-6bfc89c2888b
-2026-02-01 17:32:12,185 - app.api.eda - WARNING - ⚠️ Summary not found for dataset: f5529d0e-a390-4ee7-8940-6bfc89c2888b
-2026-02-01 17:32:12,185 - app.api.eda - INFO - 🔗 Correlations requested for dataset: f5529d0e-a390-4ee7-8940-6bfc89c2888b
-2026-02-01 17:32:12,185 - app.api.eda - WARNING - ⚠️ Correlations not found for dataset: f5529d0e-a390-4ee7-8940-6bfc89c2888b
-2026-02-01 17:32:12,185 - app.api.eda - INFO - 🔍 Quality report requested for dataset: f5529d0e-a390-4ee7-8940-6bfc89c2888b
-2026-02-01 17:32:12,185 - app.api.eda - WARNING - ⚠️ Quality report not found for dataset: f5529d0e-a390-4ee7-8940-6bfc89c2888b
+NFO:     192.168.1.26:63522 - "GET /api/datasets/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:63522 - "OPTIONS /api/eda/health HTTP/1.1" 200 OK
+2026-02-01 17:43:48,082 - app.api.eda - INFO - 🏥 EDA health check requested
+2026-02-01 17:43:48,083 - __main__ - ERROR - ❌ Unhandled exception: 1 validation error:
+  {'type': 'missing', 'loc': ('response', 'components'), 'msg': 'Field required', 'input': {'status': 'healthy', 'service': 'EDA Engine', 'version': '1.0.0', 'timestamp': '2026-02-01T17:43:48.082532'}}
+
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/app/api/eda.py", line 243, in eda_health_check
+    GET /api/eda/health
+Traceback (most recent call last):
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/cors.py", line 93, in __call__
+    await self.simple_response(scope, receive, send, request_headers=headers)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/cors.py", line 144, in simple_response
+    await self.app(scope, receive, send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/routing.py", line 716, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/routing.py", line 736, in app
+    await route.handle(scope, receive, send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/routing.py", line 290, in handle
+    await self.app(scope, receive, send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/routing.py", line 115, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/routing.py", line 101, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/routing.py", line 377, in app
+    content = await serialize_response(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/routing.py", line 215, in serialize_response
+    raise ResponseValidationError(
+fastapi.exceptions.ResponseValidationError: 1 validation error:
+  {'type': 'missing', 'loc': ('response', 'components'), 'msg': 'Field required', 'input': {'status': 'healthy', 'service': 'EDA Engine', 'version': '1.0.0', 'timestamp': '2026-02-01T17:43:48.082532'}}
+
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/app/api/eda.py", line 243, in eda_health_check
+    GET /api/eda/health
+INFO:     192.168.1.26:61848 - "GET /api/eda/health HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/uvicorn/protocols/http/h11_impl.py", line 410, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/uvicorn/middleware/proxy_headers.py", line 60, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/applications.py", line 1135, in __call__
+    await super().__call__(scope, receive, send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/applications.py", line 107, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/cors.py", line 93, in __call__
+    await self.simple_response(scope, receive, send, request_headers=headers)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/cors.py", line 144, in simple_response
+    await self.app(scope, receive, send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/routing.py", line 716, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/routing.py", line 736, in app
+    await route.handle(scope, receive, send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/routing.py", line 290, in handle
+    await self.app(scope, receive, send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/routing.py", line 115, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/routing.py", line 101, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/routing.py", line 377, in app
+    content = await serialize_response(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/routing.py", line 215, in serialize_response
+    raise ResponseValidationError(
+fastapi.exceptions.ResponseValidationError: 1 validation error:
+  {'type': 'missing', 'loc': ('response', 'components'), 'msg': 'Field required', 'input': {'status': 'healthy', 'service': 'EDA Engine', 'version': '1.0.0', 'timestamp': '2026-02-01T17:43:48.082532'}}
+
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/app/api/eda.py", line 243, in eda_health_check
+    GET /api/eda/health
+INFO:     192.168.1.26:62975 - "GET /api/datasets/ HTTP/1.1" 200 OK
