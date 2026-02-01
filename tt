@@ -1,64 +1,251 @@
-users_username, users.password_hash AS users_password_hash, users.full_name AS users_full_name, users.is_active AS users_is_active, users.is_verified AS users_is_verified, users.is_superuser AS users_is_superuser, users.created_at AS users_created_at, users.updated_at AS users_updated_at 
-FROM users 
-WHERE users.id = ?
- LIMIT ? OFFSET ?
-2026-02-01 04:19:02,271 INFO sqlalchemy.engine.Engine [cached since 23.74s ago] ('d838e283-bd9d-486b-aa12-36f2b4fd0f4e', 1, 0)
-2026-02-01 04:19:02,271 - sqlalchemy.engine.Engine - INFO - [cached since 23.74s ago] ('d838e283-bd9d-486b-aa12-36f2b4fd0f4e', 1, 0)
-2026-02-01 04:19:02,273 - app.api.projects - INFO - 📋 Listing projects for user: ashok
-2026-02-01 04:19:02,274 INFO sqlalchemy.engine.Engine SELECT projects.id AS projects_id, projects.owner_id AS projects_owner_id, projects.name AS projects_name, projects.description AS projects_description, projects.is_active AS projects_is_active, projects.created_at AS projects_created_at, projects.updated_at AS projects_updated_at 
-FROM projects 
-WHERE projects.owner_id = ? AND projects.is_active = 1
-2026-02-01 04:19:02,274 - sqlalchemy.engine.Engine - INFO - SELECT projects.id AS projects_id, projects.owner_id AS projects_owner_id, projects.name AS projects_name, projects.description AS projects_description, projects.is_active AS projects_is_active, projects.created_at AS projects_created_at, projects.updated_at AS projects_updated_at 
-FROM projects 
-WHERE projects.owner_id = ? AND projects.is_active = 1
-2026-02-01 04:19:02,275 INFO sqlalchemy.engine.Engine [cached since 5.982s ago] ('d838e283-bd9d-486b-aa12-36f2b4fd0f4e',)
-2026-02-01 04:19:02,275 - sqlalchemy.engine.Engine - INFO - [cached since 5.982s ago] ('d838e283-bd9d-486b-aa12-36f2b4fd0f4e',)
-2026-02-01 04:19:02,275 - app.api.projects - INFO - ✅ Found 1 projects
-2026-02-01 04:19:02,278 INFO sqlalchemy.engine.Engine ROLLBACK
-2026-02-01 04:19:02,278 - sqlalchemy.engine.Engine - INFO - ROLLBACK
-INFO:     192.168.1.26:49666 - "GET /api/projects HTTP/1.1" 500 Internal Server Error
+venv) ashok@ubuntu:~/work/latest/kedro-integrated-fast-api$ python main.py 
+⚠️ Redis not available, using in-memory cache
+2026-02-01 16:20:11,339 - __main__ - INFO - 🎯 ML Platform starting on http://localhost:8000
+INFO:     Started server process [35821]
+INFO:     Waiting for application startup.
+2026-02-01 16:20:11,354 - __main__ - INFO - 🚀 Starting ML Platform Application...
+2026-02-01 16:20:11,354 - __main__ - INFO - 📦 Initializing database tables...
+2026-02-01 16:20:11,536 - __main__ - INFO - ✅ Database tables created/verified
+2026-02-01 16:20:11,536 - __main__ - INFO - ✅ Default data initialized
+2026-02-01 16:20:11,536 - __main__ - INFO - ======================================================================
+2026-02-01 16:20:11,536 - __main__ - INFO - ✅ ML PLATFORM READY!
+2026-02-01 16:20:11,536 - __main__ - INFO - ======================================================================
+2026-02-01 16:20:11,536 - __main__ - INFO - 📍 API Documentation: http://localhost:8000/docs
+2026-02-01 16:20:11,536 - __main__ - INFO - 📍 EDA Health: GET /api/eda/health
+2026-02-01 16:20:11,536 - __main__ - INFO - ======================================================================
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     192.168.1.26:57403 - "GET /health HTTP/1.1" 200 OK
+INFO:     192.168.1.26:57403 - "GET /api/auth/me HTTP/1.1" 404 Not Found
+INFO:     192.168.1.26:63349 - "OPTIONS /api/auth/register HTTP/1.1" 200 OK
+INFO:     192.168.1.26:65530 - "POST /api/auth/register HTTP/1.1" 200 OK
+2026-02-01 16:20:31,065 - __main__ - ERROR - ❌ Unhandled exception: (sqlite3.IntegrityError) UNIQUE constraint failed: users.email
+[SQL: INSERT INTO users (id, username, email, password_hash, created_at) VALUES (?, ?, ?, ?, ?)]
+[parameters: ('da0a0ad7-f681-4fec-a280-9baca83b86ab', 'ashok@gmail.com', 'ashok@gmail.com', 'password', '2026-02-01 16:20:31.064234')]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+Traceback (most recent call last):
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+sqlite3.IntegrityError: UNIQUE constraint failed: users.email
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/cors.py", line 93, in __call__
+    await self.simple_response(scope, receive, send, request_headers=headers)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/cors.py", line 144, in simple_response
+    await self.app(scope, receive, send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/routing.py", line 716, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/routing.py", line 736, in app
+    await route.handle(scope, receive, send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/routing.py", line 290, in handle
+    await self.app(scope, receive, send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/routing.py", line 115, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/routing.py", line 101, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/routing.py", line 355, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/routing.py", line 243, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/app/api/auth.py", line 87, in login
+    db.commit()
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 2030, in commit
+    trans.commit(_to_root=True)
+  File "<string>", line 2, in commit
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/orm/state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 1311, in commit
+    self._prepare_impl()
+  File "<string>", line 2, in _prepare_impl
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/orm/state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 1286, in _prepare_impl
+    self.session.flush()
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 4331, in flush
+    self._flush(objects)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 4466, in _flush
+    with util.safe_reraise():
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py", line 224, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 4427, in _flush
+    flush_context.execute()
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/orm/unitofwork.py", line 466, in execute
+    rec.execute(self)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/orm/unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/orm/persistence.py", line 93, in save_obj
+    _emit_insert_statements(
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/orm/persistence.py", line 1048, in _emit_insert_statements
+    result = connection.execute(
+             ^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1419, in execute
+    return meth(
+           ^^^^^
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/sql/elements.py", line 527, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2363, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) UNIQUE constraint failed: users.email
+[SQL: INSERT INTO users (id, username, email, password_hash, created_at) VALUES (?, ?, ?, ?, ?)]
+[parameters: ('da0a0ad7-f681-4fec-a280-9baca83b86ab', 'ashok@gmail.com', 'ashok@gmail.com', 'password', '2026-02-01 16:20:31.064234')]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+INFO:     192.168.1.26:65530 - "POST /api/auth/login HTTP/1.1" 500 Internal Server Error
 ERROR:    Exception in ASGI application
 Traceback (most recent call last):
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+sqlite3.IntegrityError: UNIQUE constraint failed: users.email
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/uvicorn/protocols/http/h11_impl.py", line 410, in run_asgi
     result = await app(  # type: ignore[func-returns-value]
              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/uvicorn/middleware/proxy_headers.py", line 60, in __call__
     return await self.app(scope, receive, send)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/applications.py", line 1106, in __call__
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/applications.py", line 1135, in __call__
     await super().__call__(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/applications.py", line 122, in __call__
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/applications.py", line 107, in __call__
     await self.middleware_stack(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/errors.py", line 184, in __call__
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/errors.py", line 186, in __call__
     raise exc
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/errors.py", line 162, in __call__
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/errors.py", line 164, in __call__
     await self.app(scope, receive, _send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/cors.py", line 91, in __call__
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/cors.py", line 93, in __call__
     await self.simple_response(scope, receive, send, request_headers=headers)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/cors.py", line 146, in simple_response
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/cors.py", line 144, in simple_response
     await self.app(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/exceptions.py", line 79, in __call__
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
     raise exc
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/exceptions.py", line 68, in __call__
-    await self.app(scope, receive, sender)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py", line 20, in __call__
-    raise e
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py", line 17, in __call__
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
     await self.app(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/routing.py", line 718, in __call__
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/routing.py", line 716, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/routing.py", line 736, in app
     await route.handle(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/routing.py", line 276, in handle
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/routing.py", line 290, in handle
     await self.app(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/routing.py", line 66, in app
-    response = await func(request)
-               ^^^^^^^^^^^^^^^^^^^
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/routing.py", line 292, in app
-    content = await serialize_response(
-              ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/routing.py", line 155, in serialize_response
-    raise ResponseValidationError(
-fastapi.exceptions.ResponseValidationError: 3 validation errors:
-  {'type': 'missing', 'loc': ('response', 0, 'workspace_id'), 'msg': 'Field required', 'input': <Project ssdf>, 'url': 'https://errors.pydantic.dev/2.5/v/missing'}
-  {'type': 'missing', 'loc': ('response', 0, 'problem_type'), 'msg': 'Field required', 'input': <Project ssdf>, 'url': 'https://errors.pydantic.dev/2.5/v/missing'}
-  {'type': 'missing', 'loc': ('response', 0, 'status'), 'msg': 'Field required', 'input': <Project ssdf>, 'url': 'https://errors.pydantic.dev/2.5/v/missing'}
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/routing.py", line 115, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/routing.py", line 101, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/routing.py", line 355, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/routing.py", line 243, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/app/api/auth.py", line 87, in login
+    db.commit()
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 2030, in commit
+    trans.commit(_to_root=True)
+  File "<string>", line 2, in commit
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/orm/state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 1311, in commit
+    self._prepare_impl()
+  File "<string>", line 2, in _prepare_impl
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/orm/state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 1286, in _prepare_impl
+    self.session.flush()
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 4331, in flush
+    self._flush(objects)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 4466, in _flush
+    with util.safe_reraise():
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py", line 224, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 4427, in _flush
+    flush_context.execute()
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/orm/unitofwork.py", line 466, in execute
+    rec.execute(self)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/orm/unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/orm/persistence.py", line 93, in save_obj
+    _emit_insert_statements(
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/orm/persistence.py", line 1048, in _emit_insert_statements
+    result = connection.execute(
+             ^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1419, in execute
+    return meth(
+           ^^^^^
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/sql/elements.py", line 527, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2363, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) UNIQUE constraint failed: users.email
+[SQL: INSERT INTO users (id, username, email, password_hash, created_at) VALUES (?, ?, ?, ?, ?)]
+[parameters: ('da0a0ad7-f681-4fec-a280-9baca83b86ab', 'ashok@gmail.com', 'ashok@gmail.com', 'password', '2026-02-01 16:20:31.064234')]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+INFO:     192.168.1.26:63480 - "GET /api/projects HTTP/1.1" 307 Temporary Redirect
+INFO:     192.168.1.26:63480 - "GET /api/projects/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:63480 - "OPTIONS /api/activities HTTP/1.1" 200 OK
+INFO:     192.168.1.26:49990 - "GET /api/activities HTTP/1.1" 307 Temporary Redirect
+INFO:     192.168.1.26:49990 - "OPTIONS /api/activities/ HTTP/1.1" 200 OK
+INFO:     192.168.1.26:49990 - "GET /api/activities/ HTTP/1.1" 200 OK
+
 
