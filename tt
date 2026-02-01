@@ -1,217 +1,41 @@
-INFO:     192.168.1.26:57070 - "GET /api/datasets/ HTTP/1.1" 200 OK
-2026-02-01 17:16:11,279 - app.api.eda - INFO - 🏥 EDA health check requested
-INFO:     192.168.1.26:57070 - "GET /api/eda/health HTTP/1.1" 200 OK
-INFO:     192.168.1.26:52922 - "GET /api/datasets/ HTTP/1.1" 200 OK
-INFO:     192.168.1.26:52922 - "OPTIONS /api/eda/dataset/074b332d-8026-44bf-a0cc-735f86b6b17a/analyze HTTP/1.1" 200 OK
-2026-02-01 17:16:13,507 - app.api.eda - INFO - 📊 EDA analysis requested for dataset: 074b332d-8026-44bf-a0cc-735f86b6b17a
-2026-02-01 17:16:13,507 - app.api.eda - INFO - 👤 User authenticated: mock-user-id
-2026-02-01 17:16:13,513 - app.api.eda - INFO - ✅ Dataset verified: sample_data.csv
-2026-02-01 17:16:13,514 - app.api.eda - INFO - 🔄 Job created: 9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200
-2026-02-01 17:16:13,542 - app.api.eda - INFO - 📝 Activity logged
-2026-02-01 17:16:13,543 - app.api.eda - INFO - 🚀 Background analysis task started for job: 9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200
-INFO:     192.168.1.26:57070 - "POST /api/eda/dataset/074b332d-8026-44bf-a0cc-735f86b6b17a/analyze HTTP/1.1" 202 Accepted
-2026-02-01 17:16:13,546 - app.api.eda - ERROR - ❌ EDA analysis failed: 'str' object is not a mapping
-2026-02-01 17:16:13,547 - __main__ - ERROR - ❌ Unhandled exception: 'str' object is not a mapping
-Traceback (most recent call last):
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/app/api/eda.py", line 137, in run_eda_analysis
-    processing_job = {
-                     ^
-TypeError: 'str' object is not a mapping
+026-02-01 17:20:41,620 - app.api.eda - INFO - 👤 User authenticated: mock-user-id
+2026-02-01 17:20:41,625 - app.api.eda - INFO - ✅ Dataset verified: sample_data.csv
+2026-02-01 17:20:41,626 - app.api.eda - INFO - 🔄 Job created: c1b1670a-6091-44ee-a7b3-b51c9c4eff37
+2026-02-01 17:20:41,653 - app.api.eda - INFO - 📝 Activity logged
+2026-02-01 17:20:41,653 - app.api.eda - INFO - 🚀 Background analysis task started for job: c1b1670a-6091-44ee-a7b3-b51c9c4eff37
+INFO:     192.168.1.26:59649 - "POST /api/eda/dataset/03004c8c-90ab-496c-b0a0-6c3b6b0076ed/analyze HTTP/1.1" 202 Accepted
+2026-02-01 17:20:41,680 - app.api.eda - INFO - ✅ EDA analysis completed: c1b1670a-6091-44ee-a7b3-b51c9c4eff37
+INFO:     192.168.1.26:59649 - "OPTIONS /api/eda/jobs/c1b1670a-6091-44ee-a7b3-b51c9c4eff37 HTTP/1.1" 200 OK
+2026-02-01 17:20:41,694 - app.api.eda - INFO - 🔍 Job status requested: c1b1670a-6091-44ee-a7b3-b51c9c4eff37
+2026-02-01 17:20:41,694 - app.api.eda - INFO - ✅ Job status: completed (progress: 100%)
+INFO:     192.168.1.26:59649 - "GET /api/eda/jobs/c1b1670a-6091-44ee-a7b3-b51c9c4eff37 HTTP/1.1" 200 OK
+INFO:     192.168.1.26:59649 - "OPTIONS /api/eda/03004c8c-90ab-496c-b0a0-6c3b6b0076ed/summary HTTP/1.1" 200 OK
+INFO:     192.168.1.26:50670 - "OPTIONS /api/eda/03004c8c-90ab-496c-b0a0-6c3b6b0076ed/statistics HTTP/1.1" 200 OK
+INFO:     192.168.1.26:59356 - "OPTIONS /api/eda/03004c8c-90ab-496c-b0a0-6c3b6b0076ed/quality-report HTTP/1.1" 200 OK
+INFO:     192.168.1.26:54617 - "OPTIONS /api/eda/03004c8c-90ab-496c-b0a0-6c3b6b0076ed/correlations?threshold=0.3 HTTP/1.1" 200 OK
+2026-02-01 17:20:41,719 - app.api.eda - INFO - 📋 Summary requested for dataset: 03004c8c-90ab-496c-b0a0-6c3b6b0076ed
+2026-02-01 17:20:41,719 - app.api.eda - WARNING - ⚠️ Summary not found for dataset: 03004c8c-90ab-496c-b0a0-6c3b6b0076ed
+2026-02-01 17:20:41,719 - app.api.eda - INFO - 📊 Statistics requested for dataset: 03004c8c-90ab-496c-b0a0-6c3b6b0076ed
+2026-02-01 17:20:41,719 - app.api.eda - WARNING - ⚠️ Statistics not found for dataset: 03004c8c-90ab-496c-b0a0-6c3b6b0076ed
+INFO:     192.168.1.26:59649 - "GET /api/eda/03004c8c-90ab-496c-b0a0-6c3b6b0076ed/summary HTTP/1.1" 404 Not Found
+INFO:     192.168.1.26:62277 - "GET /api/eda/03004c8c-90ab-496c-b0a0-6c3b6b0076ed/statistics HTTP/1.1" 404 Not Found
+2026-02-01 17:20:41,729 - app.api.eda - INFO - 🔍 Quality report requested for dataset: 03004c8c-90ab-496c-b0a0-6c3b6b0076ed
+2026-02-01 17:20:41,730 - app.api.eda - WARNING - ⚠️ Quality report not found for dataset: 03004c8c-90ab-496c-b0a0-6c3b6b0076ed
+2026-02-01 17:20:41,730 - app.api.eda - INFO - 🔗 Correlations requested for dataset: 03004c8c-90ab-496c-b0a0-6c3b6b0076ed
+2026-02-01 17:20:41,731 - app.api.eda - WARNING - ⚠️ Correlations not found for dataset: 03004c8c-90ab-496c-b0a0-6c3b6b0076ed
+INFO:     192.168.1.26:55411 - "GET /api/eda/03004c8c-90ab-496c-b0a0-6c3b6b0076ed/quality-report HTTP/1.1" 404 Not Found
+INFO:     192.168.1.26:56986 - "GET /api/eda/03004c8c-90ab-496c-b0a0-6c3b6b0076ed/correlations?threshold=0.3 HTTP/1.1" 404 Not Found
+2026-02-01 17:20:41,739 - app.api.eda - INFO - 📋 Summary requested for dataset: 03004c8c-90ab-496c-b0a0-6c3b6b0076ed
+2026-02-01 17:20:41,739 - app.api.eda - WARNING - ⚠️ Summary not found for dataset: 03004c8c-90ab-496c-b0a0-6c3b6b0076ed
+INFO:     192.168.1.26:65013 - "GET /api/eda/03004c8c-90ab-496c-b0a0-6c3b6b0076ed/summary HTTP/1.1" 404 Not Found
+2026-02-01 17:21:12,257 - app.api.eda - INFO - 🔍 Quality report requested for dataset: 03004c8c-90ab-496c-b0a0-6c3b6b0076ed
+2026-02-01 17:21:12,258 - app.api.eda - WARNING - ⚠️ Quality report not found for dataset: 03004c8c-90ab-496c-b0a0-6c3b6b0076ed
+INFO:     192.168.1.26:52062 - "GET /api/eda/03004c8c-90ab-496c-b0a0-6c3b6b0076ed/quality-report HTTP/1.1" 404 Not Found
+2026-02-01 17:21:13,229 - app.api.eda - INFO - 📊 Statistics requested for dataset: 03004c8c-90ab-496c-b0a0-6c3b6b0076ed
+2026-02-01 17:21:13,229 - app.api.eda - WARNING - ⚠️ Statistics not found for dataset: 03004c8c-90ab-496c-b0a0-6c3b6b0076ed
+INFO:     192.168.1.26:52062 - "GET /api/eda/03004c8c-90ab-496c-b0a0-6c3b6b0076ed/statistics HTTP/1.1" 404 Not Found
+2026-02-01 17:21:14,401 - app.api.eda - INFO - 🔗 Correlations requested for dataset: 03004c8c-90ab-496c-b0a0-6c3b6b0076ed
+2026-02-01 17:21:14,401 - app.api.eda - WARNING - ⚠️ Correlations not found for dataset: 03004c8c-90ab-496c-b0a0-6c3b6b0076ed
+INFO:     192.168.1.26:52062 - "GET /api/eda/03004c8c-90ab-496c-b0a0-6c3b6b0076ed/correlations?threshold=0.3 HTTP/1.1" 404 Not Found
 
-During handling of the above exception, another exception occurred:
 
-Traceback (most recent call last):
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/errors.py", line 164, in __call__
-    await self.app(scope, receive, _send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/cors.py", line 93, in __call__
-    await self.simple_response(scope, receive, send, request_headers=headers)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/cors.py", line 144, in simple_response
-    await self.app(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
-    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
-    await self.app(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/routing.py", line 716, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/routing.py", line 736, in app
-    await route.handle(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/routing.py", line 290, in handle
-    await self.app(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/routing.py", line 115, in app
-    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/routing.py", line 102, in app
-    await response(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/responses.py", line 167, in __call__
-    await self.background()
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/background.py", line 36, in __call__
-    await task()
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/background.py", line 21, in __call__
-    await self.func(*self.args, **self.kwargs)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/app/api/eda.py", line 173, in run_eda_analysis
-    failed_job = {
-                 ^
-TypeError: 'str' object is not a mapping
-ERROR:    Exception in ASGI application
-Traceback (most recent call last):
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/app/api/eda.py", line 137, in run_eda_analysis
-    processing_job = {
-                     ^
-TypeError: 'str' object is not a mapping
-
-During handling of the above exception, another exception occurred:
-
-Traceback (most recent call last):
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/uvicorn/protocols/http/h11_impl.py", line 410, in run_asgi
-    result = await app(  # type: ignore[func-returns-value]
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/uvicorn/middleware/proxy_headers.py", line 60, in __call__
-    return await self.app(scope, receive, send)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/applications.py", line 1135, in __call__
-    await super().__call__(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/applications.py", line 107, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/errors.py", line 186, in __call__
-    raise exc
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/errors.py", line 164, in __call__
-    await self.app(scope, receive, _send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/cors.py", line 93, in __call__
-    await self.simple_response(scope, receive, send, request_headers=headers)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/cors.py", line 144, in simple_response
-    await self.app(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
-    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
-    await self.app(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/routing.py", line 716, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/routing.py", line 736, in app
-    await route.handle(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/routing.py", line 290, in handle
-    await self.app(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/routing.py", line 115, in app
-    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/routing.py", line 102, in app
-    await response(scope, receive, send)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/responses.py", line 167, in __call__
-    await self.background()
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/background.py", line 36, in __call__
-    await task()
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/background.py", line 21, in __call__
-    await self.func(*self.args, **self.kwargs)
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/app/api/eda.py", line 173, in run_eda_analysis
-    failed_job = {
-                 ^
-TypeError: 'str' object is not a mapping
-INFO:     192.168.1.26:49667 - "OPTIONS /api/eda/jobs/9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200 HTTP/1.1" 200 OK
-2026-02-01 17:16:13,571 - app.api.eda - INFO - 🔍 Job status requested: 9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200
-2026-02-01 17:16:13,572 - app.api.eda - INFO - ✅ Job status: queued (progress: 0%)
-INFO:     192.168.1.26:49667 - "GET /api/eda/jobs/9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200 HTTP/1.1" 200 OK
-2026-02-01 17:16:14,605 - app.api.eda - INFO - 🔍 Job status requested: 9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200
-2026-02-01 17:16:14,607 - app.api.eda - INFO - ✅ Job status: queued (progress: 0%)
-INFO:     192.168.1.26:49667 - "GET /api/eda/jobs/9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200 HTTP/1.1" 200 OK
-2026-02-01 17:16:15,619 - app.api.eda - INFO - 🔍 Job status requested: 9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200
-2026-02-01 17:16:15,619 - app.api.eda - INFO - ✅ Job status: queued (progress: 0%)
-INFO:     192.168.1.26:49667 - "GET /api/eda/jobs/9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200 HTTP/1.1" 200 OK
-2026-02-01 17:16:16,629 - app.api.eda - INFO - 🔍 Job status requested: 9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200
-2026-02-01 17:16:16,629 - app.api.eda - INFO - ✅ Job status: queued (progress: 0%)
-INFO:     192.168.1.26:49667 - "GET /api/eda/jobs/9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200 HTTP/1.1" 200 OK
-2026-02-01 17:16:17,644 - app.api.eda - INFO - 🔍 Job status requested: 9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200
-2026-02-01 17:16:17,645 - app.api.eda - INFO - ✅ Job status: queued (progress: 0%)
-INFO:     192.168.1.26:49667 - "GET /api/eda/jobs/9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200 HTTP/1.1" 200 OK
-2026-02-01 17:16:18,702 - app.api.eda - INFO - 🔍 Job status requested: 9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200
-2026-02-01 17:16:18,702 - app.api.eda - INFO - ✅ Job status: queued (progress: 0%)
-INFO:     192.168.1.26:49667 - "GET /api/eda/jobs/9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200 HTTP/1.1" 200 OK
-2026-02-01 17:16:19,759 - app.api.eda - INFO - 🔍 Job status requested: 9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200
-2026-02-01 17:16:19,759 - app.api.eda - INFO - ✅ Job status: queued (progress: 0%)
-INFO:     192.168.1.26:49667 - "GET /api/eda/jobs/9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200 HTTP/1.1" 200 OK
-2026-02-01 17:16:20,811 - app.api.eda - INFO - 🔍 Job status requested: 9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200
-2026-02-01 17:16:20,811 - app.api.eda - INFO - ✅ Job status: queued (progress: 0%)
-INFO:     192.168.1.26:49667 - "GET /api/eda/jobs/9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200 HTTP/1.1" 200 OK
-2026-02-01 17:16:21,862 - app.api.eda - INFO - 🔍 Job status requested: 9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200
-2026-02-01 17:16:21,866 - app.api.eda - INFO - ✅ Job status: queued (progress: 0%)
-INFO:     192.168.1.26:49667 - "GET /api/eda/jobs/9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200 HTTP/1.1" 200 OK
-2026-02-01 17:16:22,878 - app.api.eda - INFO - 🔍 Job status requested: 9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200
-2026-02-01 17:16:22,879 - app.api.eda - INFO - ✅ Job status: queued (progress: 0%)
-INFO:     192.168.1.26:49667 - "GET /api/eda/jobs/9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200 HTTP/1.1" 200 OK
-2026-02-01 17:16:23,928 - app.api.eda - INFO - 🔍 Job status requested: 9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200
-2026-02-01 17:16:23,928 - app.api.eda - INFO - ✅ Job status: queued (progress: 0%)
-INFO:     192.168.1.26:49667 - "GET /api/eda/jobs/9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200 HTTP/1.1" 200 OK
-2026-02-01 17:16:24,995 - app.api.eda - INFO - 🔍 Job status requested: 9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200
-2026-02-01 17:16:24,996 - app.api.eda - INFO - ✅ Job status: queued (progress: 0%)
-INFO:     192.168.1.26:49667 - "GET /api/eda/jobs/9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200 HTTP/1.1" 200 OK
-2026-02-01 17:16:26,048 - app.api.eda - INFO - 🔍 Job status requested: 9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200
-2026-02-01 17:16:26,048 - app.api.eda - INFO - ✅ Job status: queued (progress: 0%)
-INFO:     192.168.1.26:49667 - "GET /api/eda/jobs/9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200 HTTP/1.1" 200 OK
-2026-02-01 17:16:27,327 - app.api.eda - INFO - 🔍 Job status requested: 9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200
-2026-02-01 17:16:27,327 - app.api.eda - INFO - ✅ Job status: queued (progress: 0%)
-INFO:     192.168.1.26:49667 - "GET /api/eda/jobs/9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200 HTTP/1.1" 200 OK
-2026-02-01 17:16:28,395 - app.api.eda - INFO - 🔍 Job status requested: 9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200
-2026-02-01 17:16:28,395 - app.api.eda - INFO - ✅ Job status: queued (progress: 0%)
-INFO:     192.168.1.26:49667 - "GET /api/eda/jobs/9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200 HTTP/1.1" 200 OK
-2026-02-01 17:16:29,566 - app.api.eda - INFO - 🔍 Job status requested: 9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200
-2026-02-01 17:16:29,567 - app.api.eda - INFO - ✅ Job status: queued (progress: 0%)
-INFO:     192.168.1.26:49667 - "GET /api/eda/jobs/9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200 HTTP/1.1" 200 OK
-2026-02-01 17:16:30,629 - app.api.eda - INFO - 🔍 Job status requested: 9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200
-2026-02-01 17:16:30,629 - app.api.eda - INFO - ✅ Job status: queued (progress: 0%)
-INFO:     192.168.1.26:49667 - "GET /api/eda/jobs/9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200 HTTP/1.1" 200 OK
-2026-02-01 17:16:31,697 - app.api.eda - INFO - 🔍 Job status requested: 9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200
-2026-02-01 17:16:31,697 - app.api.eda - INFO - ✅ Job status: queued (progress: 0%)
-INFO:     192.168.1.26:49667 - "GET /api/eda/jobs/9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200 HTTP/1.1" 200 OK
-2026-02-01 17:16:32,769 - app.api.eda - INFO - 🔍 Job status requested: 9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200
-2026-02-01 17:16:32,769 - app.api.eda - INFO - ✅ Job status: queued (progress: 0%)
-INFO:     192.168.1.26:49667 - "GET /api/eda/jobs/9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200 HTTP/1.1" 200 OK
-2026-02-01 17:16:33,780 - app.api.eda - INFO - 🔍 Job status requested: 9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200
-2026-02-01 17:16:33,780 - app.api.eda - INFO - ✅ Job status: queued (progress: 0%)
-INFO:     192.168.1.26:49667 - "GET /api/eda/jobs/9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200 HTTP/1.1" 200 OK
-2026-02-01 17:16:34,839 - app.api.eda - INFO - 🔍 Job status requested: 9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200
-2026-02-01 17:16:34,839 - app.api.eda - INFO - ✅ Job status: queued (progress: 0%)
-INFO:     192.168.1.26:49667 - "GET /api/eda/jobs/9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200 HTTP/1.1" 200 OK
-2026-02-01 17:16:36,002 - app.api.eda - INFO - 🔍 Job status requested: 9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200
-2026-02-01 17:16:36,003 - app.api.eda - INFO - ✅ Job status: queued (progress: 0%)
-INFO:     192.168.1.26:49667 - "GET /api/eda/jobs/9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200 HTTP/1.1" 200 OK
-2026-02-01 17:16:37,105 - app.api.eda - INFO - 🔍 Job status requested: 9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200
-2026-02-01 17:16:37,106 - app.api.eda - INFO - ✅ Job status: queued (progress: 0%)
-INFO:     192.168.1.26:49667 - "GET /api/eda/jobs/9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200 HTTP/1.1" 200 OK
-2026-02-01 17:16:38,204 - app.api.eda - INFO - 🔍 Job status requested: 9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200
-2026-02-01 17:16:38,205 - app.api.eda - INFO - ✅ Job status: queued (progress: 0%)
-INFO:     192.168.1.26:49667 - "GET /api/eda/jobs/9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200 HTTP/1.1" 200 OK
-2026-02-01 17:16:39,233 - app.api.eda - INFO - 🔍 Job status requested: 9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200
-2026-02-01 17:16:39,233 - app.api.eda - INFO - ✅ Job status: queued (progress: 0%)
-INFO:     192.168.1.26:49667 - "GET /api/eda/jobs/9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200 HTTP/1.1" 200 OK
-2026-02-01 17:16:41,204 - app.api.eda - INFO - 🔍 Job status requested: 9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200
-2026-02-01 17:16:41,205 - app.api.eda - INFO - ✅ Job status: queued (progress: 0%)
-INFO:     192.168.1.26:49667 - "GET /api/eda/jobs/9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200 HTTP/1.1" 200 OK
-2026-02-01 17:16:43,187 - app.api.eda - INFO - 🔍 Job status requested: 9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200
-2026-02-01 17:16:43,187 - app.api.eda - INFO - ✅ Job status: queued (progress: 0%)
-INFO:     192.168.1.26:49667 - "GET /api/eda/jobs/9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200 HTTP/1.1" 200 OK
-2026-02-01 17:16:45,185 - app.api.eda - INFO - 🔍 Job status requested: 9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200
-2026-02-01 17:16:45,185 - app.api.eda - INFO - ✅ Job status: queued (progress: 0%)
-INFO:     192.168.1.26:49667 - "GET /api/eda/jobs/9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200 HTTP/1.1" 200 OK
-2026-02-01 17:16:47,211 - app.api.eda - INFO - 🔍 Job status requested: 9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200
-2026-02-01 17:16:47,212 - app.api.eda - INFO - ✅ Job status: queued (progress: 0%)
-INFO:     192.168.1.26:49667 - "GET /api/eda/jobs/9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200 HTTP/1.1" 200 OK
-2026-02-01 17:16:49,186 - app.api.eda - INFO - 🔍 Job status requested: 9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200
-2026-02-01 17:16:49,186 - app.api.eda - INFO - ✅ Job status: queued (progress: 0%)
-INFO:     192.168.1.26:49667 - "GET /api/eda/jobs/9e33ae6c-b4ff-4b57-b1d9-f4b209fe8200 HTTP/1.1" 200 OK
-^CINFO:     Shutting down
-INFO:     Waiting for application shutdown.
-2026-02-01 17:16:50,791 - __main__ - INFO - 🛑 Shutting down ML Platform...
-2026-02-01 17:16:50,791 - __main__ - INFO - ✅ Cleanup complete
-INFO:     Application shutdown complete.
