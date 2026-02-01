@@ -1,10 +1,105 @@
-NFO:     192.168.1.26:63816 - "GET /api/eda/health HTTP/1.1" 200 OK
-INFO:     192.168.1.26:52190 - "GET /api/datasets/ HTTP/1.1" 200 OK
-2026-02-01 16:57:21,012 - app.api.eda - INFO - 📊 EDA analysis requested for dataset: d05fdb35-372d-4a8a-88b9-9caa1538787d
-2026-02-01 16:57:21,012 - app.api.eda - ERROR - ❌ Error starting analysis: name 'get_user_id_from_token' is not defined
+2026-02-01 17:00:09,992 - app.api.eda - INFO - 🚀 Background analysis task started for job: 8f93c40a-8a8e-45f7-b28c-26f906541f50
+INFO:     192.168.1.26:64312 - "POST /api/eda/dataset/d05fdb35-372d-4a8a-88b9-9caa1538787d/analyze HTTP/1.1" 202 Accepted
+2026-02-01 17:00:10,001 - app.api.eda - ERROR - ❌ EDA analysis failed: 'str' object does not support item assignment
+INFO:     192.168.1.26:64312 - "OPTIONS /api/eda/jobs/8f93c40a-8a8e-45f7-b28c-26f906541f50 HTTP/1.1" 200 OK
+2026-02-01 17:00:10,005 - __main__ - ERROR - ❌ Unhandled exception: name 'request' is not defined
 Traceback (most recent call last):
-  File "/home/ashok/work/latest/kedro-integrated-fast-api/app/api/eda.py", line 250, in start_eda_analysis
-    user_id = get_user_id_from_token(request)
-              ^^^^^^^^^^^^^^^^^^^^^^
-NameError: name 'get_user_id_from_token' is not defined
-INFO:     192.168.1.26:52190 - "POST /api/eda/dataset/d05fdb35-372d-4a8a-88b9-9caa1538787d/analyze HTTP/1.1" 500 Internal Server Error
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/cors.py", line 93, in __call__
+    await self.simple_response(scope, receive, send, request_headers=headers)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/cors.py", line 144, in simple_response
+    await self.app(scope, receive, send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/routing.py", line 716, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/routing.py", line 736, in app
+    await route.handle(scope, receive, send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/routing.py", line 290, in handle
+    await self.app(scope, receive, send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/routing.py", line 115, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/routing.py", line 102, in app
+    await response(scope, receive, send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/responses.py", line 167, in __call__
+    await self.background()
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/background.py", line 36, in __call__
+    await task()
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/background.py", line 21, in __call__
+    await self.func(*self.args, **self.kwargs)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/app/api/eda.py", line 169, in run_eda_analysis
+    auth_header = request.headers.get("authorization") or request.headers.get("Authorization")
+                  ^^^^^^^
+NameError: name 'request' is not defined. Did you mean: 'Request'?
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/uvicorn/protocols/http/h11_impl.py", line 410, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/uvicorn/middleware/proxy_headers.py", line 60, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/applications.py", line 1135, in __call__
+    await super().__call__(scope, receive, send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/applications.py", line 107, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/cors.py", line 93, in __call__
+    await self.simple_response(scope, receive, send, request_headers=headers)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/cors.py", line 144, in simple_response
+    await self.app(scope, receive, send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/routing.py", line 716, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/routing.py", line 736, in app
+    await route.handle(scope, receive, send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/routing.py", line 290, in handle
+    await self.app(scope, receive, send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/routing.py", line 115, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/fastapi/routing.py", line 102, in app
+    await response(scope, receive, send)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/responses.py", line 167, in __call__
+    await self.background()
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/background.py", line 36, in __call__
+    await task()
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/venv/lib/python3.12/site-packages/starlette/background.py", line 21, in __call__
+    await self.func(*self.args, **self.kwargs)
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/app/api/eda.py", line 169, in run_eda_analysis
+    auth_header = request.headers.get("authorization") or request.headers.get("Authorization")
+                  ^^^^^^^
+NameError: name 'request' is not defined. Did you mean: 'Request'?
+2026-02-01 17:00:10,023 - app.api.eda - INFO - 🔍 Job status requested: 8f93c40a-8a8e-45f7-b28c-26f906541f50
+2026-02-01 17:00:10,024 - app.api.eda - ERROR - ❌ Error fetching job status: 'progress'
+Traceback (most recent call last):
+  File "/home/ashok/work/latest/kedro-integrated-fast-api/app/api/eda.py", line 394, in get_job_status
+    logger.info(f"✅ Job status: {job['status']} (progress: {job['progress']}%)")
+                                                             ~~~^^^^^^^^^^^^
+KeyError: 'progress'
+INFO:     192.168.1.26:54182 - "GET /api/eda/jobs/8f93c40a-8a8e-45f7-b28c-26f906541f50 HTTP/1.1" 500 Internal Server Error
+
