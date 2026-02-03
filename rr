@@ -1,1 +1,41 @@
-01c7211f-cd44-4ce9-b213-d54e454c49ec|data_loading|dev-user-001|FAILED|{}||No module named '/home/ashok/work/latest/full/kedro-engine-dynamic'|2026-02-03 15:43:38.310188|2026-02-03 15:43:38.395953|2026-02-03 15:43:38.810360|0
+(venv) ashok@ubuntu:~/work/latest/full/kedro-engine-dynamic$ celery -A worker worker --loglevel=info -c 4
+2026-02-03 15:53:52,800 - ml_engine.utils.logger - INFO - ✅ Logging configured
+2026-02-03 15:53:52,801 - ml_engine - INFO - 🚀 ML Engine v0.2.0 initialized
+2026-02-03 15:53:52,801 - ml_engine.utils.logger - INFO - ✅ Logging configured
+2026-02-03 15:53:52,801 - src.ml_engine - INFO - 🚀 ML Engine v0.2.0 initialized
+[02/03/26 15:53:52] INFO     Using                                                                       __init__.py:269
+                             '/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site                
+                             -packages/kedro/framework/project/rich_logging.yml' as logging                             
+                             configuration.                                                                             
+ 
+ -------------- celery@ubuntu v5.6.2 (recovery)
+--- ***** ----- 
+-- ******* ---- Linux-6.14.0-37-generic-x86_64-with-glibc2.39 2026-02-03 15:53:53
+- *** --- * --- 
+- ** ---------- [config]
+- ** ---------- .> app:         ml_platform:0x74bf98c11f40
+- ** ---------- .> transport:   redis://localhost:6379/0
+- ** ---------- .> results:     disabled://
+- *** --- * --- .> concurrency: 4 (prefork)
+-- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+--- ***** ----- 
+ -------------- [queues]
+                .> celery           exchange=celery(direct) key=celery
+                
+
+[tasks]
+  . app.tasks.check_pipeline
+  . app.tasks.execute_pipeline
+  . app.tasks.get_pipeline_info
+  . worker.debug_task
+
+[2026-02-03 15:53:53,231: INFO/MainProcess] Connected to redis://localhost:6379/0
+[2026-02-03 15:53:53,234: INFO/MainProcess] mingle: searching for neighbors
+[2026-02-03 15:53:54,256: INFO/MainProcess] mingle: all alone
+[2026-02-03 15:53:54,284: INFO/MainProcess] celery@ubuntu ready.
+[2026-02-03 15:54:02,342: INFO/MainProcess] Events of group {task} enabled by remote.
+[2026-02-03 15:54:04,191: INFO/MainProcess] Task app.tasks.execute_pipeline[cb772a7d-9c78-4304-9ce2-67070f13e54c] received
+[2026-02-03 15:54:04,198: INFO/ForkPoolWorker-4] 🚀 Starting pipeline execution: data_loading (Job: 02baf0e8-25df-4605-bb9d-a9ba7e293b9a)
+[2026-02-03 15:54:04,237: INFO/ForkPoolWorker-4] ✅ Job 02baf0e8-25df-4605-bb9d-a9ba7e293b9a status updated to JobStatus.RUNNING
+[2026-02-03 15:54:04,237: INFO/ForkPoolWorker-4] KedroExecutor initialized with project: /home/ashok/work/latest/full/kedro-engine-dynamic
+
