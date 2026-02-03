@@ -1,19 +1,47 @@
+(venv) ashok@ubuntu:~/work/latest/full/kedro-engine-dynamic$ python main.py
+2026-02-03 15:57:23,650 - ml_engine.utils.logger - INFO - ✅ Logging configured
+2026-02-03 15:57:23,650 - ml_engine - INFO - 🚀 ML Engine v0.2.0 initialized
+2026-02-03 15:57:23,650 - ml_engine.utils.logger - INFO - ✅ Logging configured
+2026-02-03 15:57:23,650 - src.ml_engine - INFO - 🚀 ML Engine v0.2.0 initialized
+[02/03/26 15:57:23] INFO     Using                                                                       __init__.py:269
+                             '/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site                
+                             -packages/kedro/framework/project/rich_logging.yml' as logging                             
+                             configuration.                                                                             
+                    INFO     🎯 ML Platform starting on http://localhost:8000                                main.py:156
+INFO:     Started server process [15188]
+INFO:     Waiting for application startup.
+                    INFO     🚀 Starting ML Platform Application...                                           main.py:33
+                    INFO     📦 Initializing database tables...                                               main.py:36
+[02/03/26 15:57:24] INFO     ✅ Database tables created/verified                                              main.py:38
+                    INFO     ✅ Default data initialized                                                      main.py:42
+                    INFO     ======================================================================           main.py:44
+                    INFO     ✅ ML PLATFORM READY!                                                            main.py:45
+                    INFO     ======================================================================           main.py:46
+                    INFO     📍 API Documentation: http://localhost:8000/docs                                 main.py:47
+                    INFO     📍 EDA Health: GET /api/eda/health                                               main.py:48
+                    INFO     ======================================================================           main.py:49
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+
+
+
+celery log is:
 (venv) ashok@ubuntu:~/work/latest/full/kedro-engine-dynamic$ celery -A worker worker --loglevel=info -c 4
-2026-02-03 15:53:52,800 - ml_engine.utils.logger - INFO - ✅ Logging configured
-2026-02-03 15:53:52,801 - ml_engine - INFO - 🚀 ML Engine v0.2.0 initialized
-2026-02-03 15:53:52,801 - ml_engine.utils.logger - INFO - ✅ Logging configured
-2026-02-03 15:53:52,801 - src.ml_engine - INFO - 🚀 ML Engine v0.2.0 initialized
-[02/03/26 15:53:52] INFO     Using                                                                       __init__.py:269
+2026-02-03 15:57:37,693 - ml_engine.utils.logger - INFO - ✅ Logging configured
+2026-02-03 15:57:37,694 - ml_engine - INFO - 🚀 ML Engine v0.2.0 initialized
+2026-02-03 15:57:37,694 - ml_engine.utils.logger - INFO - ✅ Logging configured
+2026-02-03 15:57:37,694 - src.ml_engine - INFO - 🚀 ML Engine v0.2.0 initialized
+[02/03/26 15:57:37] INFO     Using                                                                       __init__.py:269
                              '/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site                
                              -packages/kedro/framework/project/rich_logging.yml' as logging                             
                              configuration.                                                                             
  
  -------------- celery@ubuntu v5.6.2 (recovery)
 --- ***** ----- 
--- ******* ---- Linux-6.14.0-37-generic-x86_64-with-glibc2.39 2026-02-03 15:53:53
+-- ******* ---- Linux-6.14.0-37-generic-x86_64-with-glibc2.39 2026-02-03 15:57:37
 - *** --- * --- 
 - ** ---------- [config]
-- ** ---------- .> app:         ml_platform:0x74bf98c11f40
+- ** ---------- .> app:         ml_platform:0x7f41913322a0
 - ** ---------- .> transport:   redis://localhost:6379/0
 - ** ---------- .> results:     disabled://
 - *** --- * --- .> concurrency: 4 (prefork)
@@ -29,13 +57,12 @@
   . app.tasks.get_pipeline_info
   . worker.debug_task
 
-[2026-02-03 15:53:53,231: INFO/MainProcess] Connected to redis://localhost:6379/0
-[2026-02-03 15:53:53,234: INFO/MainProcess] mingle: searching for neighbors
-[2026-02-03 15:53:54,256: INFO/MainProcess] mingle: all alone
-[2026-02-03 15:53:54,284: INFO/MainProcess] celery@ubuntu ready.
-[2026-02-03 15:54:02,342: INFO/MainProcess] Events of group {task} enabled by remote.
-[2026-02-03 15:54:04,191: INFO/MainProcess] Task app.tasks.execute_pipeline[cb772a7d-9c78-4304-9ce2-67070f13e54c] received
-[2026-02-03 15:54:04,198: INFO/ForkPoolWorker-4] 🚀 Starting pipeline execution: data_loading (Job: 02baf0e8-25df-4605-bb9d-a9ba7e293b9a)
-[2026-02-03 15:54:04,237: INFO/ForkPoolWorker-4] ✅ Job 02baf0e8-25df-4605-bb9d-a9ba7e293b9a status updated to JobStatus.RUNNING
-[2026-02-03 15:54:04,237: INFO/ForkPoolWorker-4] KedroExecutor initialized with project: /home/ashok/work/latest/full/kedro-engine-dynamic
-
+[2026-02-03 15:57:38,157: INFO/MainProcess] Connected to redis://localhost:6379/0
+[2026-02-03 15:57:38,162: INFO/MainProcess] mingle: searching for neighbors
+[2026-02-03 15:57:39,198: INFO/MainProcess] mingle: all alone
+[2026-02-03 15:57:39,225: INFO/MainProcess] celery@ubuntu ready.
+[2026-02-03 15:57:42,339: INFO/MainProcess] Events of group {task} enabled by remote.
+[2026-02-03 15:57:59,136: INFO/MainProcess] Task app.tasks.execute_pipeline[53c81d87-fe93-4960-9df4-157de3b7c1db] received
+[2026-02-03 15:57:59,140: INFO/ForkPoolWorker-4] 🚀 Starting pipeline execution: data_loading (Job: 481fdab2-bfcf-4780-a406-d610e9430c1c)
+[2026-02-03 15:57:59,180: INFO/ForkPoolWorker-4] ✅ Job 481fdab2-bfcf-4780-a406-d610e9430c1c status updated to JobStatus.RUNNING
+[2026-02-03 15:57:59,182: INFO/ForkPoolWorker-4] KedroExecutor initialized with project: /home/ashok/work/latest/full/kedro-engine-dynamic
