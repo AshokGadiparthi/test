@@ -1,72 +1,16 @@
-It seems that you're trying to import a function `get_executor` from `src.ml_engine.kedro_runner` in your `pipelines.py`, but it doesn't exist in the file, which is causing the `ImportError`.
+-02-03 17:13:54,013: INFO/ForkPoolWorker-4]    Run ID: b97e033b-d5e1-4b29-a0e9-0df615a72866
+[2026-02-03 17:13:54,013: ERROR/ForkPoolWorker-4] ❌ Pipeline failed: Package name not found. Make sure you have configured the project using 'bootstrap_project'. This should happen automatically if you are using Kedro command line interface.
+[2026-02-03 17:13:54,015: ERROR/ForkPoolWorker-4] Traceback (most recent call last):
+  File "/home/ashok/work/latest/full/kedro-engine-dynamic/src/ml_engine/kedro_runner.py", line 198, in execute_pipeline
+    with KedroSession.create(
+         ^^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site-packages/kedro/framework/session/session.py", line 156, in create
+    validate_settings()
+  File "/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site-packages/kedro/framework/project/__init__.py", line 335, in validate_settings
+    raise ValueError(
+ValueError: Package name not found. Make sure you have configured the project using 'bootstrap_project'. This should happen automatically if you are using Kedro command line interface.
 
-### Issue:
-
-* The `ImportError` is saying that Python cannot find the `get_executor` function in the `kedro_runner.py` file in `src/ml_engine/`.
-
-### Solution:
-
-* It seems that you may have missed defining the `get_executor` function in `kedro_runner.py` or possibly misreferenced it.
-* If the intention is to expose the `KedroExecutor` class or any function like `get_executor` for pipeline execution, I’ll guide you on how to proceed.
-
----
-
-### Option 1: Expose the `KedroExecutor` class as `get_executor` in `kedro_runner.py`
-
-In `src/ml_engine/kedro_runner.py`, add a `get_executor` function that returns an instance of `KedroExecutor`. This way, you can import `get_executor` in `pipelines.py`.
-
-**Updated `kedro_runner.py`:**
-
-```python
-# src/ml_engine/kedro_runner.py
-
-from .kedro_executor import KedroExecutor
-
-def get_executor(project_path: str = None) -> KedroExecutor:
-    """
-    Returns an instance of the KedroExecutor.
-
-    Args:
-        project_path: Path to Kedro project root (optional)
-
-    Returns:
-        KedroExecutor: Instance of the executor
-    """
-    return KedroExecutor(project_path=project_path)
-
-# Your other code here...
-```
-
-Now, you can import `get_executor` in your `pipelines.py`:
-
-**Updated `pipelines.py`**:
-
-```python
-# app/api/pipelines.py
-
-from src.ml_engine.kedro_runner import get_executor
-
-# Now you can use get_executor to get an instance of KedroExecutor
-```
-
----
-
-### Option 2: Directly Instantiate `KedroExecutor` in `pipelines.py`
-
-Alternatively, if you don't need the `get_executor` function and just need to instantiate `KedroExecutor` directly in `pipelines.py`, you can do so:
-
-```python
-# app/api/pipelines.py
-
-from src.ml_engine.kedro_executor import KedroExecutor
-
-# Directly use KedroExecutor instead of get_executor
-executor = KedroExecutor(project_path='/home/ashok/work/latest/full/kedro-engine-dynamic')
-```
-
-### Next Steps:
-
-1. **Option 1**: If you want to keep the `get_executor` function, make sure you add the `get_executor` function to `kedro_runner.py` as shown above.
-2. **Option 2**: If you just need the `KedroExecutor` in `pipelines.py`, directly import and instantiate the `KedroExecutor` class.
-
-Once you've updated the code, try running your application again. This should resolve the `ImportError` issue. Let me know if you need further assistance!
+[2026-02-03 17:13:54,015: ERROR/ForkPoolWorker-4] ❌ Pipeline failed: Package name not found. Make sure you have configured the project using 'bootstrap_project'. This should happen automatically if you are using Kedro command line interface.
+[2026-02-03 17:13:54,035: INFO/ForkPoolWorker-4] ✅ Job b97e033b-d5e1-4b29-a0e9-0df615a72866 status updated to JobStatus.FAILED
+[2026-02-03 17:13:54,038: INFO/ForkPoolWorker-4] ✅ Task f57f53db-5cc7-4659-be36-be7d8f872865 succeeded
+[2026-02-03 17:13:54,038: INFO/ForkPoolWorker-4] Task app.tasks.execute_pipeline[f57f53db-5cc7-4659-be36-be7d8f872865] succeeded in 0.06808611000451492s: {'status': 'failed', 'pipeline_name': 'data_loading', 'run_id': 'b97e033b-d5e1-4b29-a0e9-0df615a72866', 'error': 'Package name not found. Make sure you have configured the project using \'bootstrap_project\'. This should happen automatically if you are using Kedro command line interface.', 'execution_time': 0.0, 'started_at': '2026-02-03T17:13:54.013410', 'completed_at': '2026-02-03T17:13:54.013527'}
