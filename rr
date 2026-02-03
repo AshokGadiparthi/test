@@ -1,16 +1,34 @@
--02-03 17:13:54,013: INFO/ForkPoolWorker-4]    Run ID: b97e033b-d5e1-4b29-a0e9-0df615a72866
-[2026-02-03 17:13:54,013: ERROR/ForkPoolWorker-4] ❌ Pipeline failed: Package name not found. Make sure you have configured the project using 'bootstrap_project'. This should happen automatically if you are using Kedro command line interface.
-[2026-02-03 17:13:54,015: ERROR/ForkPoolWorker-4] Traceback (most recent call last):
-  File "/home/ashok/work/latest/full/kedro-engine-dynamic/src/ml_engine/kedro_runner.py", line 198, in execute_pipeline
-    with KedroSession.create(
-         ^^^^^^^^^^^^^^^^^^^^
-  File "/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site-packages/kedro/framework/session/session.py", line 156, in create
-    validate_settings()
-  File "/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site-packages/kedro/framework/project/__init__.py", line 335, in validate_settings
-    raise ValueError(
-ValueError: Package name not found. Make sure you have configured the project using 'bootstrap_project'. This should happen automatically if you are using Kedro command line interface.
+ashok@ubuntu:~/work/latest/full/kedro-engine-dynamic$ sqlite3 ml_platform.db 
+SQLite version 3.45.1 2024-01-30 16:01:20
+Enter ".help" for usage hints.
+sqlite> select * from jobs;
+Error: unable to open database "ml_platform.db": unable to open database file
 
-[2026-02-03 17:13:54,015: ERROR/ForkPoolWorker-4] ❌ Pipeline failed: Package name not found. Make sure you have configured the project using 'bootstrap_project'. This should happen automatically if you are using Kedro command line interface.
-[2026-02-03 17:13:54,035: INFO/ForkPoolWorker-4] ✅ Job b97e033b-d5e1-4b29-a0e9-0df615a72866 status updated to JobStatus.FAILED
-[2026-02-03 17:13:54,038: INFO/ForkPoolWorker-4] ✅ Task f57f53db-5cc7-4659-be36-be7d8f872865 succeeded
-[2026-02-03 17:13:54,038: INFO/ForkPoolWorker-4] Task app.tasks.execute_pipeline[f57f53db-5cc7-4659-be36-be7d8f872865] succeeded in 0.06808611000451492s: {'status': 'failed', 'pipeline_name': 'data_loading', 'run_id': 'b97e033b-d5e1-4b29-a0e9-0df615a72866', 'error': 'Package name not found. Make sure you have configured the project using \'bootstrap_project\'. This should happen automatically if you are using Kedro command line interface.', 'execution_time': 0.0, 'started_at': '2026-02-03T17:13:54.013410', 'completed_at': '2026-02-03T17:13:54.013527'}
+
+(venv) ashok@ubuntu:~/work/latest/full/kedro-engine-dynamic$ python main.py 
+/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site-packages/pydantic/_internal/_fields.py:149: UserWarning: Field "model_type" has conflict with protected namespace "model_".
+
+You may be able to resolve this warning by setting `model_config['protected_namespaces'] = ()`.
+  warnings.warn(
+🔗 Kedro Project Path: /home/ashok/work/latest/full/kedro-engine-dynamic
+/home/ashok/work/latest/full/kedro-engine-dynamic/main.py:56: DeprecationWarning: 
+        on_event is deprecated, use lifespan event handlers instead.
+
+        Read more about it in the
+        [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+        
+  @app.on_event("startup")
+/home/ashok/work/latest/full/kedro-engine-dynamic/main.py:60: DeprecationWarning: 
+        on_event is deprecated, use lifespan event handlers instead.
+
+        Read more about it in the
+        [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+        
+  @app.on_event("shutdown")
+INFO:     Started server process [18040]
+INFO:     Waiting for application startup.
+INFO:__main__:✅ FastAPI application started
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     192.168.1.26:60152 - "GET /docs HTTP/1.1" 200 OK
+INFO:     192.168.1.26:60152 - "GET /openapi.json HTTP/1.1" 200 OK
