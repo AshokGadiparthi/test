@@ -1,44 +1,72 @@
-INFO:     Application startup complete.
-INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-[02/03/26 16:56:21] INFO     🚀 Job submission started                                                        jobs.py:25
-                    INFO     ✅ Job created: d1d20db8-a263-4c71-b178-906094d46797                      job_manager.py:50
-                    INFO     ✅ Job created: d1d20db8-a263-4c71-b178-906094d46797                             jobs.py:35
-                    INFO     📤 Sending task to Celery...                                                     jobs.py:38
-                    INFO     ✅ Task sent! Task ID: ee88b576-4698-47fc-96fb-b14e60f27759                      jobs.py:46
-                    INFO        Task state: PENDING                                                           jobs.py:47
-INFO:     192.168.1.26:49917 - "POST /api/v1/jobs/api/v1/jobs HTTP/1.1" 202 Accepted
-[02/03/26 16:56:55] INFO     🚀 Job submission started                                                        jobs.py:25
-                    INFO     ✅ Job created: f321de43-b3ee-4482-a520-160a3db3c8dd                      job_manager.py:50
-                    INFO     ✅ Job created: f321de43-b3ee-4482-a520-160a3db3c8dd                             jobs.py:35
-                    INFO     📤 Sending task to Celery...                                                     jobs.py:38
-                    INFO     ✅ Task sent! Task ID: 7d082aec-e428-4f71-803e-76294bb3a963                      jobs.py:46
-                    INFO        Task state: PENDING                                                           jobs.py:47
-INFO:     192.168.1.26:65458 - "POST /api/v1/jobs/api/v1/jobs HTTP/1.1" 202 Accepted
+It seems that you're trying to import a function `get_executor` from `src.ml_engine.kedro_runner` in your `pipelines.py`, but it doesn't exist in the file, which is causing the `ImportError`.
 
+### Issue:
 
---
+* The `ImportError` is saying that Python cannot find the `get_executor` function in the `kedro_runner.py` file in `src/ml_engine/`.
 
-celery log
-26-02-03 16:56:55,371: INFO/ForkPoolWorker-4] ✅ Job f321de43-b3ee-4482-a520-160a3db3c8dd status updated to JobStatus.RUNNING
-[2026-02-03 16:56:55,371: INFO/ForkPoolWorker-4] KedroExecutor initialized with project: /home/ashok/work/latest/full/kedro-engine-dynamic
-[2026-02-03 16:56:55,371: INFO/ForkPoolWorker-4] ✅ Kedro project initialized successfully
-[2026-02-03 16:56:55,371: INFO/ForkPoolWorker-4] 🚀 Starting pipeline execution: data_loading
-[2026-02-03 16:56:55,371: INFO/ForkPoolWorker-4]    Run ID: f321de43-b3ee-4482-a520-160a3db3c8dd
-[2026-02-03 16:56:55,372: ERROR/ForkPoolWorker-4] ❌ Pipeline execution failed: No module named '/home/ashok/work/latest/full/kedro-engine-dynamic'
-[2026-02-03 16:56:55,373: ERROR/ForkPoolWorker-4] Traceback:
-Traceback (most recent call last):
-  File "/home/ashok/work/latest/full/kedro-engine-dynamic/src/ml_engine/kedro_runner.py", line 233, in execute_pipeline
-    with KedroSession.create(project_path=self.project_path) as session:
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site-packages/kedro/framework/session/session.py", line 156, in create
-    validate_settings()
-  File "/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site-packages/kedro/framework/project/__init__.py", line 341, in validate_settings
-    if importlib.util.find_spec(f"{PACKAGE_NAME}.settings") is not None:
-       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "<frozen importlib.util>", line 92, in find_spec
-ModuleNotFoundError: No module named '/home/ashok/work/latest/full/kedro-engine-dynamic'
+### Solution:
 
-[2026-02-03 16:56:55,373: ERROR/ForkPoolWorker-4] ❌ Pipeline failed: No module named '/home/ashok/work/latest/full/kedro-engine-dynamic'
-[2026-02-03 16:56:55,386: INFO/ForkPoolWorker-4] ✅ Job f321de43-b3ee-4482-a520-160a3db3c8dd status updated to JobStatus.FAILED
-[2026-02-03 16:56:55,390: INFO/ForkPoolWorker-4] ✅ Task 7d082aec-e428-4f71-803e-76294bb3a963 succeeded
-[2026-02-03 16:56:55,390: INFO/ForkPoolWorker-4] Task app.tasks.execute_pipeline[7d082aec-e428-4f71-803e-76294bb3a963] succeeded in 0.07374142100161407s: {'status': 'failed', 'pipeline_name': 'data_loading', 'run_id': 'f321de43-b3ee-4482-a520-160a3db3c8dd', 'error': 'No module named \'/home/ashok/work/latest/full/kedro-engine-dynamic\'', 'execution_time': 0.0, 'started_at': '2026-02-03T16:56:55.371687', 'completed_at': '2026-02-03T16:56:55.372001'}
+* It seems that you may have missed defining the `get_executor` function in `kedro_runner.py` or possibly misreferenced it.
+* If the intention is to expose the `KedroExecutor` class or any function like `get_executor` for pipeline execution, I’ll guide you on how to proceed.
+
+---
+
+### Option 1: Expose the `KedroExecutor` class as `get_executor` in `kedro_runner.py`
+
+In `src/ml_engine/kedro_runner.py`, add a `get_executor` function that returns an instance of `KedroExecutor`. This way, you can import `get_executor` in `pipelines.py`.
+
+**Updated `kedro_runner.py`:**
+
+```python
+# src/ml_engine/kedro_runner.py
+
+from .kedro_executor import KedroExecutor
+
+def get_executor(project_path: str = None) -> KedroExecutor:
+    """
+    Returns an instance of the KedroExecutor.
+
+    Args:
+        project_path: Path to Kedro project root (optional)
+
+    Returns:
+        KedroExecutor: Instance of the executor
+    """
+    return KedroExecutor(project_path=project_path)
+
+# Your other code here...
+```
+
+Now, you can import `get_executor` in your `pipelines.py`:
+
+**Updated `pipelines.py`**:
+
+```python
+# app/api/pipelines.py
+
+from src.ml_engine.kedro_runner import get_executor
+
+# Now you can use get_executor to get an instance of KedroExecutor
+```
+
+---
+
+### Option 2: Directly Instantiate `KedroExecutor` in `pipelines.py`
+
+Alternatively, if you don't need the `get_executor` function and just need to instantiate `KedroExecutor` directly in `pipelines.py`, you can do so:
+
+```python
+# app/api/pipelines.py
+
+from src.ml_engine.kedro_executor import KedroExecutor
+
+# Directly use KedroExecutor instead of get_executor
+executor = KedroExecutor(project_path='/home/ashok/work/latest/full/kedro-engine-dynamic')
+```
+
+### Next Steps:
+
+1. **Option 1**: If you want to keep the `get_executor` function, make sure you add the `get_executor` function to `kedro_runner.py` as shown above.
+2. **Option 2**: If you just need the `KedroExecutor` in `pipelines.py`, directly import and instantiate the `KedroExecutor` class.
+
+Once you've updated the code, try running your application again. This should resolve the `ImportError` issue. Let me know if you need further assistance!
