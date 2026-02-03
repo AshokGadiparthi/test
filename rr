@@ -1,15 +1,44 @@
-(venv) ashok@ubuntu:~/work/latest/full/kedro-engine-dynamic$ redis-cli KEYS '*'
-1) "_kombu.binding.ml_platform"
-2) "_kombu.binding.celery"
-3) "_kombu.binding.celeryev"
-4) "_kombu.binding.ml_pipelines"
-5) "celery"
-(venv) ashok@ubuntu:~/work/latest/full/kedro-engine-dynamic$ redis-cli LRANGE celery 0 -1 | head -5
-{"body": "W1tdLCB7ImpvYl9pZCI6ICIyOThiNjgzYi0wMzczLTQwMzQtYmIxMC0zMDkyYzA5M2M5NmQiLCAicGlwZWxpbmVfbmFtZSI6ICJkYXRhX2xvYWRpbmciLCAicGFyYW1ldGVycyI6IHt9fSwgeyJjYWxsYmFja3MiOiBudWxsLCAiZXJyYmFja3MiOiBudWxsLCAiY2hhaW4iOiBudWxsLCAiY2hvcmQiOiBudWxsfV0=", "content-encoding": "utf-8", "content-type": "application/json", "headers": {"lang": "py", "task": "app.tasks.execute_pipeline", "id": "1607c121-a2d8-4ed8-9b81-1d862528ca26", "shadow": null, "eta": null, "expires": null, "group": null, "group_index": null, "retries": 0, "timelimit": [null, null], "root_id": "1607c121-a2d8-4ed8-9b81-1d862528ca26", "parent_id": null, "argsrepr": "()", "kwargsrepr": "{'job_id': '298b683b-0373-4034-bb10-3092c093c96d', 'pipeline_name': 'data_loading', 'parameters': {}}", "origin": "gen16093@ubuntu", "ignore_result": false, "replaced_task_nesting": 0, "stamped_headers": null, "stamps": {}}, "properties": {"correlation_id": "1607c121-a2d8-4ed8-9b81-1d862528ca26", "reply_to": "af32bc58-8bed-3916-9439-82614739b840", "delivery_mode": 2, "delivery_info": {"exchange": "", "routing_key": "celery"}, "priority": 0, "body_encoding": "base64", "delivery_tag": "b3a91bb5-3658-4b0b-ab9c-1905ed22c61c"}}
-{"body": "W1tdLCB7ImpvYl9pZCI6ICI0NThmNWMwZi0xMWY0LTRmMDItODFmNS0zYTEyZTc1NzM2MWMiLCAicGlwZWxpbmVfbmFtZSI6ICJkYXRhX2xvYWRpbmciLCAicGFyYW1ldGVycyI6IHt9fSwgeyJjYWxsYmFja3MiOiBudWxsLCAiZXJyYmFja3MiOiBudWxsLCAiY2hhaW4iOiBudWxsLCAiY2hvcmQiOiBudWxsfV0=", "content-encoding": "utf-8", "content-type": "application/json", "headers": {"lang": "py", "task": "app.tasks.execute_pipeline", "id": "2920b0ba-cd9e-443f-913b-34a1bb375a20", "shadow": null, "eta": null, "expires": null, "group": null, "group_index": null, "retries": 0, "timelimit": [null, null], "root_id": "2920b0ba-cd9e-443f-913b-34a1bb375a20", "parent_id": null, "argsrepr": "()", "kwargsrepr": "{'job_id': '458f5c0f-11f4-4f02-81f5-3a12e757361c', 'pipeline_name': 'data_loading', 'parameters': {}}", "origin": "gen16093@ubuntu", "ignore_result": false, "replaced_task_nesting": 0, "stamped_headers": null, "stamps": {}}, "properties": {"correlation_id": "2920b0ba-cd9e-443f-913b-34a1bb375a20", "reply_to": "af32bc58-8bed-3916-9439-82614739b840", "delivery_mode": 2, "delivery_info": {"exchange": "", "routing_key": "celery"}, "priority": 0, "body_encoding": "base64", "delivery_tag": "96dcb6c8-8c97-4f37-870d-9d2750f78954"}}
-{"body": "W1tdLCB7ImpvYl9pZCI6ICJjYWYyZDk1ZS0wNDA0LTQyYzktOGI5Yy1iNDgyYjRhZDUxN2YiLCAicGlwZWxpbmVfbmFtZSI6ICJkYXRhX2xvYWRpbmciLCAicGFyYW1ldGVycyI6IHt9fSwgeyJjYWxsYmFja3MiOiBudWxsLCAiZXJyYmFja3MiOiBudWxsLCAiY2hhaW4iOiBudWxsLCAiY2hvcmQiOiBudWxsfV0=", "content-encoding": "utf-8", "content-type": "application/json", "headers": {"lang": "py", "task": "app.tasks.execute_pipeline", "id": "b9f8f59c-d184-489a-b19c-01cffdf1b4e3", "shadow": null, "eta": null, "expires": null, "group": null, "group_index": null, "retries": 0, "timelimit": [null, null], "root_id": "b9f8f59c-d184-489a-b19c-01cffdf1b4e3", "parent_id": null, "argsrepr": "()", "kwargsrepr": "{'job_id': 'caf2d95e-0404-42c9-8b9c-b482b4ad517f', 'pipeline_name': 'data_loading', 'parameters': {}}", "origin": "gen16093@ubuntu", "ignore_result": false, "replaced_task_nesting": 0, "stamped_headers": null, "stamps": {}}, "properties": {"correlation_id": "b9f8f59c-d184-489a-b19c-01cffdf1b4e3", "reply_to": "af32bc58-8bed-3916-9439-82614739b840", "delivery_mode": 2, "delivery_info": {"exchange": "", "routing_key": "celery"}, "priority": 0, "body_encoding": "base64", "delivery_tag": "faa74272-1a1a-437c-8210-6a82adcc9877"}}
-{"body": "W1tdLCB7ImpvYl9pZCI6ICJiNDY2YTQ4Mi05ZTUzLTQ1ZmItYjQ0OS1jODBlMzZhNGMzM2MiLCAicGlwZWxpbmVfbmFtZSI6ICJkYXRhX2xvYWRpbmciLCAicGFyYW1ldGVycyI6IHt9fSwgeyJjYWxsYmFja3MiOiBudWxsLCAiZXJyYmFja3MiOiBudWxsLCAiY2hhaW4iOiBudWxsLCAiY2hvcmQiOiBudWxsfV0=", "content-encoding": "utf-8", "content-type": "application/json", "headers": {"lang": "py", "task": "app.tasks.execute_pipeline", "id": "5ab939f7-70ce-41c4-a611-1ba8ca5686d9", "shadow": null, "eta": null, "expires": null, "group": null, "group_index": null, "retries": 0, "timelimit": [null, null], "root_id": "5ab939f7-70ce-41c4-a611-1ba8ca5686d9", "parent_id": null, "argsrepr": "()", "kwargsrepr": "{'job_id': 'b466a482-9e53-45fb-b449-c80e36a4c33c', 'pipeline_name': 'data_loading', 'parameters': {}}", "origin": "gen16093@ubuntu", "ignore_result": false, "replaced_task_nesting": 0, "stamped_headers": null, "stamps": {}}, "properties": {"correlation_id": "5ab939f7-70ce-41c4-a611-1ba8ca5686d9", "reply_to": "af32bc58-8bed-3916-9439-82614739b840", "delivery_mode": 2, "delivery_info": {"exchange": "", "routing_key": "celery"}, "priority": 0, "body_encoding": "base64", "delivery_tag": "b9d8b2bc-027a-46bc-a960-f143311a450c"}}
-{"body": "W1tdLCB7ImpvYl9pZCI6ICI1MDA3NTM1OS02NmZhLTQ0N2YtYTM4ZS1hMGVjYjQ0OTAzZmQiLCAicGlwZWxpbmVfbmFtZSI6ICJkYXRhX2xvYWRpbmciLCAicGFyYW1ldGVycyI6IHt9fSwgeyJjYWxsYmFja3MiOiBudWxsLCAiZXJyYmFja3MiOiBudWxsLCAiY2hhaW4iOiBudWxsLCAiY2hvcmQiOiBudWxsfV0=", "content-encoding": "utf-8", "content-type": "application/json", "headers": {"lang": "py", "task": "app.tasks.execute_pipeline", "id": "e5e1d721-e8fc-41e9-a4fb-80791ec783fc", "shadow": null, "eta": null, "expires": null, "group": null, "group_index": null, "retries": 0, "timelimit": [null, null], "root_id": "e5e1d721-e8fc-41e9-a4fb-80791ec783fc", "parent_id": null, "argsrepr": "()", "kwargsrepr": "{'job_id': '50075359-66fa-447f-a38e-a0ecb44903fd', 'pipeline_name': 'data_loading', 'parameters': {}}", "origin": "gen16093@ubuntu", "ignore_result": false, "replaced_task_nesting": 0, "stamped_headers": null, "stamps": {}}, "properties": {"correlation_id": "e5e1d721-e8fc-41e9-a4fb-80791ec783fc", "reply_to": "af32bc58-8bed-3916-9439-82614739b840", "delivery_mode": 2, "delivery_info": {"exchange": "", "routing_key": "celery"}, "priority": 0, "body_encoding": "base64", "delivery_tag": "42f0ab6f-81ac-47b9-b0b1-078f96fc662c"}}
-(venv) ashok@ubuntu:~/work/latest/full/kedro-engine-dynamic$ redis-cli LRANGE celery-task-meta-queue 0 1
-(empty array)
-(venv) ashok@ubuntu:~/work/latest/full/kedro-engine-dynamic$ 
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+[02/03/26 16:56:21] INFO     🚀 Job submission started                                                        jobs.py:25
+                    INFO     ✅ Job created: d1d20db8-a263-4c71-b178-906094d46797                      job_manager.py:50
+                    INFO     ✅ Job created: d1d20db8-a263-4c71-b178-906094d46797                             jobs.py:35
+                    INFO     📤 Sending task to Celery...                                                     jobs.py:38
+                    INFO     ✅ Task sent! Task ID: ee88b576-4698-47fc-96fb-b14e60f27759                      jobs.py:46
+                    INFO        Task state: PENDING                                                           jobs.py:47
+INFO:     192.168.1.26:49917 - "POST /api/v1/jobs/api/v1/jobs HTTP/1.1" 202 Accepted
+[02/03/26 16:56:55] INFO     🚀 Job submission started                                                        jobs.py:25
+                    INFO     ✅ Job created: f321de43-b3ee-4482-a520-160a3db3c8dd                      job_manager.py:50
+                    INFO     ✅ Job created: f321de43-b3ee-4482-a520-160a3db3c8dd                             jobs.py:35
+                    INFO     📤 Sending task to Celery...                                                     jobs.py:38
+                    INFO     ✅ Task sent! Task ID: 7d082aec-e428-4f71-803e-76294bb3a963                      jobs.py:46
+                    INFO        Task state: PENDING                                                           jobs.py:47
+INFO:     192.168.1.26:65458 - "POST /api/v1/jobs/api/v1/jobs HTTP/1.1" 202 Accepted
+
+
+--
+
+celery log
+26-02-03 16:56:55,371: INFO/ForkPoolWorker-4] ✅ Job f321de43-b3ee-4482-a520-160a3db3c8dd status updated to JobStatus.RUNNING
+[2026-02-03 16:56:55,371: INFO/ForkPoolWorker-4] KedroExecutor initialized with project: /home/ashok/work/latest/full/kedro-engine-dynamic
+[2026-02-03 16:56:55,371: INFO/ForkPoolWorker-4] ✅ Kedro project initialized successfully
+[2026-02-03 16:56:55,371: INFO/ForkPoolWorker-4] 🚀 Starting pipeline execution: data_loading
+[2026-02-03 16:56:55,371: INFO/ForkPoolWorker-4]    Run ID: f321de43-b3ee-4482-a520-160a3db3c8dd
+[2026-02-03 16:56:55,372: ERROR/ForkPoolWorker-4] ❌ Pipeline execution failed: No module named '/home/ashok/work/latest/full/kedro-engine-dynamic'
+[2026-02-03 16:56:55,373: ERROR/ForkPoolWorker-4] Traceback:
+Traceback (most recent call last):
+  File "/home/ashok/work/latest/full/kedro-engine-dynamic/src/ml_engine/kedro_runner.py", line 233, in execute_pipeline
+    with KedroSession.create(project_path=self.project_path) as session:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site-packages/kedro/framework/session/session.py", line 156, in create
+    validate_settings()
+  File "/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site-packages/kedro/framework/project/__init__.py", line 341, in validate_settings
+    if importlib.util.find_spec(f"{PACKAGE_NAME}.settings") is not None:
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib.util>", line 92, in find_spec
+ModuleNotFoundError: No module named '/home/ashok/work/latest/full/kedro-engine-dynamic'
+
+[2026-02-03 16:56:55,373: ERROR/ForkPoolWorker-4] ❌ Pipeline failed: No module named '/home/ashok/work/latest/full/kedro-engine-dynamic'
+[2026-02-03 16:56:55,386: INFO/ForkPoolWorker-4] ✅ Job f321de43-b3ee-4482-a520-160a3db3c8dd status updated to JobStatus.FAILED
+[2026-02-03 16:56:55,390: INFO/ForkPoolWorker-4] ✅ Task 7d082aec-e428-4f71-803e-76294bb3a963 succeeded
+[2026-02-03 16:56:55,390: INFO/ForkPoolWorker-4] Task app.tasks.execute_pipeline[7d082aec-e428-4f71-803e-76294bb3a963] succeeded in 0.07374142100161407s: {'status': 'failed', 'pipeline_name': 'data_loading', 'run_id': 'f321de43-b3ee-4482-a520-160a3db3c8dd', 'error': 'No module named \'/home/ashok/work/latest/full/kedro-engine-dynamic\'', 'execution_time': 0.0, 'started_at': '2026-02-03T16:56:55.371687', 'completed_at': '2026-02-03T16:56:55.372001'}
