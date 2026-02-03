@@ -1,62 +1,72 @@
-(venv) ashok@ubuntu:~/work/latest/full/kedro-engine-dynamic$ export KEDRO_PACKAGE_NAME=ml_engine
 (venv) ashok@ubuntu:~/work/latest/full/kedro-engine-dynamic$ celery -A worker worker --loglevel=info -c 4
-2026-02-03 16:11:29,452 - ml_engine.utils.logger - INFO - ✅ Logging configured
-2026-02-03 16:11:29,452 - ml_engine - INFO - 🚀 ML Engine v0.2.0 initialized
-2026-02-03 16:11:29,453 - ml_engine.utils.logger - INFO - ✅ Logging configured
-2026-02-03 16:11:29,453 - src.ml_engine - INFO - 🚀 ML Engine v0.2.0 initialized
-[02/03/26 16:11:29] INFO     Using                                                                       __init__.py:269
-                             '/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site                
-                             -packages/kedro/framework/project/rich_logging.yml' as logging                             
-                             configuration.                                                                             
- 
- -------------- celery@ubuntu v5.6.2 (recovery)
---- ***** ----- 
--- ******* ---- Linux-6.14.0-37-generic-x86_64-with-glibc2.39 2026-02-03 16:11:29
-- *** --- * --- 
-- ** ---------- [config]
-- ** ---------- .> app:         ml_platform:0x7920a86cbe60
-- ** ---------- .> transport:   redis://localhost:6379/0
-- ** ---------- .> results:     disabled://
-- *** --- * --- .> concurrency: 4 (prefork)
--- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
---- ***** ----- 
- -------------- [queues]
-                .> celery           exchange=celery(direct) key=celery
-                
-
-[tasks]
-  . app.tasks.check_pipeline
-  . app.tasks.execute_pipeline
-  . app.tasks.get_pipeline_info
-  . worker.debug_task
-
-[2026-02-03 16:11:30,094: INFO/MainProcess] Connected to redis://localhost:6379/0
-[2026-02-03 16:11:30,100: INFO/MainProcess] mingle: searching for neighbors
-[2026-02-03 16:11:31,183: INFO/MainProcess] mingle: all alone
-[2026-02-03 16:11:31,197: INFO/MainProcess] celery@ubuntu ready.
-[2026-02-03 16:11:34,991: INFO/MainProcess] Events of group {task} enabled by remote.
-[2026-02-03 16:11:36,291: INFO/MainProcess] Task app.tasks.execute_pipeline[ed0ede9f-230c-4f4a-a1b2-6a8c99a8e52a] received
-[2026-02-03 16:11:36,296: INFO/ForkPoolWorker-4] 🚀 Starting pipeline execution: data_loading (Job: 771fbb0a-e072-4d1a-8dd0-d74c2ade295d)
-[2026-02-03 16:11:36,347: INFO/ForkPoolWorker-4] ✅ Job 771fbb0a-e072-4d1a-8dd0-d74c2ade295d status updated to JobStatus.RUNNING
-[2026-02-03 16:11:36,347: INFO/ForkPoolWorker-4] KedroExecutor initialized with project: /home/ashok/work/latest/full/kedro-engine-dynamic
-[2026-02-03 16:11:36,347: INFO/ForkPoolWorker-4] ✅ Kedro project initialized successfully
-[2026-02-03 16:11:36,347: INFO/ForkPoolWorker-4] 🚀 Starting pipeline execution: data_loading
-[2026-02-03 16:11:36,347: INFO/ForkPoolWorker-4]    Run ID: 771fbb0a-e072-4d1a-8dd0-d74c2ade295d
-[2026-02-03 16:11:36,349: ERROR/ForkPoolWorker-4] ❌ Pipeline execution failed: No module named '/home/ashok/work/latest/full/kedro-engine-dynamic'
-[2026-02-03 16:11:36,349: ERROR/ForkPoolWorker-4] Traceback:
 Traceback (most recent call last):
-  File "/home/ashok/work/latest/full/kedro-engine-dynamic/src/ml_engine/kedro_runner.py", line 241, in execute_pipeline
-    with KedroSession.create(project_path=self.project_path) as session:
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site-packages/kedro/framework/session/session.py", line 156, in create
-    validate_settings()
-  File "/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site-packages/kedro/framework/project/__init__.py", line 341, in validate_settings
-    if importlib.util.find_spec(f"{PACKAGE_NAME}.settings") is not None:
-       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "<frozen importlib.util>", line 92, in find_spec
-ModuleNotFoundError: No module named '/home/ashok/work/latest/full/kedro-engine-dynamic'
-
-[2026-02-03 16:11:36,349: ERROR/ForkPoolWorker-4] ❌ Pipeline failed: No module named '/home/ashok/work/latest/full/kedro-engine-dynamic'
-[2026-02-03 16:11:36,444: INFO/ForkPoolWorker-4] ✅ Job 771fbb0a-e072-4d1a-8dd0-d74c2ade295d status updated to JobStatus.FAILED
-[2026-02-03 16:11:36,445: INFO/ForkPoolWorker-4] ✅ Task ed0ede9f-230c-4f4a-a1b2-6a8c99a8e52a succeeded
-[2026-02-03 16:11:36,445: INFO/ForkPoolWorker-4] Task app.tasks.execute_pipeline[ed0ede9f-230c-4f4a-a1b2-6a8c99a8e52a] succeeded in 0.1498307880028733s: {'status': 'failed', 'pipeline_name': 'data_loading', 'run_id': '771fbb0a-e072-4d1a-8dd0-d74c2ade295d', 'error': 'No module named \'/home/ashok/work/latest/full/kedro-engine-dynamic\'', 'execution_time': 0.0, 'started_at': '2026-02-03T16:11:36.347818', 'completed_at': '2026-02-03T16:11:36.348153'}
+  File "/home/ashok/work/latest/full/kedro-engine-dynamic/venv/bin/celery", line 8, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site-packages/celery/__main__.py", line 15, in main
+    sys.exit(_main())
+             ^^^^^^^
+  File "/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site-packages/celery/bin/celery.py", line 227, in main
+    return celery(auto_envvar_prefix="CELERY")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site-packages/click/core.py", line 1485, in __call__
+    return self.main(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site-packages/click/core.py", line 1406, in main
+    rv = self.invoke(ctx)
+         ^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site-packages/click/core.py", line 1873, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site-packages/click/core.py", line 1269, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site-packages/click/core.py", line 824, in invoke
+    return callback(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site-packages/click/decorators.py", line 34, in new_func
+    return f(get_current_context(), *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site-packages/celery/bin/base.py", line 135, in caller
+    return f(ctx, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site-packages/celery/bin/worker.py", line 359, in worker
+    worker = app.Worker(
+             ^^^^^^^^^^^
+  File "/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site-packages/celery/worker/worker.py", line 94, in __init__
+    self.app.loader.init_worker()
+  File "/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site-packages/celery/loaders/base.py", line 110, in init_worker
+    self.import_default_modules()
+  File "/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site-packages/celery/loaders/base.py", line 104, in import_default_modules
+    raise response
+  File "/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site-packages/celery/utils/dispatch/signal.py", line 280, in send
+    response = receiver(signal=self, sender=sender, **named)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site-packages/vine/promises.py", line 161, in __call__
+    return self.throw()
+           ^^^^^^^^^^^^
+  File "/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site-packages/vine/promises.py", line 158, in __call__
+    retval = fun(*final_args, **final_kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site-packages/celery/app/base.py", line 804, in _autodiscover_tasks
+    return self._autodiscover_tasks_from_names(packages, related_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site-packages/celery/app/base.py", line 809, in _autodiscover_tasks_from_names
+    return self.loader.autodiscover_tasks(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site-packages/celery/loaders/base.py", line 220, in autodiscover_tasks
+    mod.__name__ for mod in autodiscover_tasks(packages or (),
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site-packages/celery/loaders/base.py", line 246, in autodiscover_tasks
+    return [find_related_module(pkg, related_name) for pkg in packages]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site-packages/celery/loaders/base.py", line 257, in find_related_module
+    module = importlib.import_module(package)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/importlib/__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1324, in _find_and_load_unlocked
+ModuleNotFoundError: No module named 'app'
