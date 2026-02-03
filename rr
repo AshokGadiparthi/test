@@ -1,254 +1,381 @@
-(venv) ashok@ubuntu:~/work/latest/full/kedro-engine-dynamic$ celery -A worker worker --loglevel=info -c 4
- 
- -------------- celery@ubuntu v5.6.2 (recovery)
---- ***** ----- 
--- ******* ---- Linux-6.14.0-37-generic-x86_64-with-glibc2.39 2026-02-03 19:34:48
-- *** --- * --- 
-- ** ---------- [config]
-- ** ---------- .> app:         ml_platform:0x769d839aec30
-- ** ---------- .> transport:   redis://localhost:6379/0
-- ** ---------- .> results:     redis://localhost:6379/1
-- *** --- * --- .> concurrency: 4 (prefork)
--- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
---- ***** ----- 
- -------------- [queues]
-                .> celery           exchange=celery(direct) key=celery
-                
-
-[tasks]
-
-
-[2026-02-03 19:34:48,910: INFO/MainProcess] Connected to redis://localhost:6379/0
-[2026-02-03 19:34:48,913: INFO/MainProcess] mingle: searching for neighbors
-[2026-02-03 19:34:50,205: INFO/MainProcess] mingle: all alone
-[2026-02-03 19:34:50,261: INFO/MainProcess] celery@ubuntu ready.
-[2026-02-03 19:34:50,265: ERROR/MainProcess] Received unregistered task of type 'app.tasks.execute_pipeline'.
-The message has been ignored and discarded.
-
-Did you remember to import the module containing this task?
-Or maybe you're using relative imports?
-
-Please see
-https://docs.celeryq.dev/en/latest/internals/protocol.html
-for more information.
-
-The full contents of the message body was:
-b'[[], {"job_id": "30b6c9e5-f580-4f6f-99f5-74c66411662c", "pipeline_name": "data_loading", "parameters": {}}, {"callbacks": null, "errbacks": null, "chain": null, "chord": null}]' (176b)
-
-The full contents of the message headers:
-{'lang': 'py', 'task': 'app.tasks.execute_pipeline', 'id': '61619da2-5975-46e1-8b8a-a24ffdb54b24', 'shadow': None, 'eta': None, 'expires': None, 'group': None, 'group_index': None, 'retries': 0, 'timelimit': [None, None], 'root_id': '61619da2-5975-46e1-8b8a-a24ffdb54b24', 'parent_id': None, 'argsrepr': '()', 'kwargsrepr': "{'job_id': '30b6c9e5-f580-4f6f-99f5-74c66411662c', 'pipeline_name': 'data_loading', 'parameters': {}}", 'origin': 'gen15830@ubuntu', 'ignore_result': False, 'replaced_task_nesting': 0, 'stamped_headers': None, 'stamps': {}}
-
-The delivery info for this task is:
-{'exchange': '', 'routing_key': 'celery'}
-Traceback (most recent call last):
-  File "/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site-packages/celery/worker/consumer/consumer.py", line 668, in on_task_received
-    strategy = strategies[type_]
-               ~~~~~~~~~~^^^^^^^
-KeyError: 'app.tasks.execute_pipeline'
-[2026-02-03 19:34:50,278: ERROR/MainProcess] Received unregistered task of type 'app.tasks.execute_pipeline'.
-The message has been ignored and discarded.
-
-Did you remember to import the module containing this task?
-Or maybe you're using relative imports?
-
-Please see
-https://docs.celeryq.dev/en/latest/internals/protocol.html
-for more information.
-
-The full contents of the message body was:
-b'[[], {"job_id": "65e26e21-f431-4368-9b2c-4f73a87f8d0a", "pipeline_name": "data_loading", "parameters": {}}, {"callbacks": null, "errbacks": null, "chain": null, "chord": null}]' (176b)
-
-The full contents of the message headers:
-{'lang': 'py', 'task': 'app.tasks.execute_pipeline', 'id': '1040cd1a-acc9-4434-95f7-a09ac48def2a', 'shadow': None, 'eta': None, 'expires': None, 'group': None, 'group_index': None, 'retries': 0, 'timelimit': [None, None], 'root_id': '1040cd1a-acc9-4434-95f7-a09ac48def2a', 'parent_id': None, 'argsrepr': '()', 'kwargsrepr': "{'job_id': '65e26e21-f431-4368-9b2c-4f73a87f8d0a', 'pipeline_name': 'data_loading', 'parameters': {}}", 'origin': 'gen15830@ubuntu', 'ignore_result': False, 'replaced_task_nesting': 0, 'stamped_headers': None, 'stamps': {}}
-
-The delivery info for this task is:
-{'exchange': '', 'routing_key': 'celery'}
-Traceback (most recent call last):
-  File "/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site-packages/celery/worker/consumer/consumer.py", line 668, in on_task_received
-    strategy = strategies[type_]
-               ~~~~~~~~~~^^^^^^^
-KeyError: 'app.tasks.execute_pipeline'
-[2026-02-03 19:34:50,282: ERROR/MainProcess] Received unregistered task of type 'app.tasks.execute_pipeline'.
-The message has been ignored and discarded.
-
-Did you remember to import the module containing this task?
-Or maybe you're using relative imports?
-
-Please see
-https://docs.celeryq.dev/en/latest/internals/protocol.html
-for more information.
-
-The full contents of the message body was:
-b'[[], {"job_id": "f9e3ee99-acf9-4f89-a2b7-d7b6280d230d", "pipeline_name": "data_loading", "parameters": {}}, {"callbacks": null, "errbacks": null, "chain": null, "chord": null}]' (176b)
-
-The full contents of the message headers:
-{'lang': 'py', 'task': 'app.tasks.execute_pipeline', 'id': '47589753-3be2-427f-9fe9-2abdf3599a6f', 'shadow': None, 'eta': None, 'expires': None, 'group': None, 'group_index': None, 'retries': 0, 'timelimit': [None, None], 'root_id': '47589753-3be2-427f-9fe9-2abdf3599a6f', 'parent_id': None, 'argsrepr': '()', 'kwargsrepr': "{'job_id': 'f9e3ee99-acf9-4f89-a2b7-d7b6280d230d', 'pipeline_name': 'data_loading', 'parameters': {}}", 'origin': 'gen16025@ubuntu', 'ignore_result': False, 'replaced_task_nesting': 0, 'stamped_headers': None, 'stamps': {}}
-
-The delivery info for this task is:
-{'exchange': '', 'routing_key': 'celery'}
-Traceback (most recent call last):
-  File "/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site-packages/celery/worker/consumer/consumer.py", line 668, in on_task_received
-    strategy = strategies[type_]
-               ~~~~~~~~~~^^^^^^^
-KeyError: 'app.tasks.execute_pipeline'
-[2026-02-03 19:34:50,285: ERROR/MainProcess] Received unregistered task of type 'app.tasks.execute_pipeline'.
-The message has been ignored and discarded.
-
-Did you remember to import the module containing this task?
-Or maybe you're using relative imports?
-
-Please see
-https://docs.celeryq.dev/en/latest/internals/protocol.html
-for more information.
-
-The full contents of the message body was:
-b'[[], {"job_id": "50075359-66fa-447f-a38e-a0ecb44903fd", "pipeline_name": "data_loading", "parameters": {}}, {"callbacks": null, "errbacks": null, "chain": null, "chord": null}]' (176b)
-
-The full contents of the message headers:
-{'lang': 'py', 'task': 'app.tasks.execute_pipeline', 'id': 'e5e1d721-e8fc-41e9-a4fb-80791ec783fc', 'shadow': None, 'eta': None, 'expires': None, 'group': None, 'group_index': None, 'retries': 0, 'timelimit': [None, None], 'root_id': 'e5e1d721-e8fc-41e9-a4fb-80791ec783fc', 'parent_id': None, 'argsrepr': '()', 'kwargsrepr': "{'job_id': '50075359-66fa-447f-a38e-a0ecb44903fd', 'pipeline_name': 'data_loading', 'parameters': {}}", 'origin': 'gen16093@ubuntu', 'ignore_result': False, 'replaced_task_nesting': 0, 'stamped_headers': None, 'stamps': {}}
-
-The delivery info for this task is:
-{'exchange': '', 'routing_key': 'celery'}
-Traceback (most recent call last):
-  File "/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site-packages/celery/worker/consumer/consumer.py", line 668, in on_task_received
-    strategy = strategies[type_]
-               ~~~~~~~~~~^^^^^^^
-KeyError: 'app.tasks.execute_pipeline'
-[2026-02-03 19:34:50,292: ERROR/MainProcess] Received unregistered task of type 'app.tasks.execute_pipeline'.
-The message has been ignored and discarded.
-
-Did you remember to import the module containing this task?
-Or maybe you're using relative imports?
-
-Please see
-https://docs.celeryq.dev/en/latest/internals/protocol.html
-for more information.
-
-The full contents of the message body was:
-b'[[], {"job_id": "b466a482-9e53-45fb-b449-c80e36a4c33c", "pipeline_name": "data_loading", "parameters": {}}, {"callbacks": null, "errbacks": null, "chain": null, "chord": null}]' (176b)
-
-The full contents of the message headers:
-{'lang': 'py', 'task': 'app.tasks.execute_pipeline', 'id': '5ab939f7-70ce-41c4-a611-1ba8ca5686d9', 'shadow': None, 'eta': None, 'expires': None, 'group': None, 'group_index': None, 'retries': 0, 'timelimit': [None, None], 'root_id': '5ab939f7-70ce-41c4-a611-1ba8ca5686d9', 'parent_id': None, 'argsrepr': '()', 'kwargsrepr': "{'job_id': 'b466a482-9e53-45fb-b449-c80e36a4c33c', 'pipeline_name': 'data_loading', 'parameters': {}}", 'origin': 'gen16093@ubuntu', 'ignore_result': False, 'replaced_task_nesting': 0, 'stamped_headers': None, 'stamps': {}}
-
-The delivery info for this task is:
-{'exchange': '', 'routing_key': 'celery'}
-Traceback (most recent call last):
-  File "/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site-packages/celery/worker/consumer/consumer.py", line 668, in on_task_received
-    strategy = strategies[type_]
-               ~~~~~~~~~~^^^^^^^
-KeyError: 'app.tasks.execute_pipeline'
-[2026-02-03 19:34:50,298: ERROR/MainProcess] Received unregistered task of type 'app.tasks.execute_pipeline'.
-The message has been ignored and discarded.
-
-Did you remember to import the module containing this task?
-Or maybe you're using relative imports?
-
-Please see
-https://docs.celeryq.dev/en/latest/internals/protocol.html
-for more information.
-
-The full contents of the message body was:
-b'[[], {"job_id": "caf2d95e-0404-42c9-8b9c-b482b4ad517f", "pipeline_name": "data_loading", "parameters": {}}, {"callbacks": null, "errbacks": null, "chain": null, "chord": null}]' (176b)
-
-The full contents of the message headers:
-{'lang': 'py', 'task': 'app.tasks.execute_pipeline', 'id': 'b9f8f59c-d184-489a-b19c-01cffdf1b4e3', 'shadow': None, 'eta': None, 'expires': None, 'group': None, 'group_index': None, 'retries': 0, 'timelimit': [None, None], 'root_id': 'b9f8f59c-d184-489a-b19c-01cffdf1b4e3', 'parent_id': None, 'argsrepr': '()', 'kwargsrepr': "{'job_id': 'caf2d95e-0404-42c9-8b9c-b482b4ad517f', 'pipeline_name': 'data_loading', 'parameters': {}}", 'origin': 'gen16093@ubuntu', 'ignore_result': False, 'replaced_task_nesting': 0, 'stamped_headers': None, 'stamps': {}}
-
-The delivery info for this task is:
-{'exchange': '', 'routing_key': 'celery'}
-Traceback (most recent call last):
-  File "/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site-packages/celery/worker/consumer/consumer.py", line 668, in on_task_received
-    strategy = strategies[type_]
-               ~~~~~~~~~~^^^^^^^
-KeyError: 'app.tasks.execute_pipeline'
-[2026-02-03 19:34:50,305: ERROR/MainProcess] Received unregistered task of type 'app.tasks.execute_pipeline'.
-The message has been ignored and discarded.
-
-Did you remember to import the module containing this task?
-Or maybe you're using relative imports?
-
-Please see
-https://docs.celeryq.dev/en/latest/internals/protocol.html
-for more information.
-
-The full contents of the message body was:
-b'[[], {"job_id": "458f5c0f-11f4-4f02-81f5-3a12e757361c", "pipeline_name": "data_loading", "parameters": {}}, {"callbacks": null, "errbacks": null, "chain": null, "chord": null}]' (176b)
-
-The full contents of the message headers:
-{'lang': 'py', 'task': 'app.tasks.execute_pipeline', 'id': '2920b0ba-cd9e-443f-913b-34a1bb375a20', 'shadow': None, 'eta': None, 'expires': None, 'group': None, 'group_index': None, 'retries': 0, 'timelimit': [None, None], 'root_id': '2920b0ba-cd9e-443f-913b-34a1bb375a20', 'parent_id': None, 'argsrepr': '()', 'kwargsrepr': "{'job_id': '458f5c0f-11f4-4f02-81f5-3a12e757361c', 'pipeline_name': 'data_loading', 'parameters': {}}", 'origin': 'gen16093@ubuntu', 'ignore_result': False, 'replaced_task_nesting': 0, 'stamped_headers': None, 'stamps': {}}
-
-The delivery info for this task is:
-{'exchange': '', 'routing_key': 'celery'}
-Traceback (most recent call last):
-  File "/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site-packages/celery/worker/consumer/consumer.py", line 668, in on_task_received
-    strategy = strategies[type_]
-               ~~~~~~~~~~^^^^^^^
-KeyError: 'app.tasks.execute_pipeline'
-[2026-02-03 19:34:50,313: ERROR/MainProcess] Received unregistered task of type 'app.tasks.execute_pipeline'.
-The message has been ignored and discarded.
-
-Did you remember to import the module containing this task?
-Or maybe you're using relative imports?
-
-Please see
-https://docs.celeryq.dev/en/latest/internals/protocol.html
-for more information.
-
-The full contents of the message body was:
-b'[[], {"job_id": "298b683b-0373-4034-bb10-3092c093c96d", "pipeline_name": "data_loading", "parameters": {}}, {"callbacks": null, "errbacks": null, "chain": null, "chord": null}]' (176b)
-
-The full contents of the message headers:
-{'lang': 'py', 'task': 'app.tasks.execute_pipeline', 'id': '1607c121-a2d8-4ed8-9b81-1d862528ca26', 'shadow': None, 'eta': None, 'expires': None, 'group': None, 'group_index': None, 'retries': 0, 'timelimit': [None, None], 'root_id': '1607c121-a2d8-4ed8-9b81-1d862528ca26', 'parent_id': None, 'argsrepr': '()', 'kwargsrepr': "{'job_id': '298b683b-0373-4034-bb10-3092c093c96d', 'pipeline_name': 'data_loading', 'parameters': {}}", 'origin': 'gen16093@ubuntu', 'ignore_result': False, 'replaced_task_nesting': 0, 'stamped_headers': None, 'stamps': {}}
-
-The delivery info for this task is:
-{'exchange': '', 'routing_key': 'celery'}
-Traceback (most recent call last):
-  File "/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site-packages/celery/worker/consumer/consumer.py", line 668, in on_task_received
-    strategy = strategies[type_]
-               ~~~~~~~~~~^^^^^^^
-KeyError: 'app.tasks.execute_pipeline'
-[2026-02-03 19:34:50,319: ERROR/MainProcess] Received unregistered task of type 'app.tasks.execute_pipeline'.
-The message has been ignored and discarded.
-
-Did you remember to import the module containing this task?
-Or maybe you're using relative imports?
-
-Please see
-https://docs.celeryq.dev/en/latest/internals/protocol.html
-for more information.
-
-The full contents of the message body was:
-b'[[], {"job_id": "70493bfa-7bde-4924-aebd-a5197b1abb74", "pipeline_name": "data_loading", "parameters": {}}, {"callbacks": null, "errbacks": null, "chain": null, "chord": null}]' (176b)
-
-The full contents of the message headers:
-{'lang': 'py', 'task': 'app.tasks.execute_pipeline', 'id': '498a11de-7aea-4c72-88a2-26313f5b1eed', 'shadow': None, 'eta': None, 'expires': None, 'group': None, 'group_index': None, 'retries': 0, 'timelimit': [None, None], 'root_id': '498a11de-7aea-4c72-88a2-26313f5b1eed', 'parent_id': None, 'argsrepr': '()', 'kwargsrepr': "{'job_id': '70493bfa-7bde-4924-aebd-a5197b1abb74', 'pipeline_name': 'data_loading', 'parameters': {}}", 'origin': 'gen16093@ubuntu', 'ignore_result': False, 'replaced_task_nesting': 0, 'stamped_headers': None, 'stamps': {}}
-
-The delivery info for this task is:
-{'exchange': '', 'routing_key': 'celery'}
-Traceback (most recent call last):
-  File "/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site-packages/celery/worker/consumer/consumer.py", line 668, in on_task_received
-    strategy = strategies[type_]
-               ~~~~~~~~~~^^^^^^^
-KeyError: 'app.tasks.execute_pipeline'
-[2026-02-03 19:34:50,323: ERROR/MainProcess] Received unregistered task of type 'app.tasks.execute_pipeline'.
-The message has been ignored and discarded.
-
-Did you remember to import the module containing this task?
-Or maybe you're using relative imports?
-
-Please see
-https://docs.celeryq.dev/en/latest/internals/protocol.html
-for more information.
-
-The full contents of the message body was:
-b'[[], {"job_id": "b72866f5-8816-48cf-ad3e-07f3003a0a5a", "pipeline_name": "data_processing", "parameters": {}}, {"callbacks": null, "errbacks": null, "chain": null, "chord": null}]' (179b)
-
-The full contents of the message headers:
-{'lang': 'py', 'task': 'app.tasks.execute_pipeline', 'id': 'a5c9c4a4-bcbb-4a3e-ad53-1bdc3ffd05b2', 'shadow': None, 'eta': None, 'expires': None, 'group': None, 'group_index': None, 'retries': 0, 'timelimit': [None, None], 'root_id': 'a5c9c4a4-bcbb-4a3e-ad53-1bdc3ffd05b2', 'parent_id': None, 'argsrepr': '()', 'kwargsrepr': "{'job_id': 'b72866f5-8816-48cf-ad3e-07f3003a0a5a', 'pipeline_name': 'data_processing', 'parameters': {}}", 'origin': 'gen18667@ubuntu', 'ignore_result': False, 'replaced_task_nesting': 0, 'stamped_headers': None, 'stamps': {}}
-
-The delivery info for this task is:
-{'exchange': '', 'routing_key': 'celery'}
-Traceback (most recent call last):
-  File "/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site-packages/celery/worker/consumer/consumer.py", line 668, in on_task_received
-    strategy = strategies[type_]
-               ~~~~~~~~~~^^^^^^^
-KeyError: 'app.tasks.execute_pipeline'
+[notice] To update, run: pip install --upgrade pip
+(venv) ashok@ubuntu:~/work/latest/full/kedro-ml-engine-integrated$ kedro run
+[02/03/26 20:54:46] INFO     Using                                                                       __init__.py:269
+                             '/home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.1                
+                             0/site-packages/kedro/framework/project/rich_logging.yml' as logging                       
+                             configuration.                                                                             
+[02/03/26 20:54:47] INFO     Kedro project kedro-ml-engine-integrated                                     session.py:330
+✅ Multi-table loader imported successfully
+[02/03/26 20:54:48] INFO     ✅ Phase 1a (data_loading) imported successfully                    pipeline_registry.py:62
+                    INFO     ✅ Phase 1b (data_validation) imported successfully                 pipeline_registry.py:69
+                    INFO     ✅ Phase 1c (data_cleaning with PATH B feature scaling) imported    pipeline_registry.py:76
+                             successfully                                                                               
+                    INFO     ✅ Phase 2a (feature_engineering) imported successfully             pipeline_registry.py:87
+                    INFO     ✅ Phase 2b (feature_selection) imported successfully               pipeline_registry.py:94
+                    INFO     ✅ Phase 3 (model_training with PATH A+B) imported successfully    pipeline_registry.py:108
+                    INFO     ✅ Phase 4 (phase4_algorithms with PATH A+B+C ready) imported      pipeline_registry.py:126
+                             successfully                                                                               
+                    INFO     ✅ Phase 6 (ensemble_methods) imported successfully                pipeline_registry.py:139
+                    INFO     ✅ Phase 5a (training_strategies) module available                 pipeline_registry.py:166
+                    INFO     ✅ Phase 5b (evaluation_metrics) module available                  pipeline_registry.py:174
+                    INFO     ✅ Phase 5c (cross_validation_strategies) module available         pipeline_registry.py:182
+                    INFO     ✅ Phase 5d (model_comparison) module available                    pipeline_registry.py:190
+                    INFO     ✅ Phase 5e (visualization_manager) module available               pipeline_registry.py:198
+                    INFO     ✅ Phase 5f (hyperparameter_analysis) module available             pipeline_registry.py:206
+                    INFO     ✅ Phase 5g (report_generator) module available                    pipeline_registry.py:214
+                    INFO                                                                        pipeline_registry.py:247
+                             ==================================================================                         
+                             ==============                                                                             
+                    INFO     REGISTERING PIPELINES - PATH A, B, C + PHASE 5                     pipeline_registry.py:248
+                    INFO     ================================================================== pipeline_registry.py:249
+                             ==============                                                                             
+                    INFO     ✅ Phase 1 pipeline created (data loading + validation + cleaning) pipeline_registry.py:267
+                    INFO     ✅ Phase 2 pipeline created (feature engineering + selection)      pipeline_registry.py:275
+                    INFO     ✅ Phase 1+2 pipeline created (complete data processing)           pipeline_registry.py:281
+                    INFO     ✅ Phase 3 pipeline created (model training with PATH A+B)         pipeline_registry.py:289
+                    INFO     ✅ Phase 4 pipeline created (algorithms with PATH A+B+C ready)     pipeline_registry.py:297
+                    INFO                                                                 phase6_ensemble_pipeline.py:319
+                             ===========================================================                                
+                             =====================                                                                      
+                    INFO     🔧 CREATING PHASE 6 PIPELINE                                phase6_ensemble_pipeline.py:320
+                    INFO     =========================================================== phase6_ensemble_pipeline.py:321
+                             =====================                                                                      
+                    INFO     ✅ Phase 6 Pipeline created successfully                    phase6_ensemble_pipeline.py:345
+                    INFO     =========================================================== phase6_ensemble_pipeline.py:346
+                             =====================                                                                      
+                                                                                                                        
+                    INFO     ✅ Phase 6 pipeline created (ensemble methods)                     pipeline_registry.py:306
+                    INFO     ✅ Complete Pipeline created (Phase 1-6)                           pipeline_registry.py:349
+                    INFO     ================================================================== pipeline_registry.py:351
+                             ==============                                                                             
+                    INFO     ✅ COMPLETE PIPELINE CREATED (Phase 1-4)                           pipeline_registry.py:352
+                    INFO        Phases included: 4                                              pipeline_registry.py:353
+                    INFO        Path A (outlier detection, CV, ensemble): ✅                    pipeline_registry.py:354
+                    INFO        Path B (feature scaling, tuning, ROC): ✅                       pipeline_registry.py:355
+                    INFO        Path C (learning curves, SHAP, stats): ✅ (optional)            pipeline_registry.py:356
+                    INFO        Expected accuracy: 89-90%                                       pipeline_registry.py:357
+                    INFO     ================================================================== pipeline_registry.py:358
+                             ==============                                                                             
+                    INFO     ✅ Available pipelines: ['phase1', 'data_loading',                 pipeline_registry.py:359
+                             'data_validation', 'data_cleaning', 'phase2',                                              
+                             'feature_engineering', 'phase1_2', 'data_processing', 'phase3',                            
+                             'model_training', 'phase4', 'algorithms', 'phase6', 'ensemble',                            
+                             'ensemble_methods', 'complete', 'all', 'end_to_end', 'a_b_c',                              
+                             '__default__', 'complete_1_6', 'all_with_ensemble',                                        
+                             'end_to_end_full']                                                                         
+                    INFO     ================================================================== pipeline_registry.py:360
+                             ==============                                                                             
+                    INFO                                                                        pipeline_registry.py:389
+                             ==================================================================                         
+                             ==============                                                                             
+                    INFO     🆕 PHASE 5: ADVANCED ANALYSIS MODULES (Available for manual use)   pipeline_registry.py:390
+                    INFO     ================================================================== pipeline_registry.py:391
+                             ==============                                                                             
+                    INFO     Input: Phase 4 outputs (load from disk after pipeline runs)        pipeline_registry.py:392
+                    INFO     Process: 7 modules with classes for analysis and reporting         pipeline_registry.py:393
+                    INFO     Output: Use in Python code for metrics, visualizations, reports    pipeline_registry.py:394
+                    INFO     ================================================================== pipeline_registry.py:395
+                             ==============                                                                             
+                    INFO     ✅ Phase 5a (training_strategies) - Available                      pipeline_registry.py:400
+                    INFO     ✅ Phase 5b (evaluation_metrics) - Available                       pipeline_registry.py:406
+                    INFO     ✅ Phase 5c (cross_validation_strategies) - Available              pipeline_registry.py:412
+                    INFO     ✅ Phase 5d (model_comparison) - Available                         pipeline_registry.py:418
+                    INFO     ✅ Phase 5e (visualization_manager) - Available                    pipeline_registry.py:424
+                    INFO     ✅ Phase 5f (hyperparameter_analysis) - Available                  pipeline_registry.py:430
+                    INFO     ✅ Phase 5g (report_generator) - Available                         pipeline_registry.py:436
+                    INFO                                                                        pipeline_registry.py:441
+                             🆕 PHASE 6 (Ensemble Methods):                                                             
+                    INFO       ✅ Phase 6 available (ensemble methods)                          pipeline_registry.py:443
+                    INFO          Methods: Stacking, Blending, Weighted Voting                  pipeline_registry.py:444
+                    INFO          Can be run: kedro run --pipeline phase6                       pipeline_registry.py:445
+                    INFO          Or as part: kedro run --pipeline complete_1_6                 pipeline_registry.py:446
+                    INFO                                                                        pipeline_registry.py:450
+                             Phase 5 modules available: 7/7                                                             
+                    INFO                                                                        pipeline_registry.py:451
+                             Phase 5 Usage Examples:                                                                    
+                    INFO       from ml_engine.pipelines.evaluation_metrics import               pipeline_registry.py:452
+                             ComprehensiveMetricsCalculator                                                             
+                    INFO       calc = ComprehensiveMetricsCalculator()                          pipeline_registry.py:453
+                    INFO       metrics = calc.evaluate_classification(y_test, y_pred, y_proba)  pipeline_registry.py:454
+                    INFO                                                                        pipeline_registry.py:455
+                               from ml_engine.pipelines.visualization_manager import                                    
+                             VisualizationManager                                                                       
+                    INFO       viz = VisualizationManager()                                     pipeline_registry.py:456
+                    INFO       viz.plot_confusion_matrix(y_test, y_pred, 'output.png')          pipeline_registry.py:457
+                    INFO                                                                        pipeline_registry.py:458
+                               from ml_engine.pipelines.report_generator import                                         
+                             ComprehensiveReportManager                                                                 
+                    INFO       report = ComprehensiveReportManager('MyModel')                   pipeline_registry.py:459
+                    INFO       reports = report.generate_all_reports('./data/08_reporting')     pipeline_registry.py:460
+                    INFO     ================================================================== pipeline_registry.py:461
+                             ==============                                                                             
+                    INFO                                                                        pipeline_registry.py:467
+                             ==================================================================                         
+                             ==============                                                                             
+                    INFO     📊 PIPELINE REGISTRY COMPLETE & FIXED!                             pipeline_registry.py:468
+                    INFO     ================================================================== pipeline_registry.py:469
+                             ==============                                                                             
+                    INFO     Total pipelines registered: 23                                     pipeline_registry.py:470
+                    INFO                                                                        pipeline_registry.py:471
+                             📈 Phase 1-4 (Kedro Pipelines): ✅ All working                                             
+                    INFO       • __default__ (Phase 1-4, 100% backward compatible)              pipeline_registry.py:472
+                    INFO       • complete, all, end_to_end, a_b_c                               pipeline_registry.py:473
+                    INFO       • phase1, phase2, phase3, phase4                                 pipeline_registry.py:474
+                    INFO       • data_loading, feature_engineering, model_training, algorithms  pipeline_registry.py:475
+                    INFO       • phase1_2, data_processing                                      pipeline_registry.py:476
+                    INFO                                                                        pipeline_registry.py:478
+                             🆕 Phase 5 (Python Classes): ✅ 7/7 modules                                                
+                    INFO       • training_strategies (multiple training approaches)             pipeline_registry.py:479
+                    INFO       • evaluation_metrics (40+ automatic metrics)                     pipeline_registry.py:480
+                    INFO       • cross_validation_strategies (6 CV approaches)                  pipeline_registry.py:481
+                    INFO       • model_comparison (statistical testing)                         pipeline_registry.py:482
+                    INFO       • visualization_manager (10+ plot types)                         pipeline_registry.py:483
+                    INFO       • hyperparameter_analysis (sensitivity analysis)                 pipeline_registry.py:484
+                    INFO       • report_generator (HTML/JSON/PDF/Model Cards)                   pipeline_registry.py:485
+                    INFO                                                                        pipeline_registry.py:487
+                             ✅ PHASE 1-4: Automated via Kedro | PHASE 5: Manual Python classes                         
+                    INFO     ✅ NO IMPORT ERRORS | NO CONFLICTS | FULLY WORKING                 pipeline_registry.py:488
+                    INFO                                                                        pipeline_registry.py:490
+                             🎯 How to use:                                                                             
+                    INFO       Phase 1-4 (Automated via Kedro):                                 pipeline_registry.py:491
+                    INFO         $ kedro run                                                    pipeline_registry.py:492
+                    INFO         $ kedro run --pipeline __default__                             pipeline_registry.py:493
+                    INFO         $ kedro run --pipeline complete                                pipeline_registry.py:494
+                    INFO                                                                        pipeline_registry.py:495
+                               Phase 5 (Manual in Python - after Phase 1-4 completes):                                  
+                    INFO         from ml_engine.pipelines.evaluation_metrics import             pipeline_registry.py:496
+                             ComprehensiveMetricsCalculator                                                             
+                    INFO         calc = ComprehensiveMetricsCalculator()                        pipeline_registry.py:497
+                    INFO         metrics = calc.evaluate_classification(y_test, y_pred,         pipeline_registry.py:498
+                             y_proba)                                                                                   
+                    INFO                                                                        pipeline_registry.py:499
+                               That's it! No errors, no conflicts, everything working!                                  
+                    INFO     ================================================================== pipeline_registry.py:500
+                             ==============                                                                             
+                                                                                                                        
+                    INFO     Kedro is sending anonymous usage data with the sole purpose of improving the  plugin.py:242
+                             product. No personal data or IP addresses are stored on our side. To opt out,              
+                             set the `KEDRO_DISABLE_TELEMETRY` or `DO_NOT_TRACK` environment variables, or              
+                             create a `.telemetry` file in the current working directory with the contents              
+                             `consent: false`. To hide this message, explicitly grant or deny consent.                  
+                             Read more at https://docs.kedro.org/en/stable/about/telemetry/                             
+╭─────────────────────────────── Traceback (most recent call last) ────────────────────────────────╮
+│ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/bin/kedro:8 in <module>             │
+│                                                                                                  │
+│ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10/site-packages/kedro/ │
+│ framework/cli/cli.py:260 in main                                                                 │
+│                                                                                                  │
+│   257 │   """                                                                                    │
+│   258 │   _init_plugins()                                                                        │
+│   259 │   cli_collection = KedroCLI(project_path=find_kedro_project(Path.cwd()) or Path.cwd())   │
+│ ❱ 260 │   cli_collection()                                                                       │
+│   261                                                                                            │
+│                                                                                                  │
+│ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10/site-packages/click/ │
+│ core.py:1442 in __call__                                                                         │
+│                                                                                                  │
+│ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10/site-packages/kedro/ │
+│ framework/cli/cli.py:162 in main                                                                 │
+│                                                                                                  │
+│   159 │   │   )                                                                                  │
+│   160 │   │                                                                                      │
+│   161 │   │   try:                                                                               │
+│ ❱ 162 │   │   │   super().main(                                                                  │
+│   163 │   │   │   │   args=args,                                                                 │
+│   164 │   │   │   │   prog_name=prog_name,                                                       │
+│   165 │   │   │   │   complete_var=complete_var,                                                 │
+│                                                                                                  │
+│ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10/site-packages/click/ │
+│ core.py:1363 in main                                                                             │
+│                                                                                                  │
+│ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10/site-packages/click/ │
+│ core.py:1830 in invoke                                                                           │
+│                                                                                                  │
+│ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10/site-packages/click/ │
+│ core.py:1226 in invoke                                                                           │
+│                                                                                                  │
+│ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10/site-packages/click/ │
+│ core.py:794 in invoke                                                                            │
+│                                                                                                  │
+│ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10/site-packages/kedro/ │
+│ framework/cli/project.py:262 in run                                                              │
+│                                                                                                  │
+│   259 │   with KedroSession.create(                                                              │
+│   260 │   │   env=env, conf_source=conf_source, runtime_params=params                            │
+│   261 │   ) as session:                                                                          │
+│ ❱ 262 │   │   return session.run(                                                                │
+│   263 │   │   │   tags=tuple_tags,                                                               │
+│   264 │   │   │   runner=runner_obj(is_async=is_async),                                          │
+│   265 │   │   │   node_names=tuple_node_names,                                                   │
+│                                                                                                  │
+│ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10/site-packages/kedro/ │
+│ framework/session/session.py:397 in run                                                          │
+│                                                                                                  │
+│   394 │   │   │   else settings.DATA_CATALOG_CLASS                                               │
+│   395 │   │   )                                                                                  │
+│   396 │   │                                                                                      │
+│ ❱ 397 │   │   catalog = context._get_catalog(                                                    │
+│   398 │   │   │   catalog_class=catalog_class,                                                   │
+│   399 │   │   │   save_version=save_version,                                                     │
+│   400 │   │   │   load_versions=load_versions,                                                   │
+│                                                                                                  │
+│ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10/site-packages/kedro/ │
+│ framework/context/context.py:265 in _get_catalog                                                 │
+│                                                                                                  │
+│   262 │   │                                                                                      │
+│   263 │   │   _validate_transcoded_datasets(catalog)                                             │
+│   264 │   │                                                                                      │
+│ ❱ 265 │   │   self._hook_manager.hook.after_catalog_created(                                     │
+│   266 │   │   │   catalog=catalog,                                                               │
+│   267 │   │   │   conf_catalog=conf_catalog,                                                     │
+│   268 │   │   │   conf_creds=conf_creds,                                                         │
+│                                                                                                  │
+│ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10/site-packages/pluggy │
+│ /_hooks.py:512 in __call__                                                                       │
+│                                                                                                  │
+│   509 │   │   self._verify_all_args_are_provided(kwargs)                                         │
+│   510 │   │   firstresult = self.spec.opts.get("firstresult", False) if self.spec else False     │
+│   511 │   │   # Copy because plugins may register other plugins during iteration (#438).         │
+│ ❱ 512 │   │   return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)      │
+│   513 │                                                                                          │
+│   514 │   def call_historic(                                                                     │
+│   515 │   │   self,                                                                              │
+│                                                                                                  │
+│ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10/site-packages/pluggy │
+│ /_manager.py:120 in _hookexec                                                                    │
+│                                                                                                  │
+│   117 │   ) -> object | list[object]:                                                            │
+│   118 │   │   # called from all hookcaller instances.                                            │
+│   119 │   │   # enable_tracing will set its own wrapping function at self._inner_hookexec        │
+│ ❱ 120 │   │   return self._inner_hookexec(hook_name, methods, kwargs, firstresult)               │
+│   121 │                                                                                          │
+│   122 │   def register(self, plugin: _Plugin, name: str | None = None) -> str | None:            │
+│   123 │   │   """Register a plugin and return its name.                                          │
+│                                                                                                  │
+│ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10/site-packages/pluggy │
+│ /_manager.py:475 in traced_hookexec                                                              │
+│                                                                                                  │
+│   472 │   │   │   │   lambda: oldcall(hook_name, hook_impls, caller_kwargs, firstresult)         │
+│   473 │   │   │   )                                                                              │
+│   474 │   │   │   after(outcome, hook_name, hook_impls, caller_kwargs)                           │
+│ ❱ 475 │   │   │   return outcome.get_result()                                                    │
+│   476 │   │                                                                                      │
+│   477 │   │   self._inner_hookexec = traced_hookexec                                             │
+│   478                                                                                            │
+│                                                                                                  │
+│ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10/site-packages/pluggy │
+│ /_result.py:103 in get_result                                                                    │
+│                                                                                                  │
+│   100 │   │   if exc is None:                                                                    │
+│   101 │   │   │   return cast(ResultType, self._result)                                          │
+│   102 │   │   else:                                                                              │
+│ ❱ 103 │   │   │   raise exc.with_traceback(tb)                                                   │
+│   104                                                                                            │
+│   105                                                                                            │
+│   106 # Historical name (pluggy<=1.2), kept for backward compatibility.                          │
+│                                                                                                  │
+│ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10/site-packages/pluggy │
+│ /_result.py:62 in from_call                                                                      │
+│                                                                                                  │
+│    59 │   │   __tracebackhide__ = True                                                           │
+│    60 │   │   result = exception = None                                                          │
+│    61 │   │   try:                                                                               │
+│ ❱  62 │   │   │   result = func()                                                                │
+│    63 │   │   except BaseException as exc:                                                       │
+│    64 │   │   │   exception = exc                                                                │
+│    65 │   │   return cls(result, exception)                                                      │
+│                                                                                                  │
+│ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10/site-packages/pluggy │
+│ /_manager.py:472 in <lambda>                                                                     │
+│                                                                                                  │
+│   469 │   │   ) -> object | list[object]:                                                        │
+│   470 │   │   │   before(hook_name, hook_impls, caller_kwargs)                                   │
+│   471 │   │   │   outcome = Result.from_call(                                                    │
+│ ❱ 472 │   │   │   │   lambda: oldcall(hook_name, hook_impls, caller_kwargs, firstresult)         │
+│   473 │   │   │   )                                                                              │
+│   474 │   │   │   after(outcome, hook_name, hook_impls, caller_kwargs)                           │
+│   475 │   │   │   return outcome.get_result()                                                    │
+│                                                                                                  │
+│ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10/site-packages/pluggy │
+│ /_callers.py:167 in _multicall                                                                   │
+│                                                                                                  │
+│   164 │   │   │   _raise_wrapfail(teardown, "has second yield")                                  │
+│   165 │                                                                                          │
+│   166 │   if exception is not None:                                                              │
+│ ❱ 167 │   │   raise exception                                                                    │
+│   168 │   else:                                                                                  │
+│   169 │   │   return result                                                                      │
+│   170                                                                                            │
+│                                                                                                  │
+│ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10/site-packages/pluggy │
+│ /_callers.py:121 in _multicall                                                                   │
+│                                                                                                  │
+│   118 │   │   │   │   │   except StopIteration:                                                  │
+│   119 │   │   │   │   │   │   _raise_wrapfail(function_gen, "did not yield")                     │
+│   120 │   │   │   │   else:                                                                      │
+│ ❱ 121 │   │   │   │   │   res = hook_impl.function(*args)                                        │
+│   122 │   │   │   │   │   if res is not None:                                                    │
+│   123 │   │   │   │   │   │   results.append(res)                                                │
+│   124 │   │   │   │   │   │   if firstresult:  # halt further impl calls                         │
+│                                                                                                  │
+│ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10/site-packages/kedro_ │
+│ telemetry/plugin.py:231 in after_catalog_created                                                 │
+│                                                                                                  │
+│   228 │   │   │   │   self._user_uuid, self._project_path                                        │
+│   229 │   │   │   )                                                                              │
+│   230 │   │                                                                                      │
+│ ❱ 231 │   │   project_properties = _format_project_statistics_data(                              │
+│   232 │   │   │   catalog, default_pipeline, pipelines                                           │
+│   233 │   │   )                                                                                  │
+│   234 │   │   self._event_properties.update(project_properties)                                  │
+│                                                                                                  │
+│ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10/site-packages/kedro_ │
+│ telemetry/plugin.py:314 in _format_project_statistics_data                                       │
+│                                                                                                  │
+│   311 │   │   dataset_names = catalog.keys()                                                     │
+│   312 │   │   for ds_name in dataset_names:                                                      │
+│   313 │   │   │   if not ds_name.startswith(("parameters", "params:")):                          │
+│ ❱ 314 │   │   │   │   ds_type = catalog.get_type(ds_name) or ""                                  │
+│   315 │   │   │   │   if (                                                                       │
+│   316 │   │   │   │   │   ds_type.startswith("kedro_datasets.")                                  │
+│   317 │   │   │   │   │   or ds_type.startswith("kedro.io.")                                     │
+│                                                                                                  │
+│ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10/site-packages/kedro/ │
+│ io/data_catalog.py:976 in get_type                                                               │
+│                                                                                                  │
+│    973 │   │   │   return str(_LazyDataset(ds_name, ds_config))                                  │
+│    974 │   │                                                                                     │
+│    975 │   │   if ds_name in self._lazy_datasets:                                                │
+│ ❱  976 │   │   │   return str(self._lazy_datasets[ds_name])                                      │
+│    977 │   │                                                                                     │
+│    978 │   │   class_type = type(self._datasets[ds_name])                                        │
+│    979 │   │   return f"{class_type.__module__}.{class_type.__qualname__}"                       │
+│                                                                                                  │
+│ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10/site-packages/kedro/ │
+│ io/data_catalog.py:127 in __repr__                                                               │
+│                                                                                                  │
+│    124 │   │   │   # kedro_datasets.pandas.csv_dataset.CSVDataset                                │
+│    125 │   │   ```                                                                               │
+│    126 │   │   """                                                                               │
+│ ❱  127 │   │   class_type, _ = parse_dataset_definition(self.config)                             │
+│    128 │   │   return f"{class_type.__module__}.{class_type.__qualname__}"                       │
+│    129 │                                                                                         │
+│    130 │   def materialize(self) -> AbstractDataset:                                             │
+│                                                                                                  │
+│ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10/site-packages/kedro/ │
+│ io/core.py:578 in parse_dataset_definition                                                       │
+│                                                                                                  │
+│    575 │   │   │   │   "related dependencies for the specific dataset group."                    │
+│    576 │   │   │   )                                                                             │
+│    577 │   │   │   default_error_msg = f"Class '{dataset_type}' not found, is this a typo?"      │
+│ ❱  578 │   │   │   raise DatasetError(f"{error_msg if error_msg else default_error_msg}{hint}")  │
+│    579 │                                                                                         │
+│    580 │   if not class_obj:                                                                     │
+│    581 │   │   class_obj = dataset_type                                                          │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+DatasetError: No module named 'pandas.csv_dataset'. Please install the missing dependencies for 
+pandas.csv_dataset.CSVDataset:
+https://docs.kedro.org/en/stable/kedro_project_setup/dependencies.html#install-dependencies-related-to-the-data-catalog
+Hint: If you are trying to use a dataset from `kedro-datasets`, make sure that the package is installed in your current 
+environment. You can do so by running `pip install kedro-datasets` or `pip install kedro-datasets[<dataset-group>]` to 
+install `kedro-datasets` along with related dependencies for the specific dataset group.
