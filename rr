@@ -1,12 +1,13 @@
-[notice] To update, run: pip install --upgrade pip
-(venv) ashok@ubuntu:~/work/latest/full/kedro-ml-engine-integrated$ kedro run
-[02/03/26 20:54:46] INFO     Using                                                                       __init__.py:269
+(venv) ashok@ubuntu:~/work/latest/full/kedro-ml-engine-integrated$ kedro run --pipeline data_loading
+[02/03/26 21:11:43] INFO     Using                                                                       __init__.py:269
                              '/home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.1                
                              0/site-packages/kedro/framework/project/rich_logging.yml' as logging                       
                              configuration.                                                                             
-[02/03/26 20:54:47] INFO     Kedro project kedro-ml-engine-integrated                                     session.py:330
+[02/03/26 21:11:43] INFO     Kedro project ml_engine                                                      session.py:335
+                    WARNING  `pipeline_name` is deprecated and will be removed in a future release.       session.py:337
+                             Please use `pipeline_names` instead.                                                       
 ✅ Multi-table loader imported successfully
-[02/03/26 20:54:48] INFO     ✅ Phase 1a (data_loading) imported successfully                    pipeline_registry.py:62
+[02/03/26 21:11:45] INFO     ✅ Phase 1a (data_loading) imported successfully                    pipeline_registry.py:62
                     INFO     ✅ Phase 1b (data_validation) imported successfully                 pipeline_registry.py:69
                     INFO     ✅ Phase 1c (data_cleaning with PATH B feature scaling) imported    pipeline_registry.py:76
                              successfully                                                                               
@@ -159,223 +160,47 @@
                              create a `.telemetry` file in the current working directory with the contents              
                              `consent: false`. To hide this message, explicitly grant or deny consent.                  
                              Read more at https://docs.kedro.org/en/stable/about/telemetry/                             
-╭─────────────────────────────── Traceback (most recent call last) ────────────────────────────────╮
-│ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/bin/kedro:8 in <module>             │
-│                                                                                                  │
-│ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10/site-packages/kedro/ │
-│ framework/cli/cli.py:260 in main                                                                 │
-│                                                                                                  │
-│   257 │   """                                                                                    │
-│   258 │   _init_plugins()                                                                        │
-│   259 │   cli_collection = KedroCLI(project_path=find_kedro_project(Path.cwd()) or Path.cwd())   │
-│ ❱ 260 │   cli_collection()                                                                       │
-│   261                                                                                            │
-│                                                                                                  │
-│ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10/site-packages/click/ │
-│ core.py:1442 in __call__                                                                         │
-│                                                                                                  │
-│ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10/site-packages/kedro/ │
-│ framework/cli/cli.py:162 in main                                                                 │
-│                                                                                                  │
-│   159 │   │   )                                                                                  │
-│   160 │   │                                                                                      │
-│   161 │   │   try:                                                                               │
-│ ❱ 162 │   │   │   super().main(                                                                  │
-│   163 │   │   │   │   args=args,                                                                 │
-│   164 │   │   │   │   prog_name=prog_name,                                                       │
-│   165 │   │   │   │   complete_var=complete_var,                                                 │
-│                                                                                                  │
-│ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10/site-packages/click/ │
-│ core.py:1363 in main                                                                             │
-│                                                                                                  │
-│ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10/site-packages/click/ │
-│ core.py:1830 in invoke                                                                           │
-│                                                                                                  │
-│ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10/site-packages/click/ │
-│ core.py:1226 in invoke                                                                           │
-│                                                                                                  │
-│ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10/site-packages/click/ │
-│ core.py:794 in invoke                                                                            │
-│                                                                                                  │
-│ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10/site-packages/kedro/ │
-│ framework/cli/project.py:262 in run                                                              │
-│                                                                                                  │
-│   259 │   with KedroSession.create(                                                              │
-│   260 │   │   env=env, conf_source=conf_source, runtime_params=params                            │
-│   261 │   ) as session:                                                                          │
-│ ❱ 262 │   │   return session.run(                                                                │
-│   263 │   │   │   tags=tuple_tags,                                                               │
-│   264 │   │   │   runner=runner_obj(is_async=is_async),                                          │
-│   265 │   │   │   node_names=tuple_node_names,                                                   │
-│                                                                                                  │
-│ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10/site-packages/kedro/ │
-│ framework/session/session.py:397 in run                                                          │
-│                                                                                                  │
-│   394 │   │   │   else settings.DATA_CATALOG_CLASS                                               │
-│   395 │   │   )                                                                                  │
-│   396 │   │                                                                                      │
-│ ❱ 397 │   │   catalog = context._get_catalog(                                                    │
-│   398 │   │   │   catalog_class=catalog_class,                                                   │
-│   399 │   │   │   save_version=save_version,                                                     │
-│   400 │   │   │   load_versions=load_versions,                                                   │
-│                                                                                                  │
-│ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10/site-packages/kedro/ │
-│ framework/context/context.py:265 in _get_catalog                                                 │
-│                                                                                                  │
-│   262 │   │                                                                                      │
-│   263 │   │   _validate_transcoded_datasets(catalog)                                             │
-│   264 │   │                                                                                      │
-│ ❱ 265 │   │   self._hook_manager.hook.after_catalog_created(                                     │
-│   266 │   │   │   catalog=catalog,                                                               │
-│   267 │   │   │   conf_catalog=conf_catalog,                                                     │
-│   268 │   │   │   conf_creds=conf_creds,                                                         │
-│                                                                                                  │
-│ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10/site-packages/pluggy │
-│ /_hooks.py:512 in __call__                                                                       │
-│                                                                                                  │
-│   509 │   │   self._verify_all_args_are_provided(kwargs)                                         │
-│   510 │   │   firstresult = self.spec.opts.get("firstresult", False) if self.spec else False     │
-│   511 │   │   # Copy because plugins may register other plugins during iteration (#438).         │
-│ ❱ 512 │   │   return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)      │
-│   513 │                                                                                          │
-│   514 │   def call_historic(                                                                     │
-│   515 │   │   self,                                                                              │
-│                                                                                                  │
-│ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10/site-packages/pluggy │
-│ /_manager.py:120 in _hookexec                                                                    │
-│                                                                                                  │
-│   117 │   ) -> object | list[object]:                                                            │
-│   118 │   │   # called from all hookcaller instances.                                            │
-│   119 │   │   # enable_tracing will set its own wrapping function at self._inner_hookexec        │
-│ ❱ 120 │   │   return self._inner_hookexec(hook_name, methods, kwargs, firstresult)               │
-│   121 │                                                                                          │
-│   122 │   def register(self, plugin: _Plugin, name: str | None = None) -> str | None:            │
-│   123 │   │   """Register a plugin and return its name.                                          │
-│                                                                                                  │
-│ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10/site-packages/pluggy │
-│ /_manager.py:475 in traced_hookexec                                                              │
-│                                                                                                  │
-│   472 │   │   │   │   lambda: oldcall(hook_name, hook_impls, caller_kwargs, firstresult)         │
-│   473 │   │   │   )                                                                              │
-│   474 │   │   │   after(outcome, hook_name, hook_impls, caller_kwargs)                           │
-│ ❱ 475 │   │   │   return outcome.get_result()                                                    │
-│   476 │   │                                                                                      │
-│   477 │   │   self._inner_hookexec = traced_hookexec                                             │
-│   478                                                                                            │
-│                                                                                                  │
-│ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10/site-packages/pluggy │
-│ /_result.py:103 in get_result                                                                    │
-│                                                                                                  │
-│   100 │   │   if exc is None:                                                                    │
-│   101 │   │   │   return cast(ResultType, self._result)                                          │
-│   102 │   │   else:                                                                              │
-│ ❱ 103 │   │   │   raise exc.with_traceback(tb)                                                   │
-│   104                                                                                            │
-│   105                                                                                            │
-│   106 # Historical name (pluggy<=1.2), kept for backward compatibility.                          │
-│                                                                                                  │
-│ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10/site-packages/pluggy │
-│ /_result.py:62 in from_call                                                                      │
-│                                                                                                  │
-│    59 │   │   __tracebackhide__ = True                                                           │
-│    60 │   │   result = exception = None                                                          │
-│    61 │   │   try:                                                                               │
-│ ❱  62 │   │   │   result = func()                                                                │
-│    63 │   │   except BaseException as exc:                                                       │
-│    64 │   │   │   exception = exc                                                                │
-│    65 │   │   return cls(result, exception)                                                      │
-│                                                                                                  │
-│ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10/site-packages/pluggy │
-│ /_manager.py:472 in <lambda>                                                                     │
-│                                                                                                  │
-│   469 │   │   ) -> object | list[object]:                                                        │
-│   470 │   │   │   before(hook_name, hook_impls, caller_kwargs)                                   │
-│   471 │   │   │   outcome = Result.from_call(                                                    │
-│ ❱ 472 │   │   │   │   lambda: oldcall(hook_name, hook_impls, caller_kwargs, firstresult)         │
-│   473 │   │   │   )                                                                              │
-│   474 │   │   │   after(outcome, hook_name, hook_impls, caller_kwargs)                           │
-│   475 │   │   │   return outcome.get_result()                                                    │
-│                                                                                                  │
-│ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10/site-packages/pluggy │
-│ /_callers.py:167 in _multicall                                                                   │
-│                                                                                                  │
-│   164 │   │   │   _raise_wrapfail(teardown, "has second yield")                                  │
-│   165 │                                                                                          │
-│   166 │   if exception is not None:                                                              │
-│ ❱ 167 │   │   raise exception                                                                    │
-│   168 │   else:                                                                                  │
-│   169 │   │   return result                                                                      │
-│   170                                                                                            │
-│                                                                                                  │
-│ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10/site-packages/pluggy │
-│ /_callers.py:121 in _multicall                                                                   │
-│                                                                                                  │
-│   118 │   │   │   │   │   except StopIteration:                                                  │
-│   119 │   │   │   │   │   │   _raise_wrapfail(function_gen, "did not yield")                     │
-│   120 │   │   │   │   else:                                                                      │
-│ ❱ 121 │   │   │   │   │   res = hook_impl.function(*args)                                        │
-│   122 │   │   │   │   │   if res is not None:                                                    │
-│   123 │   │   │   │   │   │   results.append(res)                                                │
-│   124 │   │   │   │   │   │   if firstresult:  # halt further impl calls                         │
-│                                                                                                  │
-│ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10/site-packages/kedro_ │
-│ telemetry/plugin.py:231 in after_catalog_created                                                 │
-│                                                                                                  │
-│   228 │   │   │   │   self._user_uuid, self._project_path                                        │
-│   229 │   │   │   )                                                                              │
-│   230 │   │                                                                                      │
-│ ❱ 231 │   │   project_properties = _format_project_statistics_data(                              │
-│   232 │   │   │   catalog, default_pipeline, pipelines                                           │
-│   233 │   │   )                                                                                  │
-│   234 │   │   self._event_properties.update(project_properties)                                  │
-│                                                                                                  │
-│ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10/site-packages/kedro_ │
-│ telemetry/plugin.py:314 in _format_project_statistics_data                                       │
-│                                                                                                  │
-│   311 │   │   dataset_names = catalog.keys()                                                     │
-│   312 │   │   for ds_name in dataset_names:                                                      │
-│   313 │   │   │   if not ds_name.startswith(("parameters", "params:")):                          │
-│ ❱ 314 │   │   │   │   ds_type = catalog.get_type(ds_name) or ""                                  │
-│   315 │   │   │   │   if (                                                                       │
-│   316 │   │   │   │   │   ds_type.startswith("kedro_datasets.")                                  │
-│   317 │   │   │   │   │   or ds_type.startswith("kedro.io.")                                     │
-│                                                                                                  │
-│ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10/site-packages/kedro/ │
-│ io/data_catalog.py:976 in get_type                                                               │
-│                                                                                                  │
-│    973 │   │   │   return str(_LazyDataset(ds_name, ds_config))                                  │
-│    974 │   │                                                                                     │
-│    975 │   │   if ds_name in self._lazy_datasets:                                                │
-│ ❱  976 │   │   │   return str(self._lazy_datasets[ds_name])                                      │
-│    977 │   │                                                                                     │
-│    978 │   │   class_type = type(self._datasets[ds_name])                                        │
-│    979 │   │   return f"{class_type.__module__}.{class_type.__qualname__}"                       │
-│                                                                                                  │
-│ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10/site-packages/kedro/ │
-│ io/data_catalog.py:127 in __repr__                                                               │
-│                                                                                                  │
-│    124 │   │   │   # kedro_datasets.pandas.csv_dataset.CSVDataset                                │
-│    125 │   │   ```                                                                               │
-│    126 │   │   """                                                                               │
-│ ❱  127 │   │   class_type, _ = parse_dataset_definition(self.config)                             │
-│    128 │   │   return f"{class_type.__module__}.{class_type.__qualname__}"                       │
-│    129 │                                                                                         │
-│    130 │   def materialize(self) -> AbstractDataset:                                             │
-│                                                                                                  │
-│ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10/site-packages/kedro/ │
-│ io/core.py:578 in parse_dataset_definition                                                       │
-│                                                                                                  │
-│    575 │   │   │   │   "related dependencies for the specific dataset group."                    │
-│    576 │   │   │   )                                                                             │
-│    577 │   │   │   default_error_msg = f"Class '{dataset_type}' not found, is this a typo?"      │
-│ ❱  578 │   │   │   raise DatasetError(f"{error_msg if error_msg else default_error_msg}{hint}")  │
-│    579 │                                                                                         │
-│    580 │   if not class_obj:                                                                     │
-│    581 │   │   class_obj = dataset_type                                                          │
-╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
-DatasetError: No module named 'pandas.csv_dataset'. Please install the missing dependencies for 
-pandas.csv_dataset.CSVDataset:
-https://docs.kedro.org/en/stable/kedro_project_setup/dependencies.html#install-dependencies-related-to-the-data-catalog
-Hint: If you are trying to use a dataset from `kedro-datasets`, make sure that the package is installed in your current 
-environment. You can do so by running `pip install kedro-datasets` or `pip install kedro-datasets[<dataset-group>]` to 
-install `kedro-datasets` along with related dependencies for the specific dataset group.
+[02/03/26 21:11:46] INFO     Using synchronous mode for loading and saving data. Use the --async sequential_runner.py:59
+                             flag for potential performance gains.                                                      
+                             https://docs.kedro.org/en/stable/build/run_a_pipeline/#load-and-sav                        
+                             e-asynchronously                                                                           
+                    INFO     Loading data from params:data_loading (MemoryDataset)...               data_catalog.py:1048
+                    INFO     Running node: load_data_node: load_data_auto() ->                               node.py:531
+                             [X_train_raw;X_test_raw;y_train_raw;y_test_raw]                                            
+                    INFO                                                                             data_loading.py:154
+                             =======================================================================                    
+                             =========                                                                                  
+                    INFO     📊 DATA LOADING - MODE: MULTI                                           data_loading.py:155
+                    INFO     ======================================================================= data_loading.py:156
+                             =========                                                                                  
+                                                                                                                        
+                    INFO     🔗 Multi-Table Mode Activated                                           data_loading.py:163
+                    INFO                                                                  data_loading_multitable.py:124
+                             ============================================================                               
+                             ====================                                                                       
+
+================================================================================
+                    INFO     📂 LOADING TABLES                                            data_loading_multitable.py:124
+📂 LOADING TABLES
+                    INFO     ============================================================ data_loading_multitable.py:124
+                             ====================                                                                       
+                                                                                                                        
+================================================================================
+
+                    INFO     Loading application...                                       data_loading_multitable.py:124
+Loading application... [02/03/26 21:11:48] INFO     ✅ (307,511 rows × 122 cols)                                 data_loading_multitable.py:124
+✅ (307,511 rows × 122 cols)
+                    INFO     Loading bureau...                                            data_loading_multitable.py:124
+Loading bureau... [02/03/26 21:11:49] INFO     ✅ (1,716,428 rows × 17 cols)                                data_loading_multitable.py:124
+✅ (1,716,428 rows × 17 cols)
+                    INFO     Loading previous_application...                              data_loading_multitable.py:124
+Loading previous_application... [02/03/26 21:11:53] INFO     ✅ (1,670,214 rows × 37 cols)                                data_loading_multitable.py:124
+✅ (1,670,214 rows × 37 cols)
+                    INFO     Loading pos_cash...                                          data_loading_multitable.py:124
+Loading pos_cash... [02/03/26 21:11:57] INFO     ✅ (10,001,358 rows × 8 cols)                                data_loading_multitable.py:124
+✅ (10,001,358 rows × 8 cols)
+                    INFO     Loading credit_card...                                       data_loading_multitable.py:124
+Loading credit_card... [02/03/26 21:12:02] INFO     ✅ (3,840,312 rows × 23 cols)                                data_loading_multitable.py:124
+✅ (3,840,312 rows × 23 cols)
+                    INFO     Loading installments...                                      data_loading_multitable.py:124
+Loading installments... Killed
