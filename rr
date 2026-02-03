@@ -1,33 +1,33 @@
-[2026-02-03 22:43:11,586: INFO/MainProcess] Events of group {task} enabled by remote.
-[2026-02-03 22:47:51,871: INFO/MainProcess] Task app.tasks.execute_pipeline[60afab1d-106e-4f98-b00a-2e9c0fdbe400] received
-[2026-02-03 22:47:51,935: INFO/ForkPoolWorker-4] ================================================================================
-[2026-02-03 22:47:51,938: INFO/ForkPoolWorker-4] 🚀 STARTING PIPELINE EXECUTION
-[2026-02-03 22:47:51,939: INFO/ForkPoolWorker-4] ================================================================================
-[2026-02-03 22:47:51,939: INFO/ForkPoolWorker-4] Job ID: de902dcf-a540-4ddd-b61a-d4a7ab3b2226
-[2026-02-03 22:47:51,939: INFO/ForkPoolWorker-4] Pipeline: data_loading
-[2026-02-03 22:47:51,939: INFO/ForkPoolWorker-4] Parameters: {}
-[2026-02-03 22:47:51,939: INFO/ForkPoolWorker-4] 
+26-02-03 22:55:28,810: INFO/ForkPoolWorker-4] ================================================================================
+[2026-02-03 22:55:28,810: INFO/ForkPoolWorker-4] Job ID: 7c60687f-77d9-4119-90b4-42277290824e
+[2026-02-03 22:55:28,810: INFO/ForkPoolWorker-4] Pipeline: data_loading
+[2026-02-03 22:55:28,810: INFO/ForkPoolWorker-4] Parameters: {}
+[2026-02-03 22:55:28,811: INFO/ForkPoolWorker-4] 
 [STEP 1] Updating job status...
-[2026-02-03 22:47:51,965: INFO/ForkPoolWorker-4] ✅ Job de902dcf-a540-4ddd-b61a-d4a7ab3b2226 marked as RUNNING
-[2026-02-03 22:47:51,966: INFO/ForkPoolWorker-4] 
+[2026-02-03 22:55:28,831: INFO/ForkPoolWorker-4] ✅ Job 7c60687f-77d9-4119-90b4-42277290824e marked as RUNNING
+[2026-02-03 22:55:28,831: INFO/ForkPoolWorker-4] 
 [STEP 2] Verifying Kedro project...
-[2026-02-03 22:47:51,966: INFO/ForkPoolWorker-4] ✅ Kedro project verified: /home/ashok/work/latest/full/kedro-ml-engine-integrated
-[2026-02-03 22:47:51,966: INFO/ForkPoolWorker-4] 
+[2026-02-03 22:55:28,832: INFO/ForkPoolWorker-4] ✅ Kedro project verified: /home/ashok/work/latest/full/kedro-ml-engine-integrated
+[2026-02-03 22:55:28,832: INFO/ForkPoolWorker-4] 
 [STEP 3] Creating Kedro session...
-[2026-02-03 22:47:51,966: INFO/ForkPoolWorker-4] Loading project metadata from /home/ashok/work/latest/full/kedro-ml-engine-integrated
-[2026-02-03 22:47:51,966: ERROR/ForkPoolWorker-4] 
+[2026-02-03 22:55:28,832: INFO/ForkPoolWorker-4] Loading project from /home/ashok/work/latest/full/kedro-ml-engine-integrated
+[2026-02-03 22:55:28,832: INFO/ForkPoolWorker-4] ✅ Project path verified: /home/ashok/work/latest/full/kedro-ml-engine-integrated
+[2026-02-03 22:55:28,832: ERROR/ForkPoolWorker-4] 
 ================================================================================
-[2026-02-03 22:47:51,966: ERROR/ForkPoolWorker-4] ❌ PIPELINE EXECUTION FAILED
-[2026-02-03 22:47:51,966: ERROR/ForkPoolWorker-4] ================================================================================
-[2026-02-03 22:47:51,966: ERROR/ForkPoolWorker-4] Job ID: de902dcf-a540-4ddd-b61a-d4a7ab3b2226
-[2026-02-03 22:47:51,967: ERROR/ForkPoolWorker-4] Pipeline: data_loading
-[2026-02-03 22:47:51,967: ERROR/ForkPoolWorker-4] Error Type: AttributeError
-[2026-02-03 22:47:51,967: ERROR/ForkPoolWorker-4] Error Message: type object 'ProjectMetadata' has no attribute 'from_project_root'
+[2026-02-03 22:55:28,832: ERROR/ForkPoolWorker-4] ❌ PIPELINE EXECUTION FAILED
+[2026-02-03 22:55:28,832: ERROR/ForkPoolWorker-4] ================================================================================
+[2026-02-03 22:55:28,832: ERROR/ForkPoolWorker-4] Job ID: 7c60687f-77d9-4119-90b4-42277290824e
+[2026-02-03 22:55:28,832: ERROR/ForkPoolWorker-4] Pipeline: data_loading
+[2026-02-03 22:55:28,832: ERROR/ForkPoolWorker-4] Error Type: ValueError
+[2026-02-03 22:55:28,832: ERROR/ForkPoolWorker-4] Error Message: Package name not found. Make sure you have configured the project using 'bootstrap_project'. This should happen automatically if you are using Kedro command line interface.
 Traceback (most recent call last):
   File "/home/ashok/work/latest/full/kedro-engine-dynamic/app/tasks.py", line 90, in execute_pipeline
-    metadata = ProjectMetadata.from_project_root(KEDRO_PROJECT_PATH)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-AttributeError: type object 'ProjectMetadata' has no attribute 'from_project_root'
-[2026-02-03 22:47:51,992: INFO/ForkPoolWorker-4] ✅ Error logged to database
-[2026-02-03 22:47:52,005: INFO/ForkPoolWorker-4] Task app.tasks.execute_pipeline[60afab1d-106e-4f98-b00a-2e9c0fdbe400] succeeded in 0.13201040800004193s: {'status': 'failed', 'pipeline_name': 'data_loading', 'error_type': 'AttributeError', 'error_message': 'type object \'ProjectMetadata\' has no attribute \'from_project_root\'', 'execution_time': 0.044782, 'timestamp': '2026-02-03T22:47:51.935363'}
-
+    with KedroSession.create(project_path=KEDRO_PROJECT_PATH) as session:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site-packages/kedro/framework/session/session.py", line 158, in create
+    validate_settings()
+  File "/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site-packages/kedro/framework/project/__init__.py", line 335, in validate_settings
+    raise ValueError(
+ValueError: Package name not found. Make sure you have configured the project using 'bootstrap_project'. This should happen automatically if you are using Kedro command line interface.
+[2026-02-03 22:55:28,859: INFO/ForkPoolWorker-4] ✅ Error logged to database
+[2026-02-03 22:55:28,865: INFO/ForkPoolWorker-4] Task app.tasks.execute_pipeline[d94fd814-8e32-4a07-ac83-ac90786cdacb] succeeded in 0.07096079099983399s: {'status': 'failed', 'pipeline_name': 'data_loading', 'error_type': 'ValueError', 'error_message': 'Package name not found. Make sure you have configured the project using \'bootstrap_project\'. This should happen automatically if you are using Kedro command line interface.', 'execution_time': 0.027755, 'timestamp': '2026-02-03T22:55:28.806534'}
