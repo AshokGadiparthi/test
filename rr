@@ -1,20 +1,25 @@
 (venv) ashok@ubuntu:~/work/latest/full/kedro-engine-dynamic$ celery -A worker worker --loglevel=info -c 4
-2026-02-03 16:31:17,322 - ml_engine.utils.logger - INFO - ✅ Logging configured
-2026-02-03 16:31:17,322 - ml_engine - INFO - 🚀 ML Engine v0.2.0 initialized
-2026-02-03 16:31:17,323 - ml_engine.utils.logger - INFO - ✅ Logging configured
-2026-02-03 16:31:17,323 - src.ml_engine - INFO - 🚀 ML Engine v0.2.0 initialized
-[02/03/26 16:31:17] INFO     Using                                                                       __init__.py:269
+✅ Project root: /home/ashok/work/latest/full/kedro-engine-dynamic
+✅ sys.path[0]: /home/ashok/work/latest/full/kedro-engine-dynamic/src
+✅ Celery app created
+2026-02-03 16:42:23,832 - ml_engine.utils.logger - INFO - ✅ Logging configured
+2026-02-03 16:42:23,833 - ml_engine - INFO - 🚀 ML Engine v0.2.0 initialized
+2026-02-03 16:42:23,833 - ml_engine.utils.logger - INFO - ✅ Logging configured
+2026-02-03 16:42:23,833 - src.ml_engine - INFO - 🚀 ML Engine v0.2.0 initialized
+[02/03/26 16:42:23] INFO     Using                                                                       __init__.py:269
                              '/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site                
                              -packages/kedro/framework/project/rich_logging.yml' as logging                             
                              configuration.                                                                             
-[02/03/26 16:31:17] INFO     ✅ Kedro configured: /home/ashok/work/latest/full/kedro-engine-dynamic   kedro_runner.py:41
+[02/03/26 16:42:24] INFO     ✅ Kedro configured: /home/ashok/work/latest/full/kedro-engine-dynamic   kedro_runner.py:41
+✅ Tasks imported successfully!
+   Available tasks: ['celery.chord_unlock', 'celery.chord', 'celery.chunks', 'app.tasks.check_pipeline', 'celery.map', 'app.tasks.execute_pipeline', 'celery.backend_cleanup', 'celery.group', 'app.tasks.get_pipeline_info', 'celery.starmap', 'celery.accumulate', 'celery.chain']
  
  -------------- celery@ubuntu v5.6.2 (recovery)
 --- ***** ----- 
--- ******* ---- Linux-6.14.0-37-generic-x86_64-with-glibc2.39 2026-02-03 16:31:17
+-- ******* ---- Linux-6.14.0-37-generic-x86_64-with-glibc2.39 2026-02-03 16:42:24
 - *** --- * --- 
 - ** ---------- [config]
-- ** ---------- .> app:         ml_platform:0x7b9f19e2bb30
+- ** ---------- .> app:         ml_platform:0x7e14c6d46d20
 - ** ---------- .> transport:   redis://localhost:6379/0
 - ** ---------- .> results:     redis://localhost:6379/1
 - *** --- * --- .> concurrency: 4 (prefork)
@@ -30,19 +35,8 @@
   . app.tasks.get_pipeline_info
   . worker.debug_task
 
-[2026-02-03 16:31:18,004: INFO/MainProcess] Connected to redis://localhost:6379/0
-[2026-02-03 16:31:18,008: INFO/MainProcess] mingle: searching for neighbors
-[2026-02-03 16:31:19,015: INFO/MainProcess] mingle: all alone
-[2026-02-03 16:31:19,038: INFO/MainProcess] celery@ubuntu ready.
-[2026-02-03 16:31:59,290: INFO/MainProcess] Events of group {task} enabled by remote.
-
-
-
-ashok@ubuntu:~/work/latest/full/kedro-engine-dynamic$ redis-cli ping
-PONG
-ashok@ubuntu:~/work/latest/full/kedro-engine-dynamic$ redis-cli LLEN celery
-(integer) 2
-ashok@ubuntu:~/work/latest/full/kedro-engine-dynamic$ redis-cli KEYS celery*
-(empty array)
-ashok@ubuntu:~/work/latest/full/kedro-engine-dynamic$ 
+[2026-02-03 16:42:24,434: INFO/MainProcess] Connected to redis://localhost:6379/0
+[2026-02-03 16:42:24,437: INFO/MainProcess] mingle: searching for neighbors
+[2026-02-03 16:42:25,443: INFO/MainProcess] mingle: all alone
+[2026-02-03 16:42:25,454: INFO/MainProcess] celery@ubuntu ready.
 
