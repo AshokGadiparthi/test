@@ -1,117 +1,33 @@
-(venv) ashok@ubuntu:~/work/latest/full/kedro-engine-dynamic$ python main.py 
-2026-02-03 22:42:40,389 - __main__ - INFO - Kedro project path: /home/ashok/work/latest/full/kedro-ml-engine-integrated
-2026-02-03 22:42:40,389 - __main__ - INFO - ✅ Kedro project found and added to path
-2026-02-03 22:42:40,392 - __main__ - INFO - ✅ JobManager imported successfully
-2026-02-03 22:42:40,393 - __main__ - INFO - ✅ Health router imported
-2026-02-03 22:42:40,415 - __main__ - INFO - ✅ Auth router imported
-2026-02-03 22:42:40,416 - __main__ - INFO - ✅ Projects router imported
-2026-02-03 22:42:40,420 - __main__ - INFO - ✅ Datasets router imported
-2026-02-03 22:42:40,421 - __main__ - INFO - ✅ Datasources router imported
-2026-02-03 22:42:40,422 - __main__ - INFO - ✅ Models router imported
-2026-02-03 22:42:40,423 - __main__ - INFO - ✅ Activities router imported
-2026-02-03 22:42:40,432 - __main__ - INFO - ✅ EDA router imported
-2026-02-03 22:42:40,433 - __main__ - INFO - ✅ Pipelines router imported
-2026-02-03 22:42:40,503 - celery_app - INFO - ✅ Celery configured: None
-[02/03/26 22:42:40] INFO     Using                                                                       __init__.py:269
-                             '/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site                
-                             -packages/kedro/framework/project/rich_logging.yml' as logging                             
-                             configuration.                                                                             
-                    INFO     ✅ Database initialized at:                                              job_manager.py:316
-                             /home/ashok/work/latest/full/kedro-engine-dynamic/ml_platform.db                           
-                    INFO     ✅ Created 20 tables successfully!                                       job_manager.py:317
-                    INFO     ✅ Kedro project path configured:                                               tasks.py:28
-                             /home/ashok/work/latest/full/kedro-ml-engine-integrated                                    
-                    INFO     ✅ Database initialized at:                                              job_manager.py:316
-                             /home/ashok/work/latest/full/kedro-engine-dynamic/ml_platform.db                           
-                    INFO     ✅ Created 20 tables successfully!                                       job_manager.py:317
-                    WARNING  /home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site- warnings.py:110
-                             packages/pydantic/_internal/_config.py:318: UserWarning: Valid config keys                 
-                             have changed in V2:                                                                        
-                             * 'schema_extra' has been renamed to 'json_schema_extra'                                   
-                               warnings.warn(message, UserWarning)                                                      
-                                                                                                                        
-                    INFO     ✅ Jobs router fully initialized with ALL endpoints                             jobs.py:519
-                    INFO     ✅ Jobs router imported                                                         main.py:124
-                    INFO     ✅ FastAPI application created: ML Platform with Kedro Integration              main.py:190
-                    INFO     ✅ CORS middleware configured                                                   main.py:204
-                    INFO     ✅ Health router included                                                       main.py:237
-                    INFO     ✅ Auth router included                                                         main.py:241
-                    INFO     ✅ Projects router included                                                     main.py:245
-                    INFO     ✅ Datasets router included                                                     main.py:249
-                    INFO     ✅ Datasources router included                                                  main.py:253
-                    INFO     ✅ Models router included                                                       main.py:257
-                    INFO     ✅ Activities router included                                                   main.py:261
-                    INFO     ✅ EDA router included                                                          main.py:265
-                    INFO     ✅ Pipelines router included                                                    main.py:269
-                    INFO     ✅ Jobs router included                                                         main.py:273
-                    INFO     Starting Uvicorn server on 0.0.0.0:8000                                         main.py:286
-                    INFO     Kedro project path: /home/ashok/work/latest/full/kedro-ml-engine-integrated      main.py:35
-                    INFO     ✅ Kedro project found and added to path                                         main.py:40
-                    INFO     ✅ JobManager imported successfully                                              main.py:50
-                    INFO     ✅ Health router imported                                                        main.py:61
-                    INFO     ✅ Auth router imported                                                          main.py:68
-                    INFO     ✅ Projects router imported                                                      main.py:75
-                    INFO     ✅ Datasets router imported                                                      main.py:82
-                    INFO     ✅ Datasources router imported                                                   main.py:89
-                    INFO     ✅ Models router imported                                                        main.py:96
-                    INFO     ✅ Activities router imported                                                   main.py:103
-                    INFO     ✅ EDA router imported                                                          main.py:110
-                    INFO     ✅ Pipelines router imported                                                    main.py:117
-                    INFO     ✅ Jobs router imported                                                         main.py:124
-                    INFO     ✅ FastAPI application created: ML Platform with Kedro Integration              main.py:190
-                    INFO     ✅ CORS middleware configured                                                   main.py:204
-                    INFO     ✅ Health router included                                                       main.py:237
-                    INFO     ✅ Auth router included                                                         main.py:241
-                    INFO     ✅ Projects router included                                                     main.py:245
-                    INFO     ✅ Datasets router included                                                     main.py:249
-                    INFO     ✅ Datasources router included                                                  main.py:253
-                    INFO     ✅ Models router included                                                       main.py:257
-                    INFO     ✅ Activities router included                                                   main.py:261
-                    INFO     ✅ EDA router included                                                          main.py:265
-                    INFO     ✅ Pipelines router included                                                    main.py:269
-                    INFO     ✅ Jobs router included                                                         main.py:273
-INFO:     Started server process [4687]
-INFO:     Waiting for application startup.
-                    INFO                                                                                     main.py:143
-                             ===============================================================================            
-                             =                                                                                          
-                    INFO     🚀 STARTING UP APPLICATION                                                      main.py:144
-                    INFO     =============================================================================== main.py:145
-                             =                                                                                          
-                    INFO     📊 Initializing database with ALL tables...                                     main.py:148
-                    INFO     ✅ Database initialized at:                                              job_manager.py:316
-                             /home/ashok/work/latest/full/kedro-engine-dynamic/ml_platform.db                           
-                    INFO     ✅ Created 20 tables successfully!                                       job_manager.py:317
-                    INFO     ✅ Database initialized successfully with all tables!                           main.py:151
-                    INFO     ✅ Kedro project path: /home/ashok/work/latest/full/kedro-ml-engine-integrated  main.py:155
-                    INFO     ✅ API running on: 0.0.0.0:8000                                                 main.py:156
-                    INFO     ✅ Celery broker: not configured                                                main.py:157
-                    INFO     ✅ Database: sqlite:///ml_platform.db                                           main.py:158
-                    INFO     =============================================================================== main.py:159
-                             =                                                                                          
-                    INFO     ✅ FastAPI application started successfully                                     main.py:160
-                                                                                                                        
-INFO:     Application startup complete.
-INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-INFO:     192.168.1.26:49709 - "GET /docs HTTP/1.1" 200 OK
-INFO:     192.168.1.26:49709 - "GET /openapi.json HTTP/1.1" 200 OK
-[02/03/26 22:43:53] INFO     📊 API Request: Run data_loading pipeline                                       jobs.py:192
-                    INFO     📊 API Request: Run pipeline 'data_loading'                                     jobs.py:127
-                    INFO     Creating job in database...                                                     jobs.py:131
-                    ERROR    ❌ Error in run_pipeline: DatabaseManager.create_job() got an unexpected        jobs.py:164
-                             keyword argument 'description'                                                             
-                             ╭───────────────────── Traceback (most recent call last) ─────────────────────╮            
-                             │ /home/ashok/work/latest/full/kedro-engine-dynamic/app/api/jobs.py:132 in    │            
-                             │ run_pipeline                                                                │            
-                             │                                                                             │            
-                             │   129 │   try:                                                              │            
-                             │   130 │   │   # Create job in database                                      │            
-                             │   131 │   │   logger.info(f"Creating job in database...")                   │            
-                             │ ❱ 132 │   │   job = db_manager.create_job(                                  │            
-                             │   133 │   │   │   pipeline_name=pipeline_name,                              │            
-                             │   134 │   │   │   parameters=request.parameters if request else {},         │            
-                             │   135 │   │   │   user_id="api_user",                                       │            
-                             ╰─────────────────────────────────────────────────────────────────────────────╯            
-                             TypeError: DatabaseManager.create_job() got an unexpected keyword argument                 
-                             'description'                                                                              
-INFO:     192.168.1.26:51147 - "POST /api/v1/jobs/data-loading HTTP/1.1" 400 Bad Request
+[2026-02-03 22:43:11,586: INFO/MainProcess] Events of group {task} enabled by remote.
+[2026-02-03 22:47:51,871: INFO/MainProcess] Task app.tasks.execute_pipeline[60afab1d-106e-4f98-b00a-2e9c0fdbe400] received
+[2026-02-03 22:47:51,935: INFO/ForkPoolWorker-4] ================================================================================
+[2026-02-03 22:47:51,938: INFO/ForkPoolWorker-4] 🚀 STARTING PIPELINE EXECUTION
+[2026-02-03 22:47:51,939: INFO/ForkPoolWorker-4] ================================================================================
+[2026-02-03 22:47:51,939: INFO/ForkPoolWorker-4] Job ID: de902dcf-a540-4ddd-b61a-d4a7ab3b2226
+[2026-02-03 22:47:51,939: INFO/ForkPoolWorker-4] Pipeline: data_loading
+[2026-02-03 22:47:51,939: INFO/ForkPoolWorker-4] Parameters: {}
+[2026-02-03 22:47:51,939: INFO/ForkPoolWorker-4] 
+[STEP 1] Updating job status...
+[2026-02-03 22:47:51,965: INFO/ForkPoolWorker-4] ✅ Job de902dcf-a540-4ddd-b61a-d4a7ab3b2226 marked as RUNNING
+[2026-02-03 22:47:51,966: INFO/ForkPoolWorker-4] 
+[STEP 2] Verifying Kedro project...
+[2026-02-03 22:47:51,966: INFO/ForkPoolWorker-4] ✅ Kedro project verified: /home/ashok/work/latest/full/kedro-ml-engine-integrated
+[2026-02-03 22:47:51,966: INFO/ForkPoolWorker-4] 
+[STEP 3] Creating Kedro session...
+[2026-02-03 22:47:51,966: INFO/ForkPoolWorker-4] Loading project metadata from /home/ashok/work/latest/full/kedro-ml-engine-integrated
+[2026-02-03 22:47:51,966: ERROR/ForkPoolWorker-4] 
+================================================================================
+[2026-02-03 22:47:51,966: ERROR/ForkPoolWorker-4] ❌ PIPELINE EXECUTION FAILED
+[2026-02-03 22:47:51,966: ERROR/ForkPoolWorker-4] ================================================================================
+[2026-02-03 22:47:51,966: ERROR/ForkPoolWorker-4] Job ID: de902dcf-a540-4ddd-b61a-d4a7ab3b2226
+[2026-02-03 22:47:51,967: ERROR/ForkPoolWorker-4] Pipeline: data_loading
+[2026-02-03 22:47:51,967: ERROR/ForkPoolWorker-4] Error Type: AttributeError
+[2026-02-03 22:47:51,967: ERROR/ForkPoolWorker-4] Error Message: type object 'ProjectMetadata' has no attribute 'from_project_root'
+Traceback (most recent call last):
+  File "/home/ashok/work/latest/full/kedro-engine-dynamic/app/tasks.py", line 90, in execute_pipeline
+    metadata = ProjectMetadata.from_project_root(KEDRO_PROJECT_PATH)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: type object 'ProjectMetadata' has no attribute 'from_project_root'
+[2026-02-03 22:47:51,992: INFO/ForkPoolWorker-4] ✅ Error logged to database
+[2026-02-03 22:47:52,005: INFO/ForkPoolWorker-4] Task app.tasks.execute_pipeline[60afab1d-106e-4f98-b00a-2e9c0fdbe400] succeeded in 0.13201040800004193s: {'status': 'failed', 'pipeline_name': 'data_loading', 'error_type': 'AttributeError', 'error_message': 'type object \'ProjectMetadata\' has no attribute \'from_project_root\'', 'execution_time': 0.044782, 'timestamp': '2026-02-03T22:47:51.935363'}
+
