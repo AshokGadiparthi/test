@@ -1,20 +1,20 @@
-^C(venv) ashok@ubuntu:~/work/latest/full/kedro-engine-dynamic$ export KEDRO_PACKAGE_NAME=kedro-engine-dynamic
+(venv) ashok@ubuntu:~/work/latest/full/kedro-engine-dynamic$ export KEDRO_PACKAGE_NAME=ml_engine
 (venv) ashok@ubuntu:~/work/latest/full/kedro-engine-dynamic$ celery -A worker worker --loglevel=info -c 4
-2026-02-03 16:09:13,079 - ml_engine.utils.logger - INFO - ✅ Logging configured
-2026-02-03 16:09:13,079 - ml_engine - INFO - 🚀 ML Engine v0.2.0 initialized
-2026-02-03 16:09:13,079 - ml_engine.utils.logger - INFO - ✅ Logging configured
-2026-02-03 16:09:13,079 - src.ml_engine - INFO - 🚀 ML Engine v0.2.0 initialized
-[02/03/26 16:09:13] INFO     Using                                                                       __init__.py:269
+2026-02-03 16:11:29,452 - ml_engine.utils.logger - INFO - ✅ Logging configured
+2026-02-03 16:11:29,452 - ml_engine - INFO - 🚀 ML Engine v0.2.0 initialized
+2026-02-03 16:11:29,453 - ml_engine.utils.logger - INFO - ✅ Logging configured
+2026-02-03 16:11:29,453 - src.ml_engine - INFO - 🚀 ML Engine v0.2.0 initialized
+[02/03/26 16:11:29] INFO     Using                                                                       __init__.py:269
                              '/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site                
                              -packages/kedro/framework/project/rich_logging.yml' as logging                             
                              configuration.                                                                             
  
  -------------- celery@ubuntu v5.6.2 (recovery)
 --- ***** ----- 
--- ******* ---- Linux-6.14.0-37-generic-x86_64-with-glibc2.39 2026-02-03 16:09:13
+-- ******* ---- Linux-6.14.0-37-generic-x86_64-with-glibc2.39 2026-02-03 16:11:29
 - *** --- * --- 
 - ** ---------- [config]
-- ** ---------- .> app:         ml_platform:0x7a6284541d00
+- ** ---------- .> app:         ml_platform:0x7920a86cbe60
 - ** ---------- .> transport:   redis://localhost:6379/0
 - ** ---------- .> results:     disabled://
 - *** --- * --- .> concurrency: 4 (prefork)
@@ -30,20 +30,20 @@
   . app.tasks.get_pipeline_info
   . worker.debug_task
 
-[2026-02-03 16:09:13,703: INFO/MainProcess] Connected to redis://localhost:6379/0
-[2026-02-03 16:09:13,714: INFO/MainProcess] mingle: searching for neighbors
-[2026-02-03 16:09:14,725: INFO/MainProcess] mingle: all alone
-[2026-02-03 16:09:14,748: INFO/MainProcess] celery@ubuntu ready.
-[2026-02-03 16:09:14,995: INFO/MainProcess] Events of group {task} enabled by remote.
-[2026-02-03 16:09:24,663: INFO/MainProcess] Task app.tasks.execute_pipeline[4b170893-3d00-40df-96f6-a9c1489266cf] received
-[2026-02-03 16:09:24,667: INFO/ForkPoolWorker-4] 🚀 Starting pipeline execution: data_loading (Job: 91a78044-c5b6-44d3-8ea2-e650442be84d)
-[2026-02-03 16:09:24,708: INFO/ForkPoolWorker-4] ✅ Job 91a78044-c5b6-44d3-8ea2-e650442be84d status updated to JobStatus.RUNNING
-[2026-02-03 16:09:24,709: INFO/ForkPoolWorker-4] KedroExecutor initialized with project: /home/ashok/work/latest/full/kedro-engine-dynamic
-[2026-02-03 16:09:24,709: INFO/ForkPoolWorker-4] ✅ Kedro project initialized successfully
-[2026-02-03 16:09:24,709: INFO/ForkPoolWorker-4] 🚀 Starting pipeline execution: data_loading
-[2026-02-03 16:09:24,709: INFO/ForkPoolWorker-4]    Run ID: 91a78044-c5b6-44d3-8ea2-e650442be84d
-[2026-02-03 16:09:24,710: ERROR/ForkPoolWorker-4] ❌ Pipeline execution failed: No module named '/home/ashok/work/latest/full/kedro-engine-dynamic'
-[2026-02-03 16:09:24,711: ERROR/ForkPoolWorker-4] Traceback:
+[2026-02-03 16:11:30,094: INFO/MainProcess] Connected to redis://localhost:6379/0
+[2026-02-03 16:11:30,100: INFO/MainProcess] mingle: searching for neighbors
+[2026-02-03 16:11:31,183: INFO/MainProcess] mingle: all alone
+[2026-02-03 16:11:31,197: INFO/MainProcess] celery@ubuntu ready.
+[2026-02-03 16:11:34,991: INFO/MainProcess] Events of group {task} enabled by remote.
+[2026-02-03 16:11:36,291: INFO/MainProcess] Task app.tasks.execute_pipeline[ed0ede9f-230c-4f4a-a1b2-6a8c99a8e52a] received
+[2026-02-03 16:11:36,296: INFO/ForkPoolWorker-4] 🚀 Starting pipeline execution: data_loading (Job: 771fbb0a-e072-4d1a-8dd0-d74c2ade295d)
+[2026-02-03 16:11:36,347: INFO/ForkPoolWorker-4] ✅ Job 771fbb0a-e072-4d1a-8dd0-d74c2ade295d status updated to JobStatus.RUNNING
+[2026-02-03 16:11:36,347: INFO/ForkPoolWorker-4] KedroExecutor initialized with project: /home/ashok/work/latest/full/kedro-engine-dynamic
+[2026-02-03 16:11:36,347: INFO/ForkPoolWorker-4] ✅ Kedro project initialized successfully
+[2026-02-03 16:11:36,347: INFO/ForkPoolWorker-4] 🚀 Starting pipeline execution: data_loading
+[2026-02-03 16:11:36,347: INFO/ForkPoolWorker-4]    Run ID: 771fbb0a-e072-4d1a-8dd0-d74c2ade295d
+[2026-02-03 16:11:36,349: ERROR/ForkPoolWorker-4] ❌ Pipeline execution failed: No module named '/home/ashok/work/latest/full/kedro-engine-dynamic'
+[2026-02-03 16:11:36,349: ERROR/ForkPoolWorker-4] Traceback:
 Traceback (most recent call last):
   File "/home/ashok/work/latest/full/kedro-engine-dynamic/src/ml_engine/kedro_runner.py", line 241, in execute_pipeline
     with KedroSession.create(project_path=self.project_path) as session:
@@ -56,7 +56,7 @@ Traceback (most recent call last):
   File "<frozen importlib.util>", line 92, in find_spec
 ModuleNotFoundError: No module named '/home/ashok/work/latest/full/kedro-engine-dynamic'
 
-[2026-02-03 16:09:24,711: ERROR/ForkPoolWorker-4] ❌ Pipeline failed: No module named '/home/ashok/work/latest/full/kedro-engine-dynamic'
-[2026-02-03 16:09:24,721: INFO/ForkPoolWorker-4] ✅ Job 91a78044-c5b6-44d3-8ea2-e650442be84d status updated to JobStatus.FAILED
-[2026-02-03 16:09:24,721: INFO/ForkPoolWorker-4] ✅ Task 4b170893-3d00-40df-96f6-a9c1489266cf succeeded
-[2026-02-03 16:09:24,721: INFO/ForkPoolWorker-4] Task app.tasks.execute_pipeline[4b170893-3d00-40df-96f6-a9c1489266cf] succeeded in 0.05449619200226152s: {'status': 'failed', 'pipeline_name': 'data_loading', 'run_id': '91a78044-c5b6-44d3-8ea2-e650442be84d', 'error': 'No module named \'/home/ashok/work/latest/full/kedro-engine-dynamic\'', 'execution_time': 0.0, 'started_at': '2026-02-03T16:09:24.709170', 'completed_at': '2026-02-03T16:09:24.709401'}
+[2026-02-03 16:11:36,349: ERROR/ForkPoolWorker-4] ❌ Pipeline failed: No module named '/home/ashok/work/latest/full/kedro-engine-dynamic'
+[2026-02-03 16:11:36,444: INFO/ForkPoolWorker-4] ✅ Job 771fbb0a-e072-4d1a-8dd0-d74c2ade295d status updated to JobStatus.FAILED
+[2026-02-03 16:11:36,445: INFO/ForkPoolWorker-4] ✅ Task ed0ede9f-230c-4f4a-a1b2-6a8c99a8e52a succeeded
+[2026-02-03 16:11:36,445: INFO/ForkPoolWorker-4] Task app.tasks.execute_pipeline[ed0ede9f-230c-4f4a-a1b2-6a8c99a8e52a] succeeded in 0.1498307880028733s: {'status': 'failed', 'pipeline_name': 'data_loading', 'run_id': '771fbb0a-e072-4d1a-8dd0-d74c2ade295d', 'error': 'No module named \'/home/ashok/work/latest/full/kedro-engine-dynamic\'', 'execution_time': 0.0, 'started_at': '2026-02-03T16:11:36.347818', 'completed_at': '2026-02-03T16:11:36.348153'}
