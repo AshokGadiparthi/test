@@ -1,206 +1,35 @@
-(venv) ashok@ubuntu:~/work/latest/full/kedro-ml-engine-integrated$ kedro run --pipeline data_loading
-[02/03/26 21:11:43] INFO     Using                                                                       __init__.py:269
-                             '/home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.1                
-                             0/site-packages/kedro/framework/project/rich_logging.yml' as logging                       
-                             configuration.                                                                             
-[02/03/26 21:11:43] INFO     Kedro project ml_engine                                                      session.py:335
-                    WARNING  `pipeline_name` is deprecated and will be removed in a future release.       session.py:337
-                             Please use `pipeline_names` instead.                                                       
-✅ Multi-table loader imported successfully
-[02/03/26 21:11:45] INFO     ✅ Phase 1a (data_loading) imported successfully                    pipeline_registry.py:62
-                    INFO     ✅ Phase 1b (data_validation) imported successfully                 pipeline_registry.py:69
-                    INFO     ✅ Phase 1c (data_cleaning with PATH B feature scaling) imported    pipeline_registry.py:76
-                             successfully                                                                               
-                    INFO     ✅ Phase 2a (feature_engineering) imported successfully             pipeline_registry.py:87
-                    INFO     ✅ Phase 2b (feature_selection) imported successfully               pipeline_registry.py:94
-                    INFO     ✅ Phase 3 (model_training with PATH A+B) imported successfully    pipeline_registry.py:108
-                    INFO     ✅ Phase 4 (phase4_algorithms with PATH A+B+C ready) imported      pipeline_registry.py:126
-                             successfully                                                                               
-                    INFO     ✅ Phase 6 (ensemble_methods) imported successfully                pipeline_registry.py:139
-                    INFO     ✅ Phase 5a (training_strategies) module available                 pipeline_registry.py:166
-                    INFO     ✅ Phase 5b (evaluation_metrics) module available                  pipeline_registry.py:174
-                    INFO     ✅ Phase 5c (cross_validation_strategies) module available         pipeline_registry.py:182
-                    INFO     ✅ Phase 5d (model_comparison) module available                    pipeline_registry.py:190
-                    INFO     ✅ Phase 5e (visualization_manager) module available               pipeline_registry.py:198
-                    INFO     ✅ Phase 5f (hyperparameter_analysis) module available             pipeline_registry.py:206
-                    INFO     ✅ Phase 5g (report_generator) module available                    pipeline_registry.py:214
-                    INFO                                                                        pipeline_registry.py:247
-                             ==================================================================                         
-                             ==============                                                                             
-                    INFO     REGISTERING PIPELINES - PATH A, B, C + PHASE 5                     pipeline_registry.py:248
-                    INFO     ================================================================== pipeline_registry.py:249
-                             ==============                                                                             
-                    INFO     ✅ Phase 1 pipeline created (data loading + validation + cleaning) pipeline_registry.py:267
-                    INFO     ✅ Phase 2 pipeline created (feature engineering + selection)      pipeline_registry.py:275
-                    INFO     ✅ Phase 1+2 pipeline created (complete data processing)           pipeline_registry.py:281
-                    INFO     ✅ Phase 3 pipeline created (model training with PATH A+B)         pipeline_registry.py:289
-                    INFO     ✅ Phase 4 pipeline created (algorithms with PATH A+B+C ready)     pipeline_registry.py:297
-                    INFO                                                                 phase6_ensemble_pipeline.py:319
-                             ===========================================================                                
-                             =====================                                                                      
-                    INFO     🔧 CREATING PHASE 6 PIPELINE                                phase6_ensemble_pipeline.py:320
-                    INFO     =========================================================== phase6_ensemble_pipeline.py:321
-                             =====================                                                                      
-                    INFO     ✅ Phase 6 Pipeline created successfully                    phase6_ensemble_pipeline.py:345
-                    INFO     =========================================================== phase6_ensemble_pipeline.py:346
-                             =====================                                                                      
-                                                                                                                        
-                    INFO     ✅ Phase 6 pipeline created (ensemble methods)                     pipeline_registry.py:306
-                    INFO     ✅ Complete Pipeline created (Phase 1-6)                           pipeline_registry.py:349
-                    INFO     ================================================================== pipeline_registry.py:351
-                             ==============                                                                             
-                    INFO     ✅ COMPLETE PIPELINE CREATED (Phase 1-4)                           pipeline_registry.py:352
-                    INFO        Phases included: 4                                              pipeline_registry.py:353
-                    INFO        Path A (outlier detection, CV, ensemble): ✅                    pipeline_registry.py:354
-                    INFO        Path B (feature scaling, tuning, ROC): ✅                       pipeline_registry.py:355
-                    INFO        Path C (learning curves, SHAP, stats): ✅ (optional)            pipeline_registry.py:356
-                    INFO        Expected accuracy: 89-90%                                       pipeline_registry.py:357
-                    INFO     ================================================================== pipeline_registry.py:358
-                             ==============                                                                             
-                    INFO     ✅ Available pipelines: ['phase1', 'data_loading',                 pipeline_registry.py:359
-                             'data_validation', 'data_cleaning', 'phase2',                                              
-                             'feature_engineering', 'phase1_2', 'data_processing', 'phase3',                            
-                             'model_training', 'phase4', 'algorithms', 'phase6', 'ensemble',                            
-                             'ensemble_methods', 'complete', 'all', 'end_to_end', 'a_b_c',                              
-                             '__default__', 'complete_1_6', 'all_with_ensemble',                                        
-                             'end_to_end_full']                                                                         
-                    INFO     ================================================================== pipeline_registry.py:360
-                             ==============                                                                             
-                    INFO                                                                        pipeline_registry.py:389
-                             ==================================================================                         
-                             ==============                                                                             
-                    INFO     🆕 PHASE 5: ADVANCED ANALYSIS MODULES (Available for manual use)   pipeline_registry.py:390
-                    INFO     ================================================================== pipeline_registry.py:391
-                             ==============                                                                             
-                    INFO     Input: Phase 4 outputs (load from disk after pipeline runs)        pipeline_registry.py:392
-                    INFO     Process: 7 modules with classes for analysis and reporting         pipeline_registry.py:393
-                    INFO     Output: Use in Python code for metrics, visualizations, reports    pipeline_registry.py:394
-                    INFO     ================================================================== pipeline_registry.py:395
-                             ==============                                                                             
-                    INFO     ✅ Phase 5a (training_strategies) - Available                      pipeline_registry.py:400
-                    INFO     ✅ Phase 5b (evaluation_metrics) - Available                       pipeline_registry.py:406
-                    INFO     ✅ Phase 5c (cross_validation_strategies) - Available              pipeline_registry.py:412
-                    INFO     ✅ Phase 5d (model_comparison) - Available                         pipeline_registry.py:418
-                    INFO     ✅ Phase 5e (visualization_manager) - Available                    pipeline_registry.py:424
-                    INFO     ✅ Phase 5f (hyperparameter_analysis) - Available                  pipeline_registry.py:430
-                    INFO     ✅ Phase 5g (report_generator) - Available                         pipeline_registry.py:436
-                    INFO                                                                        pipeline_registry.py:441
-                             🆕 PHASE 6 (Ensemble Methods):                                                             
-                    INFO       ✅ Phase 6 available (ensemble methods)                          pipeline_registry.py:443
-                    INFO          Methods: Stacking, Blending, Weighted Voting                  pipeline_registry.py:444
-                    INFO          Can be run: kedro run --pipeline phase6                       pipeline_registry.py:445
-                    INFO          Or as part: kedro run --pipeline complete_1_6                 pipeline_registry.py:446
-                    INFO                                                                        pipeline_registry.py:450
-                             Phase 5 modules available: 7/7                                                             
-                    INFO                                                                        pipeline_registry.py:451
-                             Phase 5 Usage Examples:                                                                    
-                    INFO       from ml_engine.pipelines.evaluation_metrics import               pipeline_registry.py:452
-                             ComprehensiveMetricsCalculator                                                             
-                    INFO       calc = ComprehensiveMetricsCalculator()                          pipeline_registry.py:453
-                    INFO       metrics = calc.evaluate_classification(y_test, y_pred, y_proba)  pipeline_registry.py:454
-                    INFO                                                                        pipeline_registry.py:455
-                               from ml_engine.pipelines.visualization_manager import                                    
-                             VisualizationManager                                                                       
-                    INFO       viz = VisualizationManager()                                     pipeline_registry.py:456
-                    INFO       viz.plot_confusion_matrix(y_test, y_pred, 'output.png')          pipeline_registry.py:457
-                    INFO                                                                        pipeline_registry.py:458
-                               from ml_engine.pipelines.report_generator import                                         
-                             ComprehensiveReportManager                                                                 
-                    INFO       report = ComprehensiveReportManager('MyModel')                   pipeline_registry.py:459
-                    INFO       reports = report.generate_all_reports('./data/08_reporting')     pipeline_registry.py:460
-                    INFO     ================================================================== pipeline_registry.py:461
-                             ==============                                                                             
-                    INFO                                                                        pipeline_registry.py:467
-                             ==================================================================                         
-                             ==============                                                                             
-                    INFO     📊 PIPELINE REGISTRY COMPLETE & FIXED!                             pipeline_registry.py:468
-                    INFO     ================================================================== pipeline_registry.py:469
-                             ==============                                                                             
-                    INFO     Total pipelines registered: 23                                     pipeline_registry.py:470
-                    INFO                                                                        pipeline_registry.py:471
-                             📈 Phase 1-4 (Kedro Pipelines): ✅ All working                                             
-                    INFO       • __default__ (Phase 1-4, 100% backward compatible)              pipeline_registry.py:472
-                    INFO       • complete, all, end_to_end, a_b_c                               pipeline_registry.py:473
-                    INFO       • phase1, phase2, phase3, phase4                                 pipeline_registry.py:474
-                    INFO       • data_loading, feature_engineering, model_training, algorithms  pipeline_registry.py:475
-                    INFO       • phase1_2, data_processing                                      pipeline_registry.py:476
-                    INFO                                                                        pipeline_registry.py:478
-                             🆕 Phase 5 (Python Classes): ✅ 7/7 modules                                                
-                    INFO       • training_strategies (multiple training approaches)             pipeline_registry.py:479
-                    INFO       • evaluation_metrics (40+ automatic metrics)                     pipeline_registry.py:480
-                    INFO       • cross_validation_strategies (6 CV approaches)                  pipeline_registry.py:481
-                    INFO       • model_comparison (statistical testing)                         pipeline_registry.py:482
-                    INFO       • visualization_manager (10+ plot types)                         pipeline_registry.py:483
-                    INFO       • hyperparameter_analysis (sensitivity analysis)                 pipeline_registry.py:484
-                    INFO       • report_generator (HTML/JSON/PDF/Model Cards)                   pipeline_registry.py:485
-                    INFO                                                                        pipeline_registry.py:487
-                             ✅ PHASE 1-4: Automated via Kedro | PHASE 5: Manual Python classes                         
-                    INFO     ✅ NO IMPORT ERRORS | NO CONFLICTS | FULLY WORKING                 pipeline_registry.py:488
-                    INFO                                                                        pipeline_registry.py:490
-                             🎯 How to use:                                                                             
-                    INFO       Phase 1-4 (Automated via Kedro):                                 pipeline_registry.py:491
-                    INFO         $ kedro run                                                    pipeline_registry.py:492
-                    INFO         $ kedro run --pipeline __default__                             pipeline_registry.py:493
-                    INFO         $ kedro run --pipeline complete                                pipeline_registry.py:494
-                    INFO                                                                        pipeline_registry.py:495
-                               Phase 5 (Manual in Python - after Phase 1-4 completes):                                  
-                    INFO         from ml_engine.pipelines.evaluation_metrics import             pipeline_registry.py:496
-                             ComprehensiveMetricsCalculator                                                             
-                    INFO         calc = ComprehensiveMetricsCalculator()                        pipeline_registry.py:497
-                    INFO         metrics = calc.evaluate_classification(y_test, y_pred,         pipeline_registry.py:498
-                             y_proba)                                                                                   
-                    INFO                                                                        pipeline_registry.py:499
-                               That's it! No errors, no conflicts, everything working!                                  
-                    INFO     ================================================================== pipeline_registry.py:500
-                             ==============                                                                             
-                                                                                                                        
-                    INFO     Kedro is sending anonymous usage data with the sole purpose of improving the  plugin.py:242
-                             product. No personal data or IP addresses are stored on our side. To opt out,              
-                             set the `KEDRO_DISABLE_TELEMETRY` or `DO_NOT_TRACK` environment variables, or              
-                             create a `.telemetry` file in the current working directory with the contents              
-                             `consent: false`. To hide this message, explicitly grant or deny consent.                  
-                             Read more at https://docs.kedro.org/en/stable/about/telemetry/                             
-[02/03/26 21:11:46] INFO     Using synchronous mode for loading and saving data. Use the --async sequential_runner.py:59
-                             flag for potential performance gains.                                                      
-                             https://docs.kedro.org/en/stable/build/run_a_pipeline/#load-and-sav                        
-                             e-asynchronously                                                                           
-                    INFO     Loading data from params:data_loading (MemoryDataset)...               data_catalog.py:1048
-                    INFO     Running node: load_data_node: load_data_auto() ->                               node.py:531
-                             [X_train_raw;X_test_raw;y_train_raw;y_test_raw]                                            
-                    INFO                                                                             data_loading.py:154
-                             =======================================================================                    
-                             =========                                                                                  
-                    INFO     📊 DATA LOADING - MODE: MULTI                                           data_loading.py:155
-                    INFO     ======================================================================= data_loading.py:156
-                             =========                                                                                  
-                                                                                                                        
-                    INFO     🔗 Multi-Table Mode Activated                                           data_loading.py:163
-                    INFO                                                                  data_loading_multitable.py:124
-                             ============================================================                               
-                             ====================                                                                       
+(venv) ashok@ubuntu:~/work/latest/full/kedro-engine-dynamic$ celery -A worker worker --loglevel=info -c 4
+INFO:celery_app:✅ Celery configured: None
+Usage: celery [OPTIONS] COMMAND [ARGS]...
+Try 'celery --help' for help.
 
-================================================================================
-                    INFO     📂 LOADING TABLES                                            data_loading_multitable.py:124
-📂 LOADING TABLES
-                    INFO     ============================================================ data_loading_multitable.py:124
-                             ====================                                                                       
-                                                                                                                        
-================================================================================
-
-                    INFO     Loading application...                                       data_loading_multitable.py:124
-Loading application... [02/03/26 21:11:48] INFO     ✅ (307,511 rows × 122 cols)                                 data_loading_multitable.py:124
-✅ (307,511 rows × 122 cols)
-                    INFO     Loading bureau...                                            data_loading_multitable.py:124
-Loading bureau... [02/03/26 21:11:49] INFO     ✅ (1,716,428 rows × 17 cols)                                data_loading_multitable.py:124
-✅ (1,716,428 rows × 17 cols)
-                    INFO     Loading previous_application...                              data_loading_multitable.py:124
-Loading previous_application... [02/03/26 21:11:53] INFO     ✅ (1,670,214 rows × 37 cols)                                data_loading_multitable.py:124
-✅ (1,670,214 rows × 37 cols)
-                    INFO     Loading pos_cash...                                          data_loading_multitable.py:124
-Loading pos_cash... [02/03/26 21:11:57] INFO     ✅ (10,001,358 rows × 8 cols)                                data_loading_multitable.py:124
-✅ (10,001,358 rows × 8 cols)
-                    INFO     Loading credit_card...                                       data_loading_multitable.py:124
-Loading credit_card... [02/03/26 21:12:02] INFO     ✅ (3,840,312 rows × 23 cols)                                data_loading_multitable.py:124
-✅ (3,840,312 rows × 23 cols)
-                    INFO     Loading installments...                                      data_loading_multitable.py:124
-Loading installments... Killed
+Error: 
+Unable to load celery application.
+While trying to load the module worker the following error occurred:
+Traceback (most recent call last):
+  File "/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site-packages/celery/bin/celery.py", line 137, in celery
+    app = find_app(app)
+          ^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site-packages/celery/app/utils.py", line 383, in find_app
+    sym = symbol_by_name(app, imp=imp)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site-packages/kombu/utils/imports.py", line 59, in symbol_by_name
+    module = imp(module_name, package=package, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site-packages/celery/utils/imports.py", line 105, in import_from_cwd
+    return imp(module, package=package)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/importlib/__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 995, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/home/ashok/work/latest/full/kedro-engine-dynamic/worker.py", line 9, in <module>
+    from app import tasks
+  File "/home/ashok/work/latest/full/kedro-engine-dynamic/app/tasks.py", line 10, in <module>
+    from kedro.framework.session import KedroSession
+ModuleNotFoundError: No module named 'kedro'
