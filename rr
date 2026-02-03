@@ -1,68 +1,28 @@
-(venv) ashok@ubuntu:~/work/latest/full/kedro-engine-dynamic$ python main.py
-2026-02-03 15:57:23,650 - ml_engine.utils.logger - INFO - ✅ Logging configured
-2026-02-03 15:57:23,650 - ml_engine - INFO - 🚀 ML Engine v0.2.0 initialized
-2026-02-03 15:57:23,650 - ml_engine.utils.logger - INFO - ✅ Logging configured
-2026-02-03 15:57:23,650 - src.ml_engine - INFO - 🚀 ML Engine v0.2.0 initialized
-[02/03/26 15:57:23] INFO     Using                                                                       __init__.py:269
-                             '/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site                
-                             -packages/kedro/framework/project/rich_logging.yml' as logging                             
-                             configuration.                                                                             
-                    INFO     🎯 ML Platform starting on http://localhost:8000                                main.py:156
-INFO:     Started server process [15188]
-INFO:     Waiting for application startup.
-                    INFO     🚀 Starting ML Platform Application...                                           main.py:33
-                    INFO     📦 Initializing database tables...                                               main.py:36
-[02/03/26 15:57:24] INFO     ✅ Database tables created/verified                                              main.py:38
-                    INFO     ✅ Default data initialized                                                      main.py:42
-                    INFO     ======================================================================           main.py:44
-                    INFO     ✅ ML PLATFORM READY!                                                            main.py:45
-                    INFO     ======================================================================           main.py:46
-                    INFO     📍 API Documentation: http://localhost:8000/docs                                 main.py:47
-                    INFO     📍 EDA Health: GET /api/eda/health                                               main.py:48
-                    INFO     ======================================================================           main.py:49
-INFO:     Application startup complete.
-INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+[2026-02-03 16:02:52,624: INFO/MainProcess] Connected to redis://localhost:6379/0
+[2026-02-03 16:02:52,629: INFO/MainProcess] mingle: searching for neighbors
+[2026-02-03 16:02:53,663: INFO/MainProcess] mingle: all alone
+[2026-02-03 16:02:53,706: INFO/MainProcess] celery@ubuntu ready.
+[2026-02-03 16:03:01,657: INFO/MainProcess] Events of group {task} enabled by remote.
+[2026-02-03 16:03:01,792: INFO/MainProcess] Task app.tasks.execute_pipeline[06ce346c-4575-4d6b-8cee-5a0ee72f136a] received
+[2026-02-03 16:03:01,799: INFO/ForkPoolWorker-4] 🚀 Starting pipeline execution: data_loading (Job: 99e77914-24cf-42d9-aecc-7ad41ad161dc)
+[2026-02-03 16:03:01,859: INFO/ForkPoolWorker-4] ✅ Job 99e77914-24cf-42d9-aecc-7ad41ad161dc status updated to JobStatus.RUNNING
+[2026-02-03 16:03:01,859: INFO/ForkPoolWorker-4] KedroExecutor initialized with project: /home/ashok/work/latest/full/kedro-engine-dynamic
+[2026-02-03 16:03:01,859: INFO/ForkPoolWorker-4] ✅ Kedro project initialized successfully
+[2026-02-03 16:03:01,859: INFO/ForkPoolWorker-4] 🚀 Starting pipeline execution: data_loading
+[2026-02-03 16:03:01,859: INFO/ForkPoolWorker-4]    Run ID: 99e77914-24cf-42d9-aecc-7ad41ad161dc
+[2026-02-03 16:03:01,860: ERROR/ForkPoolWorker-4] ❌ Pipeline execution failed: Package name not found. Make sure you have configured the project using 'bootstrap_project'. This should happen automatically if you are using Kedro command line interface.
+[2026-02-03 16:03:01,860: ERROR/ForkPoolWorker-4] Traceback:
+Traceback (most recent call last):
+  File "/home/ashok/work/latest/full/kedro-engine-dynamic/src/ml_engine/kedro_runner.py", line 236, in execute_pipeline
+    with KedroSession.create(project_path=self.project_path) as session:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site-packages/kedro/framework/session/session.py", line 156, in create
+    validate_settings()
+  File "/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site-packages/kedro/framework/project/__init__.py", line 335, in validate_settings
+    raise ValueError(
+ValueError: Package name not found. Make sure you have configured the project using 'bootstrap_project'. This should happen automatically if you are using Kedro command line interface.
 
-
-
-celery log is:
-(venv) ashok@ubuntu:~/work/latest/full/kedro-engine-dynamic$ celery -A worker worker --loglevel=info -c 4
-2026-02-03 15:57:37,693 - ml_engine.utils.logger - INFO - ✅ Logging configured
-2026-02-03 15:57:37,694 - ml_engine - INFO - 🚀 ML Engine v0.2.0 initialized
-2026-02-03 15:57:37,694 - ml_engine.utils.logger - INFO - ✅ Logging configured
-2026-02-03 15:57:37,694 - src.ml_engine - INFO - 🚀 ML Engine v0.2.0 initialized
-[02/03/26 15:57:37] INFO     Using                                                                       __init__.py:269
-                             '/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site                
-                             -packages/kedro/framework/project/rich_logging.yml' as logging                             
-                             configuration.                                                                             
- 
- -------------- celery@ubuntu v5.6.2 (recovery)
---- ***** ----- 
--- ******* ---- Linux-6.14.0-37-generic-x86_64-with-glibc2.39 2026-02-03 15:57:37
-- *** --- * --- 
-- ** ---------- [config]
-- ** ---------- .> app:         ml_platform:0x7f41913322a0
-- ** ---------- .> transport:   redis://localhost:6379/0
-- ** ---------- .> results:     disabled://
-- *** --- * --- .> concurrency: 4 (prefork)
--- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
---- ***** ----- 
- -------------- [queues]
-                .> celery           exchange=celery(direct) key=celery
-                
-
-[tasks]
-  . app.tasks.check_pipeline
-  . app.tasks.execute_pipeline
-  . app.tasks.get_pipeline_info
-  . worker.debug_task
-
-[2026-02-03 15:57:38,157: INFO/MainProcess] Connected to redis://localhost:6379/0
-[2026-02-03 15:57:38,162: INFO/MainProcess] mingle: searching for neighbors
-[2026-02-03 15:57:39,198: INFO/MainProcess] mingle: all alone
-[2026-02-03 15:57:39,225: INFO/MainProcess] celery@ubuntu ready.
-[2026-02-03 15:57:42,339: INFO/MainProcess] Events of group {task} enabled by remote.
-[2026-02-03 15:57:59,136: INFO/MainProcess] Task app.tasks.execute_pipeline[53c81d87-fe93-4960-9df4-157de3b7c1db] received
-[2026-02-03 15:57:59,140: INFO/ForkPoolWorker-4] 🚀 Starting pipeline execution: data_loading (Job: 481fdab2-bfcf-4780-a406-d610e9430c1c)
-[2026-02-03 15:57:59,180: INFO/ForkPoolWorker-4] ✅ Job 481fdab2-bfcf-4780-a406-d610e9430c1c status updated to JobStatus.RUNNING
-[2026-02-03 15:57:59,182: INFO/ForkPoolWorker-4] KedroExecutor initialized with project: /home/ashok/work/latest/full/kedro-engine-dynamic
+[2026-02-03 16:03:01,861: ERROR/ForkPoolWorker-4] ❌ Pipeline failed: Package name not found. Make sure you have configured the project using 'bootstrap_project'. This should happen automatically if you are using Kedro command line interface.
+[2026-02-03 16:03:01,872: INFO/ForkPoolWorker-4] ✅ Job 99e77914-24cf-42d9-aecc-7ad41ad161dc status updated to JobStatus.FAILED
+[2026-02-03 16:03:01,872: INFO/ForkPoolWorker-4] ✅ Task 06ce346c-4575-4d6b-8cee-5a0ee72f136a succeeded
+[2026-02-03 16:03:01,873: INFO/ForkPoolWorker-4] Task app.tasks.execute_pipeline[06ce346c-4575-4d6b-8cee-5a0ee72f136a] succeeded in 0.07410479999816744s: {'status': 'failed', 'pipeline_name': 'data_loading', 'run_id': '99e77914-24cf-42d9-aecc-7ad41ad161dc', 'error': 'Package name not found. Make sure you have configured the project using \'bootstrap_project\'. This should happen automatically if you are using Kedro command line interface.', 'execution_time': 0.0, 'started_at': '2026-02-03T16:03:01.859838', 'completed_at': '2026-02-03T16:03:01.859903'}
