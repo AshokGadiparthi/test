@@ -1,42 +1,15 @@
-(venv) ashok@ubuntu:~/work/latest/full/kedro-engine-dynamic$ celery -A worker worker --loglevel=info -c 4
-✅ Project root: /home/ashok/work/latest/full/kedro-engine-dynamic
-✅ sys.path[0]: /home/ashok/work/latest/full/kedro-engine-dynamic/src
-✅ Celery app created
-2026-02-03 16:42:23,832 - ml_engine.utils.logger - INFO - ✅ Logging configured
-2026-02-03 16:42:23,833 - ml_engine - INFO - 🚀 ML Engine v0.2.0 initialized
-2026-02-03 16:42:23,833 - ml_engine.utils.logger - INFO - ✅ Logging configured
-2026-02-03 16:42:23,833 - src.ml_engine - INFO - 🚀 ML Engine v0.2.0 initialized
-[02/03/26 16:42:23] INFO     Using                                                                       __init__.py:269
-                             '/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site                
-                             -packages/kedro/framework/project/rich_logging.yml' as logging                             
-                             configuration.                                                                             
-[02/03/26 16:42:24] INFO     ✅ Kedro configured: /home/ashok/work/latest/full/kedro-engine-dynamic   kedro_runner.py:41
-✅ Tasks imported successfully!
-   Available tasks: ['celery.chord_unlock', 'celery.chord', 'celery.chunks', 'app.tasks.check_pipeline', 'celery.map', 'app.tasks.execute_pipeline', 'celery.backend_cleanup', 'celery.group', 'app.tasks.get_pipeline_info', 'celery.starmap', 'celery.accumulate', 'celery.chain']
- 
- -------------- celery@ubuntu v5.6.2 (recovery)
---- ***** ----- 
--- ******* ---- Linux-6.14.0-37-generic-x86_64-with-glibc2.39 2026-02-03 16:42:24
-- *** --- * --- 
-- ** ---------- [config]
-- ** ---------- .> app:         ml_platform:0x7e14c6d46d20
-- ** ---------- .> transport:   redis://localhost:6379/0
-- ** ---------- .> results:     redis://localhost:6379/1
-- *** --- * --- .> concurrency: 4 (prefork)
--- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
---- ***** ----- 
- -------------- [queues]
-                .> default          exchange=ml_platform(direct) key=default
-                .> ml_pipelines     exchange=ml_pipelines(direct) key=ml_pipelines
-
-[tasks]
-  . app.tasks.check_pipeline
-  . app.tasks.execute_pipeline
-  . app.tasks.get_pipeline_info
-  . worker.debug_task
-
-[2026-02-03 16:42:24,434: INFO/MainProcess] Connected to redis://localhost:6379/0
-[2026-02-03 16:42:24,437: INFO/MainProcess] mingle: searching for neighbors
-[2026-02-03 16:42:25,443: INFO/MainProcess] mingle: all alone
-[2026-02-03 16:42:25,454: INFO/MainProcess] celery@ubuntu ready.
-
+(venv) ashok@ubuntu:~/work/latest/full/kedro-engine-dynamic$ redis-cli KEYS '*'
+1) "_kombu.binding.ml_platform"
+2) "_kombu.binding.celery"
+3) "_kombu.binding.celeryev"
+4) "_kombu.binding.ml_pipelines"
+5) "celery"
+(venv) ashok@ubuntu:~/work/latest/full/kedro-engine-dynamic$ redis-cli LRANGE celery 0 -1 | head -5
+{"body": "W1tdLCB7ImpvYl9pZCI6ICIyOThiNjgzYi0wMzczLTQwMzQtYmIxMC0zMDkyYzA5M2M5NmQiLCAicGlwZWxpbmVfbmFtZSI6ICJkYXRhX2xvYWRpbmciLCAicGFyYW1ldGVycyI6IHt9fSwgeyJjYWxsYmFja3MiOiBudWxsLCAiZXJyYmFja3MiOiBudWxsLCAiY2hhaW4iOiBudWxsLCAiY2hvcmQiOiBudWxsfV0=", "content-encoding": "utf-8", "content-type": "application/json", "headers": {"lang": "py", "task": "app.tasks.execute_pipeline", "id": "1607c121-a2d8-4ed8-9b81-1d862528ca26", "shadow": null, "eta": null, "expires": null, "group": null, "group_index": null, "retries": 0, "timelimit": [null, null], "root_id": "1607c121-a2d8-4ed8-9b81-1d862528ca26", "parent_id": null, "argsrepr": "()", "kwargsrepr": "{'job_id': '298b683b-0373-4034-bb10-3092c093c96d', 'pipeline_name': 'data_loading', 'parameters': {}}", "origin": "gen16093@ubuntu", "ignore_result": false, "replaced_task_nesting": 0, "stamped_headers": null, "stamps": {}}, "properties": {"correlation_id": "1607c121-a2d8-4ed8-9b81-1d862528ca26", "reply_to": "af32bc58-8bed-3916-9439-82614739b840", "delivery_mode": 2, "delivery_info": {"exchange": "", "routing_key": "celery"}, "priority": 0, "body_encoding": "base64", "delivery_tag": "b3a91bb5-3658-4b0b-ab9c-1905ed22c61c"}}
+{"body": "W1tdLCB7ImpvYl9pZCI6ICI0NThmNWMwZi0xMWY0LTRmMDItODFmNS0zYTEyZTc1NzM2MWMiLCAicGlwZWxpbmVfbmFtZSI6ICJkYXRhX2xvYWRpbmciLCAicGFyYW1ldGVycyI6IHt9fSwgeyJjYWxsYmFja3MiOiBudWxsLCAiZXJyYmFja3MiOiBudWxsLCAiY2hhaW4iOiBudWxsLCAiY2hvcmQiOiBudWxsfV0=", "content-encoding": "utf-8", "content-type": "application/json", "headers": {"lang": "py", "task": "app.tasks.execute_pipeline", "id": "2920b0ba-cd9e-443f-913b-34a1bb375a20", "shadow": null, "eta": null, "expires": null, "group": null, "group_index": null, "retries": 0, "timelimit": [null, null], "root_id": "2920b0ba-cd9e-443f-913b-34a1bb375a20", "parent_id": null, "argsrepr": "()", "kwargsrepr": "{'job_id': '458f5c0f-11f4-4f02-81f5-3a12e757361c', 'pipeline_name': 'data_loading', 'parameters': {}}", "origin": "gen16093@ubuntu", "ignore_result": false, "replaced_task_nesting": 0, "stamped_headers": null, "stamps": {}}, "properties": {"correlation_id": "2920b0ba-cd9e-443f-913b-34a1bb375a20", "reply_to": "af32bc58-8bed-3916-9439-82614739b840", "delivery_mode": 2, "delivery_info": {"exchange": "", "routing_key": "celery"}, "priority": 0, "body_encoding": "base64", "delivery_tag": "96dcb6c8-8c97-4f37-870d-9d2750f78954"}}
+{"body": "W1tdLCB7ImpvYl9pZCI6ICJjYWYyZDk1ZS0wNDA0LTQyYzktOGI5Yy1iNDgyYjRhZDUxN2YiLCAicGlwZWxpbmVfbmFtZSI6ICJkYXRhX2xvYWRpbmciLCAicGFyYW1ldGVycyI6IHt9fSwgeyJjYWxsYmFja3MiOiBudWxsLCAiZXJyYmFja3MiOiBudWxsLCAiY2hhaW4iOiBudWxsLCAiY2hvcmQiOiBudWxsfV0=", "content-encoding": "utf-8", "content-type": "application/json", "headers": {"lang": "py", "task": "app.tasks.execute_pipeline", "id": "b9f8f59c-d184-489a-b19c-01cffdf1b4e3", "shadow": null, "eta": null, "expires": null, "group": null, "group_index": null, "retries": 0, "timelimit": [null, null], "root_id": "b9f8f59c-d184-489a-b19c-01cffdf1b4e3", "parent_id": null, "argsrepr": "()", "kwargsrepr": "{'job_id': 'caf2d95e-0404-42c9-8b9c-b482b4ad517f', 'pipeline_name': 'data_loading', 'parameters': {}}", "origin": "gen16093@ubuntu", "ignore_result": false, "replaced_task_nesting": 0, "stamped_headers": null, "stamps": {}}, "properties": {"correlation_id": "b9f8f59c-d184-489a-b19c-01cffdf1b4e3", "reply_to": "af32bc58-8bed-3916-9439-82614739b840", "delivery_mode": 2, "delivery_info": {"exchange": "", "routing_key": "celery"}, "priority": 0, "body_encoding": "base64", "delivery_tag": "faa74272-1a1a-437c-8210-6a82adcc9877"}}
+{"body": "W1tdLCB7ImpvYl9pZCI6ICJiNDY2YTQ4Mi05ZTUzLTQ1ZmItYjQ0OS1jODBlMzZhNGMzM2MiLCAicGlwZWxpbmVfbmFtZSI6ICJkYXRhX2xvYWRpbmciLCAicGFyYW1ldGVycyI6IHt9fSwgeyJjYWxsYmFja3MiOiBudWxsLCAiZXJyYmFja3MiOiBudWxsLCAiY2hhaW4iOiBudWxsLCAiY2hvcmQiOiBudWxsfV0=", "content-encoding": "utf-8", "content-type": "application/json", "headers": {"lang": "py", "task": "app.tasks.execute_pipeline", "id": "5ab939f7-70ce-41c4-a611-1ba8ca5686d9", "shadow": null, "eta": null, "expires": null, "group": null, "group_index": null, "retries": 0, "timelimit": [null, null], "root_id": "5ab939f7-70ce-41c4-a611-1ba8ca5686d9", "parent_id": null, "argsrepr": "()", "kwargsrepr": "{'job_id': 'b466a482-9e53-45fb-b449-c80e36a4c33c', 'pipeline_name': 'data_loading', 'parameters': {}}", "origin": "gen16093@ubuntu", "ignore_result": false, "replaced_task_nesting": 0, "stamped_headers": null, "stamps": {}}, "properties": {"correlation_id": "5ab939f7-70ce-41c4-a611-1ba8ca5686d9", "reply_to": "af32bc58-8bed-3916-9439-82614739b840", "delivery_mode": 2, "delivery_info": {"exchange": "", "routing_key": "celery"}, "priority": 0, "body_encoding": "base64", "delivery_tag": "b9d8b2bc-027a-46bc-a960-f143311a450c"}}
+{"body": "W1tdLCB7ImpvYl9pZCI6ICI1MDA3NTM1OS02NmZhLTQ0N2YtYTM4ZS1hMGVjYjQ0OTAzZmQiLCAicGlwZWxpbmVfbmFtZSI6ICJkYXRhX2xvYWRpbmciLCAicGFyYW1ldGVycyI6IHt9fSwgeyJjYWxsYmFja3MiOiBudWxsLCAiZXJyYmFja3MiOiBudWxsLCAiY2hhaW4iOiBudWxsLCAiY2hvcmQiOiBudWxsfV0=", "content-encoding": "utf-8", "content-type": "application/json", "headers": {"lang": "py", "task": "app.tasks.execute_pipeline", "id": "e5e1d721-e8fc-41e9-a4fb-80791ec783fc", "shadow": null, "eta": null, "expires": null, "group": null, "group_index": null, "retries": 0, "timelimit": [null, null], "root_id": "e5e1d721-e8fc-41e9-a4fb-80791ec783fc", "parent_id": null, "argsrepr": "()", "kwargsrepr": "{'job_id': '50075359-66fa-447f-a38e-a0ecb44903fd', 'pipeline_name': 'data_loading', 'parameters': {}}", "origin": "gen16093@ubuntu", "ignore_result": false, "replaced_task_nesting": 0, "stamped_headers": null, "stamps": {}}, "properties": {"correlation_id": "e5e1d721-e8fc-41e9-a4fb-80791ec783fc", "reply_to": "af32bc58-8bed-3916-9439-82614739b840", "delivery_mode": 2, "delivery_info": {"exchange": "", "routing_key": "celery"}, "priority": 0, "body_encoding": "base64", "delivery_tag": "42f0ab6f-81ac-47b9-b0b1-078f96fc662c"}}
+(venv) ashok@ubuntu:~/work/latest/full/kedro-engine-dynamic$ redis-cli LRANGE celery-task-meta-queue 0 1
+(empty array)
+(venv) ashok@ubuntu:~/work/latest/full/kedro-engine-dynamic$ 
