@@ -1,188 +1,73 @@
-               INFO                                                                                     main.py:143
-                             ===============================================================================            
-                             =                                                                                          
-                    INFO     🚀 STARTING UP APPLICATION                                                      main.py:144
-                    INFO     =============================================================================== main.py:145
-                             =                                                                                          
-                    INFO     📊 Initializing database with ALL tables...                                     main.py:148
+(venv) ashok@ubuntu:~/work/latest/full/kedro-engine-dynamic$ celery -A worker worker --loglevel=info -c 4
+INFO:celery_app:✅ Celery configured: None
+[02/04/26 02:47:37] INFO     Using                                                                       __init__.py:269
+                             '/home/ashok/work/latest/full/kedro-engine-dynamic/venv/lib/python3.12/site                
+                             -packages/kedro/framework/project/rich_logging.yml' as logging                             
+                             configuration.                                                                             
                     INFO     ✅ Database initialized at:                                              job_manager.py:316
                              /home/ashok/work/latest/full/kedro-engine-dynamic/ml_platform.db                           
                     INFO     ✅ Created 20 tables successfully!                                       job_manager.py:317
-                    INFO     ✅ Database initialized successfully with all tables!                           main.py:151
-                    INFO     ✅ Kedro project path: /home/ashok/work/latest/full/kedro-ml-engine-integrated  main.py:155
-                    INFO     ✅ API running on: 0.0.0.0:8000                                                 main.py:156
-                    INFO     ✅ Celery broker: not configured                                                main.py:157
-                    INFO     ✅ Database: sqlite:///ml_platform.db                                           main.py:158
-                    INFO     =============================================================================== main.py:159
-                             =                                                                                          
-                    INFO     ✅ FastAPI application started successfully                                     main.py:160
+                    INFO     ✅ Kedro project path configured:                                               tasks.py:28
+                             /home/ashok/work/latest/full/kedro-ml-engine-integrated                                    
+ 
+ -------------- celery@ubuntu v5.6.2 (recovery)
+--- ***** ----- 
+-- ******* ---- Linux-6.14.0-37-generic-x86_64-with-glibc2.39 2026-02-04 02:47:37
+- *** --- * --- 
+- ** ---------- [config]
+- ** ---------- .> app:         ml_platform:0x7b4f887ce390
+- ** ---------- .> transport:   redis://localhost:6379/0
+- ** ---------- .> results:     redis://localhost:6379/1
+- *** --- * --- .> concurrency: 4 (prefork)
+-- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+--- ***** ----- 
+ -------------- [queues]
+                .> celery           exchange=celery(direct) key=celery
+                
+
+[tasks]
+  . app.tasks.analyze_data
+  . app.tasks.execute_pipeline
+  . app.tasks.process_data
+
+[2026-02-04 02:47:37,636: INFO/MainProcess] Connected to redis://localhost:6379/0
+[2026-02-04 02:47:37,638: INFO/MainProcess] mingle: searching for neighbors
+[2026-02-04 02:47:38,652: INFO/MainProcess] mingle: all alone
+[2026-02-04 02:47:38,661: INFO/MainProcess] celery@ubuntu ready.
+[2026-02-04 02:47:46,032: INFO/MainProcess] Events of group {task} enabled by remote.
+[2026-02-04 02:49:34,497: INFO/MainProcess] Task app.tasks.execute_pipeline[43c01e9f-3b73-4746-8972-c41167bd3d42] received
+[2026-02-04 02:49:34,512: INFO/ForkPoolWorker-4] ================================================================================
+[2026-02-04 02:49:34,512: INFO/ForkPoolWorker-4] 🚀 STARTING PIPELINE EXECUTION
+[2026-02-04 02:49:34,513: INFO/ForkPoolWorker-4] ================================================================================
+[2026-02-04 02:49:34,513: INFO/ForkPoolWorker-4] Job ID: ec197d7f-f3ae-4114-bef1-1ade5cad322f
+[2026-02-04 02:49:34,513: INFO/ForkPoolWorker-4] Pipeline: 38a67756-f059-4db1-8520-829df593b50
+[2026-02-04 02:49:34,513: INFO/ForkPoolWorker-4] Parameters: {}
+[2026-02-04 02:49:34,513: INFO/ForkPoolWorker-4] 
+[STEP 1] Updating job status...
+[2026-02-04 02:49:34,528: INFO/ForkPoolWorker-4] ✅ Job ec197d7f-f3ae-4114-bef1-1ade5cad322f marked as RUNNING
+[2026-02-04 02:49:34,528: INFO/ForkPoolWorker-4] 
+[STEP 2] Verifying Kedro project...
+[2026-02-04 02:49:34,528: INFO/ForkPoolWorker-4] ✅ Kedro project verified: /home/ashok/work/latest/full/kedro-ml-engine-integrated
+[2026-02-04 02:49:34,528: INFO/ForkPoolWorker-4] 
+[STEP 3] Configuring Kedro project...
+[2026-02-04 02:49:34,528: INFO/ForkPoolWorker-4] Loading project from /home/ashok/work/latest/full/kedro-ml-engine-integrated
+
+
                                                                                                                         
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-[02/04/26 02:47:45] INFO     📊 API Request: Run pipeline '38a67756-f059-4db1-8520-829df593b50'              jobs.py:129
+[02/04/26 02:49:34] INFO     📊 API Request: Run pipeline '38a67756-f059-4db1-8520-829df593b50'              jobs.py:129
                     INFO     Creating job in database for pipeline: 38a67756-f059-4db1-8520-829df593b50      jobs.py:133
-                    INFO     ✅ Job created: 25aa9c18-cc4f-4355-b6c9-e4065c9033e3                     job_manager.py:342
-                    INFO     ✅ Job created: 25aa9c18-cc4f-4355-b6c9-e4065c9033e3                            jobs.py:142
+                    INFO     ✅ Job created: ec197d7f-f3ae-4114-bef1-1ade5cad322f                     job_manager.py:342
+                    INFO     ✅ Job created: ec197d7f-f3ae-4114-bef1-1ade5cad322f                            jobs.py:142
                     INFO     Queuing task to Celery...                                                       jobs.py:145
-                    ERROR    ❌ Error in run_pipeline: 'NoneType' object has no attribute 'Redis'            jobs.py:167
-                             ╭───────────────────── Traceback (most recent call last) ─────────────────────╮            
-                             │ /home/ashok/work/latest/full/kedro-engine-dynamic/app/api/jobs.py:146 in    │            
-                             │ run_pipeline                                                                │            
-                             │                                                                             │            
-                             │   143 │   │                                                                 │            
-                             │   144 │   │   # Queue task to Celery worker                                 │            
-                             │   145 │   │   logger.info(f"Queuing task to Celery...")                     │            
-                             │ ❱ 146 │   │   task = execute_pipeline.delay(                                │            
-                             │   147 │   │   │   job_id=job['id'],                                         │            
-                             │   148 │   │   │   pipeline_name=pipeline_name,                              │            
-                             │   149 │   │   │   parameters=request.parameters if request else {}          │            
-                             │                                                                             │            
-                             │ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10 │            
-                             │ /site-packages/celery/app/task.py:444 in delay                              │            
-                             │                                                                             │            
-                             │    441 │   │   Returns:                                                     │            
-                             │    442 │   │   │   celery.result.AsyncResult: Future promise.               │            
-                             │    443 │   │   """                                                          │            
-                             │ ❱  444 │   │   return self.apply_async(args, kwargs)                        │            
-                             │    445 │                                                                    │            
-                             │    446 │   def apply_async(self, args=None, kwargs=None, task_id=None, prod │            
-                             │    447 │   │   │   │   │   link=None, link_error=None, shadow=None, **optio │            
-                             │                                                                             │            
-                             │ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10 │            
-                             │ /site-packages/celery/app/task.py:608 in apply_async                        │            
-                             │                                                                             │            
-                             │    605 │   │   │   │   return self.apply(args, kwargs, task_id=task_id or u │            
-                             │    606 │   │   │   │   │   │   │   │     link=link, link_error=link_error,  │            
-                             │    607 │   │   else:                                                        │            
-                             │ ❱  608 │   │   │   return app.send_task(                                    │            
-                             │    609 │   │   │   │   self.name, args, kwargs, task_id=task_id, producer=p │            
-                             │    610 │   │   │   │   link=link, link_error=link_error, result_cls=self.As │            
-                             │    611 │   │   │   │   shadow=shadow, task_type=self,                       │            
-                             │                                                                             │            
-                             │ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10 │            
-                             │ /site-packages/celery/app/base.py:852 in send_task                          │            
-                             │                                                                             │            
-                             │    849 │   │   options = router.route(                                      │            
-                             │    850 │   │   │   options, route_name or name, args, kwargs, task_type)    │            
-                             │    851 │   │                                                                │            
-                             │ ❱  852 │   │   driver_type = self.producer_pool.connections.connection.tran │            
-                             │    853 │   │                                                                │            
-                             │    854 │   │   if (eta or countdown) and detect_quorum_queues(self, driver_ │            
-                             │    855                                                                      │            
-                             │                                                                             │            
-                             │ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10 │            
-                             │ /site-packages/celery/app/base.py:1503 in producer_pool                     │            
-                             │                                                                             │            
-                             │   1500 │                                                                    │            
-                             │   1501 │   @property                                                        │            
-                             │   1502 │   def producer_pool(self):                                         │            
-                             │ ❱ 1503 │   │   return self.amqp.producer_pool                               │            
-                             │   1504 │                                                                    │            
-                             │   1505 │   def uses_utc_timezone(self):                                     │            
-                             │   1506 │   │   """Check if the application uses the UTC timezone."""        │            
-                             │                                                                             │            
-                             │ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10 │            
-                             │ /site-packages/celery/app/amqp.py:633 in producer_pool                      │            
-                             │                                                                             │            
-                             │   630 │   def producer_pool(self):                                          │            
-                             │   631 │   │   if self._producer_pool is None:                               │            
-                             │   632 │   │   │   self._producer_pool = pools.producers[                    │            
-                             │ ❱ 633 │   │   │   │   self.app.connection_for_write()]                      │            
-                             │   634 │   │   │   self._producer_pool.limit = self.app.pool.limit           │            
-                             │   635 │   │   return self._producer_pool                                    │            
-                             │   636 │   publisher_pool = producer_pool  # compat alias                    │            
-                             │                                                                             │            
-                             │ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10 │            
-                             │ /site-packages/celery/app/base.py:975 in connection_for_write               │            
-                             │                                                                             │            
-                             │    972 │   │   See Also:                                                    │            
-                             │    973 │   │   │   :meth:`connection` for supported arguments.              │            
-                             │    974 │   │   """                                                          │            
-                             │ ❱  975 │   │   return self._connection(url or self.conf.broker_write_url, * │            
-                             │    976 │                                                                    │            
-                             │    977 │   def connection(self, hostname=None, userid=None, password=None,  │            
-                             │    978 │   │   │   │      virtual_host=None, port=None, ssl=None,           │            
-                             │                                                                             │            
-                             │ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10 │            
-                             │ /site-packages/celery/app/base.py:1026 in _connection                       │            
-                             │                                                                             │            
-                             │   1023 │   │   │   │   │   transport_options=None, heartbeat=None,          │            
-                             │   1024 │   │   │   │   │   login_method=None, failover_strategy=None, **kwa │            
-                             │   1025 │   │   conf = self.conf                                             │            
-                             │ ❱ 1026 │   │   return self.amqp.Connection(                                 │            
-                             │   1027 │   │   │   url,                                                     │            
-                             │   1028 │   │   │   userid or conf.broker_user,                              │            
-                             │   1029 │   │   │   password or conf.broker_password,                        │            
-                             │                                                                             │            
-                             │ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10 │            
-                             │ /site-packages/kombu/connection.py:202 in __init__                          │            
-                             │                                                                             │            
-                             │    199 │   │   │   │   self.uri_prefix = params['transport']                │            
-                             │    200 │   │   │   elif '://' in hostname:                                  │            
-                             │    201 │   │   │   │   transport = transport or urlparse(hostname).scheme   │            
-                             │ ❱  202 │   │   │   │   if not get_transport_cls(transport).can_parse_url:   │            
-                             │    203 │   │   │   │   │   # we must parse the URL                          │            
-                             │    204 │   │   │   │   │   url_params = parse_url(hostname)                 │            
-                             │    205 │   │   │   │   │   params.update(                                   │            
-                             │                                                                             │            
-                             │ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10 │            
-                             │ /site-packages/kombu/transport/__init__.py:92 in get_transport_cls          │            
-                             │                                                                             │            
-                             │   89 │   the alias table will be consulted.                                 │            
-                             │   90 │   """                                                                │            
-                             │   91 │   if transport not in _transport_cache:                              │            
-                             │ ❱ 92 │   │   _transport_cache[transport] = resolve_transport(transport)     │            
-                             │   93 │   return _transport_cache[transport]                                 │            
-                             │   94                                                                        │            
-                             │                                                                             │            
-                             │ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10 │            
-                             │ /site-packages/kombu/transport/__init__.py:77 in resolve_transport          │            
-                             │                                                                             │            
-                             │   74 │   │   else:                                                          │            
-                             │   75 │   │   │   if callable(transport):                                    │            
-                             │   76 │   │   │   │   transport = transport()                                │            
-                             │ ❱ 77 │   │   return symbol_by_name(transport)                               │            
-                             │   78 │   return transport                                                   │            
-                             │   79                                                                        │            
-                             │   80                                                                        │            
-                             │                                                                             │            
-                             │ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10 │            
-                             │ /site-packages/kombu/utils/imports.py:59 in symbol_by_name                  │            
-                             │                                                                             │            
-                             │   56 │   │   cls_name, module_name = None, package if package else cls_name │            
-                             │   57 │   try:                                                               │            
-                             │   58 │   │   try:                                                           │            
-                             │ ❱ 59 │   │   │   module = imp(module_name, package=package, **kwargs)       │            
-                             │   60 │   │   except ValueError as exc:                                      │            
-                             │   61 │   │   │   reraise(ValueError,                                        │            
-                             │   62 │   │   │   │   │   ValueError(f"Couldn't import {name!r}: {exc}"),    │            
-                             │                                                                             │            
-                             │ /usr/lib/python3.10/importlib/__init__.py:126 in import_module              │            
-                             │                                                                             │            
-                             │   123 │   │   │   if character != '.':                                      │            
-                             │   124 │   │   │   │   break                                                 │            
-                             │   125 │   │   │   level += 1                                                │            
-                             │ ❱ 126 │   return _bootstrap._gcd_import(name[level:], package, level)       │            
-                             │   127                                                                       │            
-                             │   128                                                                       │            
-                             │   129 _RELOADING = {}                                                       │            
-                             │ in _gcd_import:1050                                                         │            
-                             │ in _find_and_load:1027                                                      │            
-                             │ in _find_and_load_unlocked:1006                                             │            
-                             │ in _load_unlocked:688                                                       │            
-                             │ in exec_module:883                                                          │            
-                             │ in _call_with_frames_removed:241                                            │            
-                             │                                                                             │            
-                             │ /home/ashok/work/latest/full/kedro-ml-engine-integrated/venv/lib/python3.10 │            
-                             │ /site-packages/kombu/transport/redis.py:274 in <module>                     │            
-                             │                                                                             │            
-                             │    271 │   │   )                                                            │            
-                             │    272                                                                      │            
-                             │    273                                                                      │            
-                             │ ❱  274 class PrefixedStrictRedis(GlobalKeyPrefixMixin, redis.Redis):        │            
-                             │    275 │   """Returns a ``StrictRedis`` client that prefixes the keys it us │            
-                             │    276 │                                                                    │            
-                             │    277 │   def __init__(self, *args, **kwargs):                             │            
-                             ╰─────────────────────────────────────────────────────────────────────────────╯            
-                             AttributeError: 'NoneType' object has no attribute 'Redis'                                 
-INFO:     192.168.1.26:65350 - "POST /api/v1/jobs/run-pipeline/38a67756-f059-4db1-8520-829df593b50 HTTP/1.1" 400 Bad Request
+                    INFO     ✅ Task queued: 43c01e9f-3b73-4746-8972-c41167bd3d42                            jobs.py:152
+                    INFO     📤 Returning response: {'id': 'ec197d7f-f3ae-4114-bef1-1ade5cad322f',           jobs.py:163
+                             'pipeline_name': '38a67756-f059-4db1-8520-829df593b50', 'status': 'pending',               
+                             'celery_task_id': '43c01e9f-3b73-4746-8972-c41167bd3d42', 'message': "Pipeline             
+                             '38a67756-f059-4db1-8520-829df593b50' queued for execution", 'created_at':                 
+                             '2026-02-04T02:49:34.498233'}                                                              
+INFO:     192.168.1.26:63176 - "POST /api/v1/jobs/run-pipeline/38a67756-f059-4db1-8520-829df593b50 HTTP/1.1" 202 Accepted
+
+
+
