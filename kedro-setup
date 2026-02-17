@@ -1,0 +1,12 @@
+celery -A celery_app worker --loglevel=info -c 1
+celery -A worker flower
+
+sudo ss -lptn 'sport = :8000'
+
+pip install kedro-datasets
+pip install scikit-learn
+pip install python-multipart
+pip install kedro
+pip install matplotlib
+pip install seaborn
+
